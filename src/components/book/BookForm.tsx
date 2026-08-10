@@ -25,6 +25,8 @@ export interface BookFormValue {
   libraryId: string
   shelfId: string
   wishlist: boolean
+  /** Обложка из найденных метаданных — скачается при сохранении. */
+  coverUrl: string
 }
 
 export const EMPTY_BOOK_FORM: BookFormValue = {
@@ -43,6 +45,7 @@ export const EMPTY_BOOK_FORM: BookFormValue = {
   libraryId: '',
   shelfId: '',
   wishlist: false,
+  coverUrl: '',
 }
 
 /** Перевод значения формы в input серверной функции. */
@@ -63,6 +66,7 @@ export function toBookInput(v: BookFormValue) {
     libraryId: v.wishlist ? null : v.libraryId || null,
     shelfId: v.wishlist ? null : v.shelfId || null,
     wishlist: v.wishlist,
+    coverUrl: v.coverUrl || undefined,
   }
 }
 
@@ -91,8 +95,10 @@ export function BookForm({
   )
   const [tagSuggestions, setTagSuggestions] = useState<Array<string>>([])
 
-  const set = <TKey extends keyof BookFormValue>(key: TKey, val: BookFormValue[TKey]) =>
-    onChange({ ...value, [key]: val })
+  const set = <TKey extends keyof BookFormValue>(
+    key: TKey,
+    val: BookFormValue[TKey],
+  ) => onChange({ ...value, [key]: val })
 
   useEffect(() => {
     void listMyLibrariesFn().then((libs) => {
@@ -125,6 +131,22 @@ export function BookForm({
         onSubmit()
       }}
     >
+      {value.coverUrl && (
+        <div className="flex items-center gap-3.5">
+          <img
+            src={value.coverUrl}
+            alt="Обложка из найденного источника"
+            className="h-24 w-16 rounded-[4px] object-cover shadow-sm"
+          />
+          <button
+            type="button"
+            className="text-[13px] text-muted-foreground underline"
+            onClick={() => set('coverUrl', '')}
+          >
+            Не сохранять эту обложку
+          </button>
+        </div>
+      )}
       <div className="grid gap-1.5">
         <Label htmlFor="bf-title">Название *</Label>
         <Input

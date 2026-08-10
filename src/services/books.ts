@@ -2,7 +2,7 @@ import { and, asc, eq, inArray, like, or, sql } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { book, bookTag, library, series, shelf, tag } from '@/db/schema/catalog'
-import { deleteCover } from './covers'
+import { deleteCover, saveCoverFromUrl } from './covers'
 import { AppError } from './errors'
 import { assertMember, memberLibraryIds } from './members'
 import { normalizeForSearch } from './search'
@@ -26,6 +26,8 @@ export interface BookInput {
   libraryId?: string | null
   shelfId?: string | null
   wishlist?: boolean
+  /** URL обложки из метаданных — скачается на диск при сохранении (best-effort). */
+  coverUrl?: string
 }
 
 async function assertShelfInLibrary(
@@ -94,6 +96,14 @@ export async function createBook(
     .returning({ id: book.id })
   if (!created) throw new AppError('Не удалось сохранить книгу')
   if (input.tags) await setBookTags(userId, created.id, input.tags)
+  if (input.coverUrl) {
+    try {
+      const coverPath = await saveCoverFromUrl(created.id, input.coverUrl)
+      await db.update(book).set({ coverPath }).where(eq(book.id, created.id))
+    } catch {
+      // обложка — best-effort: карточка сохраняется и без неё
+    }
+  }
   return created
 }
 

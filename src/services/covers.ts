@@ -43,6 +43,22 @@ export async function saveCover(
   return `covers/${bookId}.webp`
 }
 
+/** Скачивает обложку по URL из метаданных (best-effort, https-only). */
+export async function saveCoverFromUrl(
+  bookId: string,
+  url: string,
+): Promise<string> {
+  const parsed = new URL(url)
+  if (parsed.protocol !== 'https:')
+    throw new AppError('Обложка скачивается только по https')
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(8000),
+    headers: { 'User-Agent': 'Polka/0.1 (домашняя библиотека)' },
+  })
+  if (!res.ok) throw new AppError(`Источник обложки ответил ${res.status}`)
+  return saveCover(bookId, await res.arrayBuffer())
+}
+
 /** Абсолютный путь к файлу обложки; принимает только пути из БД. */
 export function coverAbsolutePath(relativePath: string): string {
   if (!/^covers\/[\w-]+\.webp$/.test(relativePath)) {

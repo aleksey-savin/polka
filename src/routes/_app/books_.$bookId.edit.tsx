@@ -29,6 +29,7 @@ function EditBookPage() {
     libraryId: book.libraryId ?? '',
     shelfId: book.shelfId ?? '',
     wishlist: book.status === 'wishlist',
+    coverUrl: '',
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)

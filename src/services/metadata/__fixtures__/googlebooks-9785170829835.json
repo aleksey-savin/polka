@@ -1,0 +1,33 @@
+{
+  "kind": "books#volumes",
+  "totalItems": 1,
+  "items": [
+    {
+      "kind": "books#volume",
+      "id": "handmade-fixture",
+      "volumeInfo": {
+        "title": "Пикник на обочине",
+        "authors": ["Аркадий Стругацкий", "Борис Стругацкий"],
+        "publisher": "АСТ",
+        "publishedDate": "2014-01-01",
+        "description": "Уникальная зона таит смертельные опасности и артефакты, за которыми охотятся сталкеры.",
+        "industryIdentifiers": [
+          {
+            "type": "ISBN_10",
+            "identifier": "5170829833"
+          },
+          {
+            "type": "ISBN_13",
+            "identifier": "9785170829835"
+          }
+        ],
+        "pageCount": 192,
+        "language": "ru",
+        "imageLinks": {
+          "smallThumbnail": "http://books.google.com/books/content?id=x&printsec=frontcover&img=1&zoom=5",
+          "thumbnail": "http://books.google.com/books/content?id=x&printsec=frontcover&img=1&zoom=1"
+        }
+      }
+    }
+  ]
+}

@@ -90,3 +90,15 @@
     text-wrap: balance;
   }
 }
+
+@keyframes scanline {
+  from {
+    transform: translateY(-46px);
+  }
+  to {
+    transform: translateY(46px);
+  }
+}
+.scanline {
+  animation: scanline 2.2s ease-in-out infinite alternate;
+}

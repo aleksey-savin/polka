@@ -27,6 +27,7 @@ const bookInput = z.object({
   libraryId: z.string().nullable().optional(),
   shelfId: z.string().nullable().optional(),
   wishlist: z.boolean().optional(),
+  coverUrl: z.url().optional(),
 })
 
 export const createBookFn = createServerFn({ method: 'POST' })

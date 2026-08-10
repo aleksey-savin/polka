@@ -1,0 +1,73 @@
+{
+  "name": "\u0410\u0440\u043a\u0430\u0434\u0438\u0439 \u0421\u0442\u0440\u0443\u0433\u0430\u0446\u043a\u0438\u0439",
+  "bio": "Arkady Natanovich Strugatsky was born in Batumi, Russia. While he was a child, he moved with his family to Leningrad. In 1942, Leningrad was under siege and he left with his father, who did not survive the trip to Vologda. Arkady was later drafted into the Soviet Army, and in 1949 he graduated from the Military Institute of Foreign Languages in Moscow. He worked as a teacher and interpreter for the military until 1955. From 1955 he began to work as an editor and writer. In 1958, he began his lifelong collaboration with his brother Boris.",
+  "links": [
+    {
+      "title": "Wikipedia entry",
+      "url": "https://secure.wikimedia.org/wikipedia/en/wiki/Arkady_and_Boris_Strugatsky",
+      "type": { "key": "/type/link" }
+    },
+    {
+      "title": "Wikipedia page",
+      "url": "http://en.wikipedia.org/wiki/Strugackij",
+      "type": { "key": "/type/link" }
+    }
+  ],
+  "type": { "key": "/type/author" },
+  "alternate_names": [
+    "Arkady Natanovich Strugatsky",
+    "Arkady Strugatsky",
+    "Arkadi Strugatski",
+    "Arkadii Strugatskii",
+    "Strugatskii Arkadii",
+    "Arkadii Natanovich Strugatskii",
+    "\u0410\u0440\u043a\u0430\u0434\u0438\u0439 \u0421\u0442\u0440\u0443\u0433\u0430\u0301\u0446\u043a\u0438\u0439",
+    "A. Strugatskie",
+    "Strugatsky Arkady",
+    "Arkadi Strugatsky",
+    "A. Strougatski",
+    "Arkadi Strougatski",
+    "A. Stugatsky",
+    "\u0411\u0440\u0430\u0442\u044c\u044f \u0421\u0442\u0440\u0443\u0433\u0430\u0446\u043a\u0438\u0435",
+    "A. Strugatskij",
+    "Strugatskij A.N.",
+    "A Strugatskij",
+    "Arkadij N. Strugackij",
+    "Arkadij Strugackij",
+    "A.B. Strugackij",
+    "Arkadi Strugatzki",
+    "A. Strugatzki",
+    "A. Strugatsky",
+    "Arkadi\u012d Strugat\ufe20s\ufe21ki\u012d",
+    "Arkadi\u012d Natanovich.\u00b7 Strugat\ufe20s\ufe21ki\u012d",
+    "Arkadii\u0306 Natanovich Strugat\ufe20s\ufe21kii\u0306"
+  ],
+  "personal_name": "Arkadi\u012d Natanovich Strugat\u0361ski\u012d",
+  "source_records": [
+    "amazon:6053757845",
+    "amazon:6053756873",
+    "ia:larcenciellointa0000stru",
+    "amazon:3548310389",
+    "bwb:9781613743430",
+    "amazon:6053754781"
+  ],
+  "birth_date": "August 28, 1925",
+  "key": "/authors/OL182660A",
+  "death_date": "October 12, 1991",
+  "remote_ids": {
+    "viaf": "54154636",
+    "isni": "0000000114727989",
+    "wikidata": "Q61699"
+  },
+  "photos": [14338993],
+  "latest_revision": 18,
+  "revision": 18,
+  "created": {
+    "type": "/type/datetime",
+    "value": "2008-04-01T03:28:50.625462"
+  },
+  "last_modified": {
+    "type": "/type/datetime",
+    "value": "2026-05-10T14:20:01.160077"
+  }
+}

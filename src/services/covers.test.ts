@@ -13,8 +13,7 @@ const { AppError } = await import('./errors')
 function tinyPng(): ArrayBuffer {
   const b64 =
     'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAGCAIAAABrW6giAAAAEElEQVR4nGPQz/aHIwZKOQBRYxXZuBDa7wAAAABJRU5ErkJggg=='
-  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
-    .buffer
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer
 }
 
 describe('covers', () => {
@@ -28,10 +27,7 @@ describe('covers', () => {
 
   test('битые данные — понятная ошибка', () => {
     expect(
-      saveCover(
-        'bad',
-        new TextEncoder().encode('не картинка').buffer,
-      ),
+      saveCover('bad', new TextEncoder().encode('не картинка').buffer),
     ).rejects.toThrow('JPEG, PNG и WebP')
   })
 

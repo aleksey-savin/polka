@@ -1,0 +1,30 @@
+{
+  "publishers": ["Znanie Bookstore"],
+  "title": "\u041f\u0438\u043a\u043d\u0438\u043a \u043d\u0430 \u043e\u0431\u043e\u0447\u0438\u043d\u0435. \u041e\u0442\u0435\u043b\u044c \u00ab\u0423 \u041f\u043e\u0433\u0438\u0431\u0448\u0435\u0433\u043e \u0410\u043b\u044c\u043f\u0438\u043d\u0438\u0441\u0442\u0430\u00bb. \u0423\u043b\u0438\u0442\u043a\u0430 \u043d\u0430 \u0441\u043a\u043b\u043e\u043d\u0435",
+  "identifiers": { "librarything": ["1166459"], "goodreads": ["1442238"] },
+  "physical_format": "Hardcover",
+  "key": "/books/OL9044017M",
+  "authors": [{ "key": "/authors/OL182660A" }],
+  "works": [{ "key": "/works/OL9067435W" }],
+  "type": { "key": "/type/edition" },
+  "local_id": ["urn:bwbsku:P7-EJY-150"],
+  "source_records": ["promise:bwb_daily_pallets_2022-03-17"],
+  "languages": [{ "key": "/languages/rus" }],
+  "covers": [15232314],
+  "series": [
+    "\u041c\u0438\u0440\u044b \u0431\u0440\u0430\u0442\u044c\u0435\u0432 \u0421\u0442\u0440\u0443\u0433\u0430\u0446\u043a\u0438\u0445"
+  ],
+  "number_of_pages": 624,
+  "isbn_10": ["5237014151"],
+  "isbn_13": ["9785237014150"],
+  "latest_revision": 13,
+  "revision": 13,
+  "created": {
+    "type": "/type/datetime",
+    "value": "2008-04-30T09:38:13.731961"
+  },
+  "last_modified": {
+    "type": "/type/datetime",
+    "value": "2026-06-26T17:20:04.082198"
+  }
+}
