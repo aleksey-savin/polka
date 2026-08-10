@@ -1,0 +1,27 @@
+# Зависимости и сборка
+node_modules/
+dist/
+.output/
+
+# Данные рантайма (БД, обложки) — живут в Docker volume
+data/
+
+# Окружение
+.env
+.env.*
+
+# Локальные настройки инструментов
+.idea
+.vscode
+.claude/
+.mcp.json
+
+# Маски песочницы Claude Code (символьные устройства поверх дотфайлов)
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshrc
+.gitconfig
+.gitmodules
+.ripgreprc
