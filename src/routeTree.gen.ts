@@ -21,6 +21,7 @@ import { Route as AppBooksIndexRouteImport } from './routes/_app/books.index'
 import { Route as AppLibrariesIndexRouteImport } from './routes/_app/libraries.index'
 import { Route as AppSeriesIndexRouteImport } from './routes/_app/series.index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
+import { Route as ApiCoversBookIdRouteImport } from './routes/api/covers.$bookId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -81,6 +82,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCoversBookIdRoute = ApiCoversBookIdRouteImport.update({
+  id: '/api/covers/$bookId',
+  path: '/api/covers/$bookId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/covers/$bookId': typeof ApiCoversBookIdRoute
   '/books/': typeof AppBooksIndexRoute
   '/libraries/': typeof AppLibrariesIndexRoute
   '/series/': typeof AppSeriesIndexRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/covers/$bookId': typeof ApiCoversBookIdRoute
   '/books': typeof AppBooksIndexRoute
   '/libraries': typeof AppLibrariesIndexRoute
   '/series': typeof AppSeriesIndexRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/_app/requests': typeof AppRequestsRoute
   '/_app/wishlist': typeof AppWishlistRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/covers/$bookId': typeof ApiCoversBookIdRoute
   '/_app/books/': typeof AppBooksIndexRoute
   '/_app/libraries/': typeof AppLibrariesIndexRoute
   '/_app/series/': typeof AppSeriesIndexRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/requests'
     | '/wishlist'
     | '/api/auth/$'
+    | '/api/covers/$bookId'
     | '/books/'
     | '/libraries/'
     | '/series/'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/requests'
     | '/wishlist'
     | '/api/auth/$'
+    | '/api/covers/$bookId'
     | '/books'
     | '/libraries'
     | '/series'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/_app/requests'
     | '/_app/wishlist'
     | '/api/auth/$'
+    | '/api/covers/$bookId'
     | '/_app/books/'
     | '/_app/libraries/'
     | '/_app/series/'
@@ -171,6 +183,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCoversBookIdRoute: typeof ApiCoversBookIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/covers/$bookId': {
+      id: '/api/covers/$bookId'
+      path: '/api/covers/$bookId'
+      fullPath: '/api/covers/$bookId'
+      preLoaderRoute: typeof ApiCoversBookIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -291,16 +311,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCoversBookIdRoute: ApiCoversBookIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
