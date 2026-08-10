@@ -150,6 +150,7 @@ button { font: inherit; cursor: pointer; }
   border: 0; padding: 0; background: #E8E2D4;
 }
 .spine:hover { transform: translateY(-6px); }
+a.spine { text-decoration: none; }
 .spine span {
   writing-mode: vertical-rl; transform: rotate(180deg); /* снизу вверх */
   font-family: var(--font-display); font-size: 12px; font-weight: 500;

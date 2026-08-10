@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polka · Полка «Фантастика» — макет</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,600;8..30,700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .crumbs { font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; }
+  .crumbs a { color: inherit; text-decoration: none; }
+
+  .head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .head h1 { font-size: 30px; }
+  .head .actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* Панель цвета полки */
+  .color-panel { margin: 20px 0 6px; padding: 14px 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .color-panel b { font-size: 13.5px; }
+  .opt { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-soft);
+         border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px 5px 6px; cursor: pointer; background: var(--card); }
+  .opt.on { border-color: var(--lamp); color: var(--lamp-deep); font-weight: 600; box-shadow: 0 0 0 1px var(--lamp); }
+  .opt i { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(35,43,56,.12); }
+  .presets-row { display: flex; gap: 6px; }
+  .presets-row .opt { padding: 5px 6px; }
+
+  /* Список книг */
+  .list { margin-top: 22px; }
+  .list-head { display: flex; align-items: center; gap: 12px; padding: 0 6px 10px; }
+  .list-head h2 { font-size: 18px; }
+  .list-head select { margin-left: auto; font: 500 13px var(--font-ui); color: var(--ink-soft);
+                      border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; background: var(--card); }
+  .row { display: flex; align-items: center; gap: 14px; padding: 10px 14px; }
+  .row + .row { margin-top: 8px; }
+  .row input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--lamp); }
+  .row .mini { flex: none; width: 26px; height: 64px; border-radius: 3px; box-shadow: var(--shadow-spine); }
+  .row .t { flex: 1; min-width: 180px; }
+  .row .t b { font-family: var(--font-display); font-size: 16px; font-weight: 600; }
+  .row .t span { display: block; font-size: 13px; color: var(--ink-soft); }
+  .row .meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .row .stars-s { color: #C9A23B; font-size: 13px; letter-spacing: 1px; white-space: nowrap; }
+  .row .year { font-family: var(--font-data); font-size: 12px; color: var(--ink-soft); }
+  .row.checked { outline: 2px solid var(--lamp); outline-offset: -2px; }
+
+  /* Панель массовых действий */
+  .batch {
+    position: sticky; bottom: 14px; margin-top: 18px;
+    display: flex; align-items: center; gap: 10px;
+    background: var(--ink); color: #fff; border-radius: 12px; padding: 10px 16px;
+    box-shadow: 0 10px 28px -10px rgba(35,43,56,.45);
+  }
+  .batch b { font-size: 14px; }
+  .batch .btn { background: var(--lamp); }
+  .batch .ghost-w { background: none; border: 0; color: rgba(255,255,255,.75); font-weight: 600; font-size: 13px; }
+  @media (max-width: 640px) { .row .meta { width: 100%; } .row { flex-wrap: wrap; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="library.html"><span class="word">Полка</span><span class="mini-spine"><i></i></span><span class="mini-spine"><i></i></span></a>
+  <nav class="nav">
+    <a href="library.html" aria-current="page">Библиотека</a>
+    <a href="#">Каталог</a><a href="#">Серии</a><a href="#">Хочу</a>
+    <a href="loans.html">На руках</a><a href="#">Заявки<span class="badge">1</span></a>
+  </nav>
+  <div class="grow"></div>
+  <a class="btn" href="add.html">+ Добавить книгу</a>
+</header>
+
+<main class="container">
+  <p class="crumbs"><a href="library.html">Дом</a> / Фантастика</p>
+
+  <div class="head">
+    <h1>Фантастика</h1>
+    <span class="shelf-meta"><b>24</b> книги · медиана изданий <b>1989</b></span>
+    <div class="actions">
+      <a class="btn secondary" href="add.html">+ Добавить сюда</a>
+      <a class="btn secondary" href="share.html">Поделиться</a>
+      <button class="btn ghost">Переименовать</button>
+    </div>
+  </div>
+
+  <!-- Сама полка -->
+  <section class="shelf" style="--board:#DDBE8A; margin-top:18px">
+    <div class="shelf-books">
+      <a href="book.html" class="spine c3 w3 tall"><span>Стругацкие · Трудно быть богом</span></a>
+      <a href="book.html" class="spine c1 w2"><span>Стругацкие · Пикник на обочине</span></a>
+      <a href="book.html" class="spine c7 w3"><span>Лем · Солярис</span></a>
+      <a href="book.html" class="spine c6 w4 short"><span>Ефремов · Туманность Андромеды</span></a>
+      <a href="book.html" class="spine c2 w2"><span>Беляев · Человек-амфибия</span></a>
+      <a href="book.html" class="spine c4 w3 lent" title="На руках у Маши"><span>Булычёв · Посёлок</span></a>
+      <a href="book.html" class="spine c1 w3"><span>Брэдбери · 451° по Фаренгейту</span></a>
+      <a href="book.html" class="spine c8 w4 tall"><span>Азимов · Основание</span></a>
+      <a href="book.html" class="spine c5 w2 short"><span>Шекли · Корпорация «Бессмертие»</span></a>
+      <a href="book.html" class="spine c3 w2"><span>Гаррисон · Стальная Крыса</span></a>
+      <a href="book.html" class="spine c6 w3"><span>Булгаков · Роковые яйца</span></a>
+      <a href="book.html" class="spine c4 w5 tall"><span>Толкин · Властелин Колец</span></a>
+    </div>
+    <div class="board"></div>
+  </section>
+
+  <!-- Цвет полки -->
+  <section class="card color-panel">
+    <b>Цвет полки:</b>
+    <button class="opt on"><i style="background:linear-gradient(90deg,#DDBE8A,#F2F1EC)"></i>Авто-патина · сейчас 1989</button>
+    <div class="presets-row" role="group" aria-label="Пресеты">
+      <button class="opt" title="роза"><i style="background:#E9ADBC"></i></button>
+      <button class="opt" title="охра"><i style="background:#DFAE54"></i></button>
+      <button class="opt" title="шалфей"><i style="background:#A3BE9C"></i></button>
+      <button class="opt" title="небо"><i style="background:#9FBEDC"></i></button>
+      <button class="opt" title="сирень"><i style="background:#B7A3D0"></i></button>
+      <button class="opt" title="кирпич"><i style="background:#CE8B71"></i></button>
+      <button class="opt" title="мята"><i style="background:#A8CFC0"></i></button>
+      <button class="opt" title="графит"><i style="background:#8A93A3"></i></button>
+    </div>
+    <button class="opt"><i style="background:conic-gradient(#E9ADBC,#DFAE54,#A3BE9C,#9FBEDC,#B7A3D0,#E9ADBC)"></i>Свой цвет…</button>
+  </section>
+
+  <!-- Книги списком -->
+  <section class="list">
+    <div class="list-head">
+      <h2>Книги на полке</h2>
+      <select aria-label="Сортировка">
+        <option>Как стоят на полке</option><option>По автору</option><option>По году</option><option>По оценке</option>
+      </select>
+    </div>
+
+    <div class="card row checked">
+      <input type="checkbox" checked aria-label="Выбрать">
+      <div class="mini" style="background:#C9D2C5"></div>
+      <div class="t"><b>Трудно быть богом</b><span>Аркадий и Борис Стругацкие</span></div>
+      <div class="meta"><span class="chip series">Миры братьев Стругацких</span><span class="stars-s">★★★★★</span><span class="year">1989</span></div>
+    </div>
+
+    <div class="card row checked">
+      <input type="checkbox" checked aria-label="Выбрать">
+      <div class="mini" style="background:#E8E2D4"></div>
+      <div class="t"><b>Пикник на обочине</b><span>Аркадий и Борис Стругацкие</span></div>
+      <div class="meta"><span class="chip series">Миры братьев Стругацких</span><span class="stars-s">★★★★★</span><span class="year">1997</span></div>
+    </div>
+
+    <div class="card row">
+      <input type="checkbox" aria-label="Выбрать">
+      <div class="mini" style="background:#CBD3DD"></div>
+      <div class="t"><b>Посёлок</b><span>Кир Булычёв</span></div>
+      <div class="meta"><span class="stamp" style="font-size:10px">На руках</span><span class="stars-s">★★★★<span style="color:var(--line)">★</span></span><span class="year">1988</span></div>
+    </div>
+
+    <div class="card row">
+      <input type="checkbox" aria-label="Выбрать">
+      <div class="mini" style="background:#4A5A6E"></div>
+      <div class="t"><b>Солярис</b><span>Станислав Лем</span></div>
+      <div class="meta"><span class="chip">перечитать</span><span class="stars-s">★★★★★</span><span class="year">1992</span></div>
+    </div>
+
+    <div class="card row">
+      <input type="checkbox" aria-label="Выбрать">
+      <div class="mini" style="background:#E3D3C0"></div>
+      <div class="t"><b>Туманность Андромеды</b><span>Иван Ефремов</span></div>
+      <div class="meta"><span class="stars-s" style="color:var(--line)">★★★★★</span><span class="year">1987</span></div>
+    </div>
+
+    <!-- Массовые действия при выборе -->
+    <div class="batch">
+      <b>Выбраны 2 книги</b>
+      <button class="btn">Переместить на полку ▾</button>
+      <button class="ghost-w">Добавить тэг</button>
+      <button class="ghost-w">Снять выбор</button>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>
