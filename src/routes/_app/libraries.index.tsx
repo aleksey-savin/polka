@@ -67,8 +67,8 @@ function LibrariesPage() {
             search={{ lib: l.id }}
             className={
               l.id === overview.id
-                ? 'border-b-[3px] border-foreground px-1 font-display text-[26px] font-semibold'
-                : 'px-1 font-display text-[26px] font-semibold text-muted-foreground hover:text-foreground'
+                ? 'border-b-[3px] border-foreground px-1 text-[24px] font-semibold tracking-tight'
+                : 'px-1 text-[24px] font-semibold tracking-tight text-muted-foreground hover:text-foreground'
             }
           >
             {l.name}

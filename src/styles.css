@@ -83,10 +83,15 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
+  /* Заголовки интерфейса — гротеск: засечки в UI режут глаз.
+     Piazzolla (--font-display) — только «книжные объекты»: логотип,
+     корешки, генерированные обложки. */
   h1,
   h2,
   h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.01em;
     text-wrap: balance;
   }
 }

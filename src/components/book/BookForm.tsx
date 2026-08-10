@@ -154,7 +154,7 @@ export function BookForm({
           required
           value={value.title}
           onChange={(e) => set('title', e.target.value)}
-          placeholder="Пикник на обочине"
+          placeholder="Анна Каренина"
         />
       </div>
       <div className="grid gap-1.5">
@@ -163,7 +163,7 @@ export function BookForm({
           id="bf-authors"
           value={value.authors}
           onChange={(e) => set('authors', e.target.value)}
-          placeholder="Аркадий Стругацкий; Борис Стругацкий"
+          placeholder="Фамилия Имя; Фамилия Имя"
         />
       </div>
 
@@ -227,7 +227,7 @@ export function BookForm({
             className="font-mono text-[13px]"
             value={value.isbn13}
             onChange={(e) => set('isbn13', e.target.value)}
-            placeholder="978-5-17-098657-2"
+            placeholder="978-5-…"
           />
         </div>
       </div>

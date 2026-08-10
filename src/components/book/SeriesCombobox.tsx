@@ -40,7 +40,7 @@ export function SeriesCombobox({
           setOpen(true)
         }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder="Например: Миры братьев Стругацких"
+        placeholder="Например: Азбука-классика"
         autoComplete="off"
       />
       {open && hints.length > 0 && (

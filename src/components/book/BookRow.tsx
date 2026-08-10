@@ -56,7 +56,7 @@ export function BookRow({
         <Link
           to="/books/$bookId"
           params={{ bookId: book.id }}
-          className="font-display text-base font-semibold hover:underline"
+          className="text-base font-semibold hover:underline"
         >
           {book.title}
         </Link>

@@ -27,7 +27,7 @@ function SeriesListPage() {
             <Link key={s.id} to="/series/$seriesId" params={{ seriesId: s.id }}>
               <Card className="h-full transition-shadow hover:shadow-md">
                 <CardContent className="grid gap-1 pt-5">
-                  <span className="font-display text-lg font-semibold text-stamp">
+                  <span className="text-lg font-semibold text-stamp">
                     {s.name}
                   </span>
                   <span className="text-[13px] text-muted-foreground">

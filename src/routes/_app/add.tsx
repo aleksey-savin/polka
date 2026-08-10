@@ -315,9 +315,7 @@ function AddPage() {
             <Input
               className="font-mono"
               placeholder={
-                mode === 'scan'
-                  ? '…или введите ISBN цифрами'
-                  : '978-5-17-082983-5'
+                mode === 'scan' ? '…или введите ISBN цифрами' : '978-5-…'
               }
               value={isbnInput}
               onChange={(e) => setIsbnInput(e.target.value)}

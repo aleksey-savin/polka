@@ -114,7 +114,7 @@ export function NewShelfDialog({
             id="shelf-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Фантастика"
+            placeholder="Например: Классика"
             onKeyDown={(e) => e.key === 'Enter' && void submit()}
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
