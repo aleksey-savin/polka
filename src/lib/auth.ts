@@ -14,6 +14,10 @@ export const auth = betterAuth({
     enabled: true,
     disableSignUp: !env.REGISTRATION_OPEN,
   },
+  advanced: {
+    // Приложение живёт за Nginx Proxy Manager — клиентский IP приходит в заголовке.
+    ipAddress: { ipAddressHeaders: ['x-forwarded-for', 'x-real-ip'] },
+  },
   // tanstackStartCookies должен быть ПОСЛЕДНИМ плагином — иначе серверный
   // sign-in не выставит cookie (см. docs/architecture.md).
   plugins: [tanstackStartCookies()],

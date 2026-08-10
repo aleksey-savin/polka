@@ -13,6 +13,10 @@ ENV NODE_ENV=production \
     DATA_DIR=/data \
     PORT=3000
 
+# Серверный бандл экстернализует зависимости — нужен production node_modules
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production --ignore-scripts
+
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/public ./public

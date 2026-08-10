@@ -1,17 +1,92 @@
+@import 'tailwindcss';
+@import './styles/fonts.css';
 
-@import "tailwindcss";
+/* Палитра Polka — docs/ux-ui-guideline.md: бумага, чернила, лампа, штемпель. */
+:root {
+  --background: oklch(0.982 0.004 106); /* бумага #FAFAF6 */
+  --foreground: oklch(0.284 0.028 262); /* чернила #232B38 */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.284 0.028 262);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.284 0.028 262);
+  --primary: oklch(0.475 0.075 163); /* лампа #2F6B4F */
+  --primary-foreground: oklch(0.985 0.005 160);
+  --secondary: oklch(0.955 0.006 100);
+  --secondary-foreground: oklch(0.284 0.028 262);
+  --muted: oklch(0.955 0.006 100);
+  --muted-foreground: oklch(0.492 0.024 262); /* мягкие чернила #5C6472 */
+  --accent: oklch(0.951 0.014 165); /* подсветка лампы #EAF2ED */
+  --accent-foreground: oklch(0.421 0.068 163); /* глубокая лампа #275C43 */
+  --destructive: oklch(0.518 0.135 29); /* сургуч #B23F38 */
+  --destructive-foreground: oklch(0.985 0.005 60);
+  --border: oklch(0.912 0.009 95); /* линия #E6E4DC */
+  --input: oklch(0.912 0.009 95);
+  --ring: oklch(0.475 0.075 163);
+  --radius: 0.625rem;
 
-* {
-  box-sizing: border-box;
+  /* Фирменные токены */
+  --stamp: oklch(0.455 0.118 270); /* штемпельные чернила #4353A5 */
+  --patina-old: oklch(0.81 0.075 84); /* старый лак #DDBE8A */
+  --patina-fresh: oklch(0.955 0.005 100); /* свежая краска #F2F1EC */
+  --shelf-neutral: oklch(0.936 0.008 95); /* полка без данных #EDEBE4 */
 }
 
-html,
-body,
-#app {
-  min-height: 100%;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-stamp: var(--stamp);
+  --color-patina-old: var(--patina-old);
+  --color-patina-fresh: var(--patina-fresh);
+  --color-shelf-neutral: var(--shelf-neutral);
+
+  --font-sans: 'Golos Text', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Piazzolla', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-body {
-  margin: 0;
+@layer base {
+  * {
+    border-color: var(--color-border);
+    outline-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
+  }
+  html,
+  body,
+  #app {
+    min-height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
 }
-

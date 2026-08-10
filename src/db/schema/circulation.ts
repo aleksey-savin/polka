@@ -31,7 +31,9 @@ export const borrowRequest = sqliteTable('borrow_request', {
     .notNull()
     .references(() => book.id, { onDelete: 'cascade' }),
   guestName: text('guest_name').notNull(),
-  requesterUserId: text('requester_user_id').references(() => user.id, { onDelete: 'set null' }),
+  requesterUserId: text('requester_user_id').references(() => user.id, {
+    onDelete: 'set null',
+  }),
   note: text('note'),
   status: text('status', { enum: ['pending', 'approved', 'declined'] })
     .notNull()
@@ -54,7 +56,9 @@ export const loan = sqliteTable(
       .$defaultFn(() => new Date()),
     dueAt: integer('due_at', { mode: 'timestamp' }),
     returnedAt: integer('returned_at', { mode: 'timestamp' }),
-    requestId: text('request_id').references(() => borrowRequest.id, { onDelete: 'set null' }),
+    requestId: text('request_id').references(() => borrowRequest.id, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
   },
   (t) => [
@@ -75,9 +79,15 @@ export const share = sqliteTable(
       .references(() => user.id),
     token: text('token').notNull().unique(),
     scope: text('scope', { enum: ['library', 'shelf'] }).notNull(),
-    libraryId: text('library_id').references(() => library.id, { onDelete: 'cascade' }),
-    shelfId: text('shelf_id').references(() => shelf.id, { onDelete: 'cascade' }),
-    allowRequests: integer('allow_requests', { mode: 'boolean' }).notNull().default(true),
+    libraryId: text('library_id').references(() => library.id, {
+      onDelete: 'cascade',
+    }),
+    shelfId: text('shelf_id').references(() => shelf.id, {
+      onDelete: 'cascade',
+    }),
+    allowRequests: integer('allow_requests', { mode: 'boolean' })
+      .notNull()
+      .default(true),
     createdAt: createdAt(),
     revokedAt: integer('revoked_at', { mode: 'timestamp' }),
   },

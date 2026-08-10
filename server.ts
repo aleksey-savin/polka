@@ -16,7 +16,11 @@ Bun.serve({
     if (request.method === 'GET' || request.method === 'HEAD') {
       const pathname = decodeURIComponent(new URL(request.url).pathname)
       const filePath = normalize(join(clientDir, pathname))
-      if (pathname !== '/' && filePath.startsWith(clientDir) && existsSync(filePath)) {
+      if (
+        pathname !== '/' &&
+        filePath.startsWith(clientDir) &&
+        existsSync(filePath)
+      ) {
         const file = Bun.file(filePath)
         if (await file.exists()) {
           const immutable = pathname.startsWith('/assets/')

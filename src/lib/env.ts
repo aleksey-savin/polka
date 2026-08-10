@@ -15,6 +15,11 @@ const envSchema = z.object({
 
 export const env = envSchema.parse(process.env)
 
-if (process.env.NODE_ENV === 'production' && env.BETTER_AUTH_SECRET === DEV_SECRET) {
-  throw new Error('BETTER_AUTH_SECRET обязателен в продакшене — задайте длинную случайную строку')
+if (
+  process.env.NODE_ENV === 'production' &&
+  env.BETTER_AUTH_SECRET === DEV_SECRET
+) {
+  throw new Error(
+    'BETTER_AUTH_SECRET обязателен в продакшене — задайте длинную случайную строку',
+  )
 }

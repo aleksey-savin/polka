@@ -48,7 +48,10 @@ export const libraryMember = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [primaryKey({ columns: [t.libraryId, t.userId] }), index('library_member_user_idx').on(t.userId)],
+  (t) => [
+    primaryKey({ columns: [t.libraryId, t.userId] }),
+    index('library_member_user_idx').on(t.userId),
+  ],
 )
 
 export const libraryInvite = sqliteTable('library_invite', {
@@ -101,21 +104,29 @@ export const book = sqliteTable(
     addedBy: text('added_by')
       .notNull()
       .references(() => user.id),
-    libraryId: text('library_id').references(() => library.id, { onDelete: 'cascade' }),
-    shelfId: text('shelf_id').references(() => shelf.id, { onDelete: 'set null' }),
+    libraryId: text('library_id').references(() => library.id, {
+      onDelete: 'cascade',
+    }),
+    shelfId: text('shelf_id').references(() => shelf.id, {
+      onDelete: 'set null',
+    }),
     title: text('title').notNull(),
     authors: text('authors').notNull().default(''),
     isbn10: text('isbn10'),
     isbn13: text('isbn13'),
     publisher: text('publisher'),
     year: integer('year'),
-    seriesId: text('series_id').references(() => series.id, { onDelete: 'set null' }),
+    seriesId: text('series_id').references(() => series.id, {
+      onDelete: 'set null',
+    }),
     seriesNumber: text('series_number'),
     pages: integer('pages'),
     language: text('language').notNull().default('ru'),
     annotation: text('annotation'),
     coverPath: text('cover_path'),
-    status: text('status', { enum: ['in_library', 'wishlist', 'gifted', 'lost'] })
+    status: text('status', {
+      enum: ['in_library', 'wishlist', 'gifted', 'lost'],
+    })
       .notNull()
       .default('in_library'),
     giftedTo: text('gifted_to'),
@@ -145,7 +156,9 @@ export const bookPersonal = sqliteTable(
     bookId: text('book_id')
       .notNull()
       .references(() => book.id, { onDelete: 'cascade' }),
-    readingStatus: text('reading_status', { enum: ['unread', 'reading', 'read', 'abandoned'] })
+    readingStatus: text('reading_status', {
+      enum: ['unread', 'reading', 'read', 'abandoned'],
+    })
       .notNull()
       .default('unread'),
     readAt: integer('read_at', { mode: 'timestamp' }),
@@ -156,7 +169,10 @@ export const bookPersonal = sqliteTable(
   },
   (t) => [
     primaryKey({ columns: [t.userId, t.bookId] }),
-    check('book_personal_rating_range', sql`${t.rating} IS NULL OR (${t.rating} >= 1 AND ${t.rating} <= 5)`),
+    check(
+      'book_personal_rating_range',
+      sql`${t.rating} IS NULL OR (${t.rating} >= 1 AND ${t.rating} <= 5)`,
+    ),
   ],
 )
 

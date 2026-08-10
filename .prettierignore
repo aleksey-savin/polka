@@ -1,3 +1,11 @@
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+bun.lock
+.bun/
+data/
+dist/
+drizzle/
+docs/design/
+src/routeTree.gen.ts
+src/styles/fonts.css

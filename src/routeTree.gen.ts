@@ -10,12 +10,71 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppAddRouteImport } from './routes/_app/add'
+import { Route as AppFriendsRouteImport } from './routes/_app/friends'
+import { Route as AppLoansRouteImport } from './routes/_app/loans'
+import { Route as AppRequestsRouteImport } from './routes/_app/requests'
+import { Route as AppWishlistRouteImport } from './routes/_app/wishlist'
+import { Route as AppBooksIndexRouteImport } from './routes/_app/books.index'
+import { Route as AppLibrariesIndexRouteImport } from './routes/_app/libraries.index'
+import { Route as AppSeriesIndexRouteImport } from './routes/_app/series.index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppAddRoute = AppAddRouteImport.update({
+  id: '/add',
+  path: '/add',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFriendsRoute = AppFriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLoansRoute = AppLoansRouteImport.update({
+  id: '/loans',
+  path: '/loans',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRequestsRoute = AppRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWishlistRoute = AppWishlistRouteImport.update({
+  id: '/wishlist',
+  path: '/wishlist',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBooksIndexRoute = AppBooksIndexRouteImport.update({
+  id: '/books/',
+  path: '/books/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLibrariesIndexRoute = AppLibrariesIndexRouteImport.update({
+  id: '/libraries/',
+  path: '/libraries/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSeriesIndexRoute = AppSeriesIndexRouteImport.update({
+  id: '/series/',
+  path: '/series/',
+  getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -25,27 +84,92 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/add': typeof AppAddRoute
+  '/friends': typeof AppFriendsRoute
+  '/loans': typeof AppLoansRoute
+  '/requests': typeof AppRequestsRoute
+  '/wishlist': typeof AppWishlistRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/books/': typeof AppBooksIndexRoute
+  '/libraries/': typeof AppLibrariesIndexRoute
+  '/series/': typeof AppSeriesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/add': typeof AppAddRoute
+  '/friends': typeof AppFriendsRoute
+  '/loans': typeof AppLoansRoute
+  '/requests': typeof AppRequestsRoute
+  '/wishlist': typeof AppWishlistRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/books': typeof AppBooksIndexRoute
+  '/libraries': typeof AppLibrariesIndexRoute
+  '/series': typeof AppSeriesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_app/add': typeof AppAddRoute
+  '/_app/friends': typeof AppFriendsRoute
+  '/_app/loans': typeof AppLoansRoute
+  '/_app/requests': typeof AppRequestsRoute
+  '/_app/wishlist': typeof AppWishlistRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_app/books/': typeof AppBooksIndexRoute
+  '/_app/libraries/': typeof AppLibrariesIndexRoute
+  '/_app/series/': typeof AppSeriesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/add'
+    | '/friends'
+    | '/loans'
+    | '/requests'
+    | '/wishlist'
+    | '/api/auth/$'
+    | '/books/'
+    | '/libraries/'
+    | '/series/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/auth/$'
-  id: '__root__' | '/' | '/api/auth/$'
+  to:
+    | '/'
+    | '/login'
+    | '/add'
+    | '/friends'
+    | '/loans'
+    | '/requests'
+    | '/wishlist'
+    | '/api/auth/$'
+    | '/books'
+    | '/libraries'
+    | '/series'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/login'
+    | '/_app/add'
+    | '/_app/friends'
+    | '/_app/loans'
+    | '/_app/requests'
+    | '/_app/wishlist'
+    | '/api/auth/$'
+    | '/_app/books/'
+    | '/_app/libraries/'
+    | '/_app/series/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -58,6 +182,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/add': {
+      id: '/_app/add'
+      path: '/add'
+      fullPath: '/add'
+      preLoaderRoute: typeof AppAddRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/friends': {
+      id: '/_app/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof AppFriendsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/loans': {
+      id: '/_app/loans'
+      path: '/loans'
+      fullPath: '/loans'
+      preLoaderRoute: typeof AppLoansRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/requests': {
+      id: '/_app/requests'
+      path: '/requests'
+      fullPath: '/requests'
+      preLoaderRoute: typeof AppRequestsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/wishlist': {
+      id: '/_app/wishlist'
+      path: '/wishlist'
+      fullPath: '/wishlist'
+      preLoaderRoute: typeof AppWishlistRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/books/': {
+      id: '/_app/books/'
+      path: '/books'
+      fullPath: '/books/'
+      preLoaderRoute: typeof AppBooksIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/libraries/': {
+      id: '/_app/libraries/'
+      path: '/libraries'
+      fullPath: '/libraries/'
+      preLoaderRoute: typeof AppLibrariesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/series/': {
+      id: '/_app/series/'
+      path: '/series'
+      fullPath: '/series/'
+      preLoaderRoute: typeof AppSeriesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -68,8 +262,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppRouteChildren {
+  AppAddRoute: typeof AppAddRoute
+  AppFriendsRoute: typeof AppFriendsRoute
+  AppLoansRoute: typeof AppLoansRoute
+  AppRequestsRoute: typeof AppRequestsRoute
+  AppWishlistRoute: typeof AppWishlistRoute
+  AppBooksIndexRoute: typeof AppBooksIndexRoute
+  AppLibrariesIndexRoute: typeof AppLibrariesIndexRoute
+  AppSeriesIndexRoute: typeof AppSeriesIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAddRoute: AppAddRoute,
+  AppFriendsRoute: AppFriendsRoute,
+  AppLoansRoute: AppLoansRoute,
+  AppRequestsRoute: AppRequestsRoute,
+  AppWishlistRoute: AppWishlistRoute,
+  AppBooksIndexRoute: AppBooksIndexRoute,
+  AppLibrariesIndexRoute: AppLibrariesIndexRoute,
+  AppSeriesIndexRoute: AppSeriesIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
