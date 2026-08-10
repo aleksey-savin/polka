@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polka · На руках — макет</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,600;8..30,700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .page-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 18px; }
+  .page-head h1 { font-size: 30px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+  .tabs a { text-decoration: none; color: var(--ink-soft); font-weight: 600; font-size: 14px; padding: 9px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs a[aria-current] { color: var(--lamp-deep); border-color: var(--lamp); }
+
+  .loan { display: flex; align-items: center; gap: 16px; padding: 14px 18px; margin-bottom: 12px; }
+  .loan .spine-mini { flex: none; width: 30px; height: 74px; border-radius: 3px; box-shadow: var(--shadow-spine);
+    display: grid; place-items: center; }
+  .loan .spine-mini span { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--font-display); font-size: 9.5px; color: rgba(35,43,56,.8); max-height: 66px; overflow: hidden; white-space: nowrap; }
+  .loan .who { flex: 1; }
+  .loan .who b { font-size: 16px; }
+  .loan .who .t { display: block; font-size: 13.5px; color: var(--ink-soft); }
+  .loan .dates { text-align: right; font-family: var(--font-data); font-size: 12.5px; color: var(--ink-soft); display: grid; gap: 3px; justify-items: end; }
+  @media (max-width: 640px) { .loan { flex-wrap: wrap; } .loan .dates { text-align: left; justify-items: start; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="library.html"><span class="word">Полка</span><span class="mini-spine"><i></i></span><span class="mini-spine"><i></i></span></a>
+  <nav class="nav"><a href="library.html">Библиотека</a><a href="#">Каталог</a><a href="#">Серии</a><a href="#">Хочу</a><a href="loans.html" aria-current="page">На руках</a><a href="#">Заявки<span class="badge">1</span></a></nav>
+  <div class="grow"></div>
+  <a class="btn" href="add.html">+ Добавить книгу</a>
+</header>
+
+<main class="container">
+  <div class="page-head"><h1>На руках</h1><span class="shelf-meta"><b>3</b> книги у читателей</span></div>
+
+  <nav class="tabs"><a href="#" aria-current="page">Сейчас · 3</a><a href="#">История · 21</a></nav>
+
+  <div class="card loan">
+    <div class="spine-mini" style="background:#CBD3DD"><span>Посёлок</span></div>
+    <div class="who"><b>Маша</b><span class="t">Посёлок · Кир Булычёв</span></div>
+    <div class="dates"><span>взяла 2 авг 2026</span><span>вернуть к 1 сен 2026</span></div>
+    <button class="btn secondary">Вернули</button>
+  </div>
+
+  <div class="card loan">
+    <div class="spine-mini" style="background:#D9CDB8"><span>Три товарища</span></div>
+    <div class="who"><b>Дима</b> <span class="stamp red" style="font-size:10px; margin-left:6px">Просрочено</span><span class="t">Три товарища · Эрих Мария Ремарк</span></div>
+    <div class="dates"><span>взял 3 мая 2026</span><span>обещал к 1 июл 2026</span></div>
+    <button class="btn secondary">Вернули</button>
+  </div>
+
+  <div class="card loan">
+    <div class="spine-mini" style="background:#C9D2C5"><span>Дюна</span></div>
+    <div class="who"><b>Серёжа</b><span class="t">Дюна · Фрэнк Герберт</span></div>
+    <div class="dates"><span>взял 28 июл 2026</span><span>срок не задан</span></div>
+    <button class="btn secondary">Вернули</button>
+  </div>
+
+  <p class="hint" style="margin-top:24px">Вернули книгу — запись переедет в историю, а корешок на полке встанет ровно.</p>
+</main>
+
+</body>
+</html>

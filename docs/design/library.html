@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polka · Библиотека «Дом» — макет</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,600;8..30,700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .lib-tabs { display: flex; gap: 8px; align-items: center; margin: 6px 0 4px; }
+  .lib-tab {
+    font-family: var(--font-display); font-size: 26px; font-weight: 600;
+    text-decoration: none; padding: 2px 4px; color: var(--ink-soft);
+  }
+  .lib-tab[aria-current] { color: var(--ink); border-bottom: 3px solid var(--ink); }
+  .lib-sub { color: var(--ink-soft); font-size: 13.5px; }
+
+  .search {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 14px; color: var(--ink-soft); font-size: 13.5px; min-width: 210px;
+  }
+
+  /* стопка «Неразобранное» */
+  .unsorted { margin-top: 40px; }
+  .unsorted .head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
+  .unsorted h2 { font-size: 21px; }
+
+  /* мобильная таб-панель */
+  .tabbar { display: none; }
+  @media (max-width: 720px) {
+    .tabbar {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+      background: var(--card); border-top: 1px solid var(--line);
+      padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
+    }
+    .tabbar a {
+      display: grid; justify-items: center; gap: 3px;
+      text-decoration: none; font-size: 10.5px; color: var(--ink-soft); padding: 4px 0;
+    }
+    .tabbar a[aria-current] { color: var(--lamp-deep); font-weight: 600; }
+    .tabbar .add {
+      width: 44px; height: 44px; border-radius: 14px; background: var(--lamp);
+      color: #fff; display: grid; place-items: center; font-size: 24px; margin-top: -14px;
+      box-shadow: 0 6px 14px -6px rgba(47,107,79,.5);
+    }
+    .search { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="library.html" aria-label="Полка — на главную">
+    <span class="word">Полка</span>
+    <span class="mini-spine"><i></i></span>
+    <span class="mini-spine"><i></i></span>
+  </a>
+  <nav class="nav" aria-label="Разделы">
+    <a href="library.html" aria-current="page">Библиотека</a>
+    <a href="#">Каталог</a>
+    <a href="#">Серии</a>
+    <a href="#">Хочу</a>
+    <a href="loans.html">На руках</a>
+    <a href="#">Заявки<span class="badge">1</span></a>
+  </nav>
+  <div class="grow"></div>
+  <div class="search">🔍 Название, автор или серия…</div>
+  <a class="btn" href="add.html">+ Добавить книгу</a>
+</header>
+
+<main class="container">
+
+  <div class="lib-tabs">
+    <a class="lib-tab" href="#" aria-current="page">Дом</a>
+    <a class="lib-tab" href="#">Дача</a>
+    <a class="btn ghost" href="#" style="margin-left:6px">+ библиотека</a>
+  </div>
+  <p class="lib-sub">4 полки · 87 книг · 3 на руках</p>
+
+  <!-- Полка со старыми книгами: патина янтарная (медиана 1989) -->
+  <section class="shelf" style="--board:#DDBE8A">
+    <div class="shelf-head">
+      <h2>Фантастика</h2>
+      <span class="shelf-meta"><b>24</b> книги · медиана изданий <b>1989</b></span>
+    </div>
+    <div class="shelf-books">
+      <button class="spine c3 w3 tall"><span>Стругацкие · Трудно быть богом</span></button>
+      <button class="spine c1 w2"><span>Стругацкие · Пикник на обочине</span></button>
+      <button class="spine c7 w3"><span>Лем · Солярис</span></button>
+      <button class="spine c6 w4 short"><span>Ефремов · Туманность Андромеды</span></button>
+      <button class="spine c2 w2"><span>Беляев · Человек-амфибия</span></button>
+      <button class="spine c4 w3 lent" title="На руках у Маши"><span>Булычёв · Посёлок</span></button>
+      <button class="spine c1 w3"><span>Брэдбери · 451° по Фаренгейту</span></button>
+      <button class="spine c8 w4 tall"><span>Азимов · Основание</span></button>
+      <button class="spine c5 w2 short"><span>Шекли · Корпорация «Бессмертие»</span></button>
+      <button class="spine c3 w2"><span>Гаррисон · Стальная Крыса</span></button>
+      <button class="spine c6 w3"><span>Булгаков · Роковые яйца</span></button>
+      <button class="spine c4 w5 tall"><span>Толкин · Властелин Колец</span></button>
+    </div>
+    <div class="board"></div>
+    <div class="shelf-foot">
+      <span class="hint">Корешок под наклоном — книга на руках</span>
+      <a class="btn ghost" href="#">Открыть полку →</a>
+    </div>
+  </section>
+
+  <!-- Полка с ручным акцентом: розовая «Романтика» -->
+  <section class="shelf" style="--board:#E9ADBC">
+    <div class="shelf-head">
+      <h2>Романтика</h2>
+      <span class="shelf-meta"><b>11</b> книг · цвет задан вручную</span>
+    </div>
+    <div class="shelf-books">
+      <button class="spine c5 w4 tall"><span>Остин · Гордость и предубеждение</span></button>
+      <button class="spine c1 w3"><span>Бронте · Джейн Эйр</span></button>
+      <button class="spine c6 w5 tall"><span>Митчелл · Унесённые ветром</span></button>
+      <button class="spine c2 w2 short"><span>Мойес · До встречи с тобой</span></button>
+      <button class="spine c4 w3"><span>Куин · Бриджертоны</span></button>
+      <button class="spine c3 w2"><span>Спаркс · Дневник памяти</span></button>
+    </div>
+    <div class="board"></div>
+    <div class="shelf-foot">
+      <span></span><a class="btn ghost" href="#">Открыть полку →</a>
+    </div>
+  </section>
+
+  <!-- Свежая полка: белая, «пахнет краской» (медиана 2022) -->
+  <section class="shelf" style="--board:#F2F1EC">
+    <div class="shelf-head">
+      <h2>Современная проза</h2>
+      <span class="shelf-meta"><b>17</b> книг · медиана изданий <b>2022</b></span>
+    </div>
+    <div class="shelf-books">
+      <button class="spine c4 w3 tall"><span>Водолазкин · Лавр</span></button>
+      <button class="spine c1 w3"><span>Яхина · Зулейха открывает глаза</span></button>
+      <button class="spine c7 w2"><span>Сальников · Петровы в гриппе</span></button>
+      <button class="spine c3 w4"><span>Рубина · Наполеонов обоз</span></button>
+      <button class="spine c6 w2 short"><span>Пелевин · KGBT+</span></button>
+      <button class="spine c2 w3"><span>Степнова · Сад</span></button>
+      <button class="spine c5 w2"><span>Абгарян · Симон</span></button>
+    </div>
+    <div class="board"></div>
+    <div class="shelf-foot">
+      <span></span><a class="btn ghost" href="#">Открыть полку →</a>
+    </div>
+  </section>
+
+  <!-- Неразобранное: лежащая стопка -->
+  <section class="unsorted">
+    <div class="head">
+      <h2>Неразобранное</h2>
+      <span class="shelf-meta"><b>13</b> книг ждут своей полки</span>
+    </div>
+    <div class="pile">
+      <div class="flat c2" style="width:230px; background:#D9CDB8">Булгаков · Мастер и Маргарита</div>
+      <div class="flat c4" style="width:196px; background:#CBD3DD; margin-left:14px">Ремарк · Три товарища</div>
+      <div class="flat c6" style="width:214px; background:#E3D3C0; margin-left:6px">Робертс · Шантарам</div>
+      <div class="flat c3" style="width:172px; background:#C9D2C5; margin-left:20px">Герберт · Дюна</div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:10px;">
+      <a class="btn secondary" href="#">Разобрать стопку</a>
+      <span class="hint" style="align-self:center">…и ещё 9 книг</span>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar" aria-label="Навигация">
+  <a href="library.html" aria-current="page"><span>🏠</span>Библиотека</a>
+  <a href="#"><span>📚</span>Каталог</a>
+  <a href="add.html"><span class="add">+</span></a>
+  <a href="loans.html"><span>🤝</span>На руках</a>
+  <a href="#"><span>⋯</span>Ещё</a>
+</nav>
+
+</body>
+</html>

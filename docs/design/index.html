@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polka · Дизайн-система — обзор M1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,600;8..30,700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  h1 { font-size: 34px; margin-bottom: 6px; }
+  .lead { color: var(--ink-soft); max-width: 640px; }
+  section { margin-top: 40px; }
+  section > h2 { font-size: 22px; margin-bottom: 14px; }
+
+  .screens { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .screens a { display: grid; gap: 4px; padding: 16px 18px; text-decoration: none; }
+  .screens b { font-family: var(--font-display); font-size: 17px; }
+  .screens span { font-size: 13px; color: var(--ink-soft); }
+
+  .swatches { display: flex; gap: 12px; flex-wrap: wrap; }
+  .sw { width: 132px; }
+  .sw i { display: block; height: 64px; border-radius: 8px; border: 1px solid rgba(35,43,56,.08); }
+  .sw b { display: block; font-size: 13px; margin-top: 6px; }
+  .sw code { font-family: var(--font-data); font-size: 11.5px; color: var(--ink-soft); }
+
+  .patina-strip { height: 40px; border-radius: 8px; background: linear-gradient(90deg, #DDBE8A, #E9D7B0, #F0E8D6, #F2F1EC); border: 1px solid rgba(35,43,56,.08); }
+  .patina-labels { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 11.5px; color: var(--ink-soft); margin-top: 6px; }
+
+  .presets { display: flex; gap: 10px; flex-wrap: wrap; }
+  .presets i { width: 44px; height: 28px; border-radius: 6px; display: block; border: 1px solid rgba(35,43,56,.1); }
+
+  .type-demo { display: grid; gap: 10px; }
+  .type-demo .display { font-family: var(--font-display); font-size: 30px; font-weight: 600; }
+  .type-demo .ui { font-size: 15px; }
+  .type-demo .data { font-family: var(--font-data); font-size: 13px; color: var(--ink-soft); }
+  .type-demo small { color: var(--ink-soft); }
+
+  .row-demo { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="index.html"><span class="word">Полка</span><span class="mini-spine"><i></i></span><span class="mini-spine"><i></i></span></a>
+  <div class="grow"></div>
+  <span class="hint">Этап M1 · макеты для утверждения</span>
+</header>
+
+<main class="container">
+  <h1>Дизайн-система Polka</h1>
+  <p class="lead">Направление — «современная библиотека»: белые стеллажи, бумага, зелёная лампа читального зала.
+  Подпись — живые полки: доска впитывает возраст стоящих на ней книг, а хозяин может перекрасить её вручную.
+  Библиотечные отсылки — точечные: штампы статусов, корешки с текстом снизу вверх.</p>
+
+  <section>
+    <h2>Экраны</h2>
+    <div class="screens">
+      <a class="card" href="library.html"><b>Библиотека</b><span>живые полки, стопка «Неразобранное»</span></a>
+      <a class="card" href="book.html"><b>Карточка книги</b><span>досье, выдачи, рецензия, штамп</span></a>
+      <a class="card" href="add.html"><b>Добавление</b><span>сканер и черновик, «добавить ещё»</span></a>
+      <a class="card" href="share.html"><b>Гостевая витрина</b><span>по ссылке + заявка «хочу почитать»</span></a>
+      <a class="card" href="loans.html"><b>На руках</b><span>выдачи и история, просрочка</span></a>
+      <a class="card" href="login.html"><b>Вход</b><span>логотип-полка, форма</span></a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Палитра</h2>
+    <div class="swatches">
+      <div class="sw"><i style="background:#FAFAF6"></i><b>Бумага</b><code>#FAFAF6 · фон</code></div>
+      <div class="sw"><i style="background:#232B38"></i><b>Чернила</b><code>#232B38 · текст</code></div>
+      <div class="sw"><i style="background:#2F6B4F"></i><b>Лампа</b><code>#2F6B4F · действия</code></div>
+      <div class="sw"><i style="background:#4353A5"></i><b>Штемпель</b><code>#4353A5 · статусы</code></div>
+      <div class="sw"><i style="background:#B23F38"></i><b>Сургуч</b><code>#B23F38 · просрочка</code></div>
+      <div class="sw"><i style="background:#E6E4DC"></i><b>Линия</b><code>#E6E4DC · границы</code></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Патина полки</h2>
+    <div class="patina-strip"></div>
+    <div class="patina-labels"><span>≤ 1960 · старый лак</span><span>1990</span><span>2010</span><span>≥ 2020 · свежая краска</span></div>
+    <p class="hint" style="margin-top:8px">Интерполяция в OKLCH по медианному году изданий полки. Книги без года не участвуют.</p>
+  </section>
+
+  <section>
+    <h2>Ручные акценты полок (пресеты)</h2>
+    <div class="presets">
+      <i style="background:#E9ADBC" title="роза"></i><i style="background:#DFAE54" title="охра"></i>
+      <i style="background:#A3BE9C" title="шалфей"></i><i style="background:#9FBEDC" title="небо"></i>
+      <i style="background:#B7A3D0" title="сирень"></i><i style="background:#CE8B71" title="кирпич"></i>
+      <i style="background:#A8CFC0" title="мята"></i><i style="background:#8A93A3" title="графит"></i>
+    </div>
+  </section>
+
+  <section>
+    <h2>Типографика <small>(вся — с полноценной кириллицей)</small></h2>
+    <div class="type-demo">
+      <div class="display">Piazzolla — заголовки и названия книг <small>· 500/600/700</small></div>
+      <div class="ui">Golos Text — интерфейс и основной текст. Русская гарнитура, сделанная для экранов. · 400/500/600</div>
+      <div class="data">IBM PLEX MONO — ISBN 978-5-17-098657-2, ГОДЫ, ШТАМПЫ · 400/500</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Фирменные элементы</h2>
+    <div class="row-demo">
+      <span class="stamp">На руках</span>
+      <span class="stamp red">Просрочено</span>
+      <span class="stamp green">Свободна</span>
+      <span class="chip series">Миры братьев Стругацких</span>
+      <span class="chip">перечитать</span>
+      <button class="btn">Дать почитать</button>
+      <button class="btn secondary">Вернули</button>
+    </div>
+    <div style="margin-top:22px; max-width:420px">
+      <div class="shelf-books" style="min-height:130px">
+        <button class="spine c3 w3"><span>Стругацкие · Трудно быть богом</span></button>
+        <button class="spine c1 w2"><span>Лем · Солярис</span></button>
+        <button class="spine c7 w4 lent"><span>Булычёв · Посёлок</span></button>
+        <button class="spine c6 w3"><span>Ефремов · Час Быка</span></button>
+      </div>
+      <div class="board" style="--board:#DDBE8A"></div>
+      <p class="hint" style="margin-top:8px">Корешок: ширина от толщины книги, цвет детерминирован названием, текст снизу вверх
+      (отечественный стандарт корешка). Наклонённый — книга на руках.</p>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polka · Пикник на обочине — макет карточки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,600;8..30,700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .crumbs { font-size: 13px; color: var(--ink-soft); margin-bottom: 18px; }
+  .crumbs a { color: inherit; text-decoration: none; }
+  .crumbs a:hover { color: var(--ink); }
+
+  .book-layout { display: grid; grid-template-columns: 250px 1fr; gap: 34px; }
+  @media (max-width: 760px) { .book-layout { grid-template-columns: 1fr; } .cover-col { max-width: 220px; } }
+
+  /* Обложка: настоящая, либо генерированная заглушка из типографики */
+  .cover {
+    aspect-ratio: 7/10; border-radius: 6px; overflow: hidden;
+    background: linear-gradient(160deg, #C9D2C5, #AEBEAE);
+    box-shadow: 0 2px 4px rgba(35,43,56,.12), 0 14px 30px -14px rgba(35,43,56,.3),
+                inset 3px 0 0 rgba(255,255,255,.35); /* «корешковый» блик слева */
+    display: grid; align-content: end; gap: 6px; padding: 20px;
+  }
+  .cover .a { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: rgba(35,43,56,.72); }
+  .cover .t { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1.15; color: rgba(35,43,56,.92); }
+  .cover-col { display: grid; gap: 12px; align-content: start; }
+
+  .title-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .title-row h1 { font-size: 34px; }
+  .authors { font-size: 16px; color: var(--ink-soft); margin: 4px 0 14px; }
+
+  .stars { color: #C9A23B; font-size: 20px; letter-spacing: 2px; }
+  .stars .off { color: var(--line); }
+
+  .facts { display: grid; grid-template-columns: max-content 1fr; gap: 7px 18px; margin: 18px 0; font-size: 14px; }
+  .facts dt { color: var(--ink-soft); }
+  .facts dd { margin: 0; }
+  .facts .data { font-family: var(--font-data); font-size: 13px; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0 6px; }
+
+  .panel { padding: 18px 20px; margin-top: 22px; }
+  .panel h3 { font-size: 16px; margin-bottom: 12px; }
+
+  /* Формуляр выдач: линованные строки — тихая отсылка к вкладышу */
+  .ledger { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .ledger th { text-align: left; font-family: var(--font-data); font-size: 11px; letter-spacing: .08em;
+               text-transform: uppercase; color: var(--ink-soft); padding: 6px 10px; }
+  .ledger td { padding: 9px 10px; border-top: 1px solid var(--line); }
+  .ledger tr.active td { background: var(--lamp-tint); }
+
+  .review { font-size: 15px; line-height: 1.65; }
+  .notes { background: #FDF9EC; border: 1px dashed #E2D3A8; border-radius: 8px; padding: 12px 14px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="library.html"><span class="word">Полка</span><span class="mini-spine"><i></i></span><span class="mini-spine"><i></i></span></a>
+  <nav class="nav">
+    <a href="library.html" aria-current="page">Библиотека</a>
+    <a href="#">Каталог</a><a href="#">Серии</a><a href="#">Хочу</a>
+    <a href="loans.html">На руках</a><a href="#">Заявки<span class="badge">1</span></a>
+  </nav>
+  <div class="grow"></div>
+  <a class="btn" href="add.html">+ Добавить книгу</a>
+</header>
+
+<main class="container">
+  <p class="crumbs"><a href="library.html">Дом</a> / <a href="#">Фантастика</a> / Пикник на обочине</p>
+
+  <div class="book-layout">
+    <div class="cover-col">
+      <div class="cover">
+        <span class="a">Аркадий и Борис Стругацкие</span>
+        <span class="t">Пикник на обочине</span>
+      </div>
+      <button class="btn secondary">Заменить обложку</button>
+    </div>
+
+    <div>
+      <div class="title-row">
+        <h1>Пикник на обочине</h1>
+        <span class="stamp">На руках</span>
+      </div>
+      <p class="authors">Аркадий Стругацкий · Борис Стругацкий</p>
+
+      <div class="stars" role="img" aria-label="Оценка 5 из 5">★★★★★</div>
+
+      <dl class="facts">
+        <dt>Серия</dt><dd><span class="chip series">Миры братьев Стругацких</span> · том 7</dd>
+        <dt>Издательство</dt><dd>АСТ, Сталкер</dd>
+        <dt>Год</dt><dd>1997</dd>
+        <dt>Страниц</dt><dd>384</dd>
+        <dt>ISBN</dt><dd class="data">978-5-15-000554-9</dd>
+        <dt>Статус чтения</dt><dd>Прочитана · март 2019</dd>
+        <dt>Тэги</dt><dd><span class="chip">фантастика</span> <span class="chip">классика</span> <span class="chip">перечитать</span></dd>
+      </dl>
+
+      <div class="actions">
+        <button class="btn">Отметить возврат</button>
+        <button class="btn secondary">Переместить</button>
+        <button class="btn secondary">Подарить</button>
+        <button class="btn secondary">Редактировать</button>
+      </div>
+
+      <section class="card panel">
+        <h3>Выдачи</h3>
+        <table class="ledger">
+          <thead><tr><th>Кому</th><th>Взял</th><th>Срок</th><th>Вернул</th></tr></thead>
+          <tbody>
+            <tr class="active"><td><b>Маша</b></td><td>2 авг 2026</td><td>1 сен 2026</td><td>—</td></tr>
+            <tr><td>Дима</td><td>14 янв 2025</td><td>—</td><td>3 фев 2025</td></tr>
+            <tr><td>Серёжа</td><td>7 июн 2023</td><td>—</td><td>28 июн 2023</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card panel">
+        <h3>Моя рецензия</h3>
+        <p class="review">Перечитал в третий раз — и снова как в первый. Зона у Стругацких пугает не чудесами,
+        а тем, как буднично люди приспосабливаются к необъяснимому. Шухарт — лучший «маленький человек»
+        советской фантастики. Финальная молитва — до мурашек.</p>
+      </section>
+
+      <section class="panel" style="padding-left:0">
+        <h3 style="margin-bottom:8px">Заметки <span class="hint">(видны только вам)</span></h3>
+        <p class="notes">Издание с автографом переводчика на форзаце — не отдавать насовсем никому. Куплено на «Олимпийском», 1998.</p>
+      </section>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>

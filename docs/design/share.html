@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Полка Алексея · Фантастика — гостевая витрина (макет)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,600;8..30,700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .guest-bar { justify-content: center; gap: 10px; }
+  .guest-bar .hint { font-size: 13px; }
+
+  .hero { text-align: center; margin: 26px 0 8px; }
+  .hero h1 { font-size: 32px; }
+  .hero p { color: var(--ink-soft); margin: 6px 0 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 18px; margin-top: 26px; }
+  .g-book { padding: 12px; display: grid; gap: 8px; align-content: start; position: relative; }
+  .g-cover {
+    aspect-ratio: 7/10; border-radius: 5px; display: grid; align-content: end; padding: 12px;
+    box-shadow: inset 2px 0 0 rgba(255,255,255,.4), 0 1px 3px rgba(35,43,56,.15);
+    font-family: var(--font-display); font-weight: 700; font-size: 14px; line-height: 1.2; color: rgba(35,43,56,.9);
+  }
+  .g-book h3 { font-size: 15px; }
+  .g-book .a { font-size: 12.5px; color: var(--ink-soft); }
+  .g-book .stamp { position: absolute; top: 4px; right: -6px; font-size: 10px; }
+  .g-actions { margin-top: 4px; }
+  .g-actions .btn { width: 100%; justify-content: center; padding: 8px 10px; font-size: 13px; }
+  .g-actions .busy { text-align: center; font-size: 12.5px; color: var(--ink-soft); padding: 8px 0 2px; }
+
+  /* Заявка (модалка показана инлайн) */
+  .modal-demo { max-width: 420px; margin: 44px auto 0; padding: 22px; display: grid; gap: 12px; }
+  .modal-demo h3 { font-size: 18px; }
+  .modal-demo .sub { font-size: 13.5px; color: var(--ink-soft); margin-top: -6px; }
+</style>
+</head>
+<body>
+
+<header class="topbar guest-bar">
+  <a class="logo" href="#"><span class="word">Полка</span><span class="mini-spine"><i></i></span><span class="mini-spine"><i></i></span></a>
+  <span class="hint">гостевой просмотр по ссылке</span>
+</header>
+
+<main class="container">
+  <div class="hero">
+    <h1>Фантастика</h1>
+    <p>Полка Алексея · 24 книги · можно попроситься почитать</p>
+  </div>
+
+  <div class="grid">
+    <div class="card g-book">
+      <div class="g-cover" style="background:linear-gradient(160deg,#C9D2C5,#AEBEAE)">Трудно быть богом</div>
+      <h3>Трудно быть богом</h3>
+      <span class="a">Аркадий и Борис Стругацкие · 1989</span>
+      <div class="g-actions"><button class="btn secondary">Хочу почитать</button></div>
+    </div>
+    <div class="card g-book">
+      <span class="stamp">На руках</span>
+      <div class="g-cover" style="background:linear-gradient(160deg,#CBD3DD,#A9B6C8)">Посёлок</div>
+      <h3>Посёлок</h3>
+      <span class="a">Кир Булычёв · 1988</span>
+      <div class="g-actions"><p class="busy">Сейчас у читателя — загляните позже</p></div>
+    </div>
+    <div class="card g-book">
+      <div class="g-cover" style="background:linear-gradient(160deg,#D8CBD4,#BCA9B9)">Солярис</div>
+      <h3>Солярис</h3>
+      <span class="a">Станислав Лем · 1992</span>
+      <div class="g-actions"><button class="btn secondary">Хочу почитать</button></div>
+    </div>
+    <div class="card g-book">
+      <div class="g-cover" style="background:linear-gradient(160deg,#E3D3C0,#C9B394)">Туманность Андромеды</div>
+      <h3>Туманность Андромеды</h3>
+      <span class="a">Иван Ефремов · 1987</span>
+      <div class="g-actions"><button class="btn secondary">Хочу почитать</button></div>
+    </div>
+  </div>
+
+  <!-- Заявка гостя: имя + записка, без регистрации -->
+  <section class="card modal-demo">
+    <h3>Хочу почитать «Солярис»</h3>
+    <p class="sub">Алексей увидит заявку и решит, когда передать книгу.</p>
+    <div class="field"><label>Как вас зовут</label><input placeholder="Маша"></div>
+    <div class="field"><label>Записка <span style="font-weight:400">(не обязательно)</span></label>
+      <textarea rows="2" placeholder="Заберу в четверг после работы"></textarea></div>
+    <button class="btn big">Отправить заявку</button>
+  </section>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polka · Вход — макет</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,600;8..30,700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { display: grid; place-items: center; min-height: 100vh; }
+  .auth { width: min(400px, calc(100vw - 32px)); display: grid; gap: 22px; padding-bottom: 40px; }
+
+  /* Крупный логотип: слово на доске, рядом корешки */
+  .auth-logo { display: flex; align-items: flex-end; justify-content: center; gap: 7px; }
+  .auth-logo .word { font-family: var(--font-display); font-weight: 700; font-size: 46px; border-bottom: 5px solid var(--ink); padding: 0 4px 2px 0; }
+  .auth-logo .s { width: 9px; border-bottom: 5px solid var(--ink); }
+  .auth-logo .s i { display: block; border-radius: 2px 2px 0 0; }
+  .auth-logo .s:nth-child(2) i { height: 26px; background: var(--lamp); }
+  .auth-logo .s:nth-child(3) i { height: 20px; background: var(--stamp); }
+  .auth-logo .s:nth-child(4) i { height: 23px; background: #DDBE8A; }
+  .auth-sub { text-align: center; color: var(--ink-soft); margin: -8px 0 0; }
+
+  .auth-card { padding: 24px; display: grid; gap: 14px; }
+  .auth-foot { text-align: center; font-size: 13.5px; color: var(--ink-soft); }
+  .auth-foot a { color: var(--lamp-deep); font-weight: 600; }
+</style>
+</head>
+<body>
+  <main class="auth">
+    <div class="auth-logo" role="img" aria-label="Полка">
+      <span class="word">Полка</span>
+      <span class="s"><i></i></span><span class="s"><i></i></span><span class="s"><i></i></span>
+    </div>
+    <p class="auth-sub">Домашняя библиотека, в которой всё стоит на своих местах</p>
+
+    <form class="card auth-card" action="library.html">
+      <div class="field"><label>Почта</label><input type="email" placeholder="you@example.ru"></div>
+      <div class="field"><label>Пароль</label><input type="password" placeholder="••••••••"></div>
+      <button class="btn big" type="submit">Войти</button>
+    </form>
+
+    <p class="auth-foot">Первый раз здесь? <a href="#">Создать аккаунт</a><br>
+    <span class="hint">Когда регистрация закрыта, этой ссылки нет.</span></p>
+  </main>
+</body>
+</html>
