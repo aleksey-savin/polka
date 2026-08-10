@@ -1,0 +1,18 @@
+# VPS: контейнер за Nginx Proxy Manager.
+# NPM проксирует поддомен → polka:3000 (общая docker-сеть) или host:3000 (ports ниже).
+services:
+  polka:
+    image: ghcr.io/aleksey-savin/polka:latest
+    container_name: polka
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?задайте в .env}
+      APP_URL: ${APP_URL:?задайте в .env, например https://polka.example.ru}
+      REGISTRATION_OPEN: ${REGISTRATION_OPEN:-true}
+    volumes:
+      - polka-data:/data
+
+volumes:
+  polka-data:

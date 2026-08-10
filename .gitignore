@@ -1,7 +1,13 @@
 # Зависимости и сборка
 node_modules/
 dist/
+dist-ssr/
 .output/
+.bun/
+.nitro/
+.tanstack/
+*.local
+.DS_Store
 
 # Данные рантайма (БД, обложки) — живут в Docker volume
 data/
