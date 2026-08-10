@@ -10,13 +10,16 @@ export const Route = createFileRoute('/api/covers/$bookId')({
   server: {
     handlers: {
       GET: async ({ params }) => {
-        const session = await auth.api.getSession({ headers: getRequestHeaders() })
+        const session = await auth.api.getSession({
+          headers: getRequestHeaders(),
+        })
         if (!session) return new Response('Unauthorized', { status: 401 })
         try {
           const row = await requireBookAccess(session.user.id, params.bookId)
           if (!row.coverPath) return new Response('Not found', { status: 404 })
           const file = Bun.file(coverAbsolutePath(row.coverPath))
-          if (!(await file.exists())) return new Response('Not found', { status: 404 })
+          if (!(await file.exists()))
+            return new Response('Not found', { status: 404 })
           return new Response(file, {
             headers: {
               'content-type': 'image/webp',

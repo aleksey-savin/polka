@@ -57,7 +57,10 @@ export const moveBooksFn = createServerFn({ method: 'POST' })
     }),
   )
   .handler(({ context, data }) =>
-    moveBooks(context.user.id, data.bookIds, { libraryId: data.libraryId, shelfId: data.shelfId }),
+    moveBooks(context.user.id, data.bookIds, {
+      libraryId: data.libraryId,
+      shelfId: data.shelfId,
+    }),
   )
 
 export const getBookCardFn = createServerFn({ method: 'GET' })

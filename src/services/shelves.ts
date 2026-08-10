@@ -4,8 +4,8 @@ import { db } from '@/db'
 import { book, library, shelf } from '@/db/schema/catalog'
 import { AppError } from './errors'
 import { assertMember } from './members'
-import {  shelfTint } from './shelfTint'
-import type {ShelfTint} from './shelfTint';
+import { shelfTint } from './shelfTint'
+import type { ShelfTint } from './shelfTint'
 
 export async function createShelf(
   userId: string,
@@ -19,11 +19,18 @@ export async function createShelf(
   const existing = await db
     .select({ id: shelf.id })
     .from(shelf)
-    .where(and(eq(shelf.libraryId, input.libraryId), eq(shelf.name, input.name)))
-  if (existing.length > 0) throw new AppError('Полка с таким названием уже есть в этой библиотеке')
+    .where(
+      and(eq(shelf.libraryId, input.libraryId), eq(shelf.name, input.name)),
+    )
+  if (existing.length > 0)
+    throw new AppError('Полка с таким названием уже есть в этой библиотеке')
   const [created] = await db
     .insert(shelf)
-    .values({ libraryId: input.libraryId, name: input.name, position: (posRow?.maxPos ?? 0) + 1 })
+    .values({
+      libraryId: input.libraryId,
+      name: input.name,
+      position: (posRow?.maxPos ?? 0) + 1,
+    })
     .returning({ id: shelf.id })
   if (!created) throw new AppError('Не удалось создать полку')
   return created
@@ -39,12 +46,17 @@ export async function updateShelf(
     .update(shelf)
     .set({
       ...(patch.name !== undefined ? { name: patch.name } : {}),
-      ...(patch.accentColor !== undefined ? { accentColor: patch.accentColor } : {}),
+      ...(patch.accentColor !== undefined
+        ? { accentColor: patch.accentColor }
+        : {}),
     })
     .where(eq(shelf.id, found.id))
 }
 
-export async function deleteShelf(userId: string, shelfId: string): Promise<void> {
+export async function deleteShelf(
+  userId: string,
+  shelfId: string,
+): Promise<void> {
   const found = await requireShelf(userId, shelfId)
   // Книги полки остаются в библиотеке: FK set null → «Неразобранное».
   await db.delete(shelf).where(eq(shelf.id, found.id))
@@ -79,10 +91,18 @@ export interface ShelfView {
   }>
 }
 
-export async function getShelfView(userId: string, shelfId: string): Promise<ShelfView> {
+export async function getShelfView(
+  userId: string,
+  shelfId: string,
+): Promise<ShelfView> {
   const found = await requireShelf(userId, shelfId)
   const [meta] = await db
-    .select({ id: shelf.id, name: shelf.name, accentColor: shelf.accentColor, libraryName: library.name })
+    .select({
+      id: shelf.id,
+      name: shelf.name,
+      accentColor: shelf.accentColor,
+      libraryName: library.name,
+    })
     .from(shelf)
     .innerJoin(library, eq(library.id, shelf.libraryId))
     .where(eq(shelf.id, shelfId))

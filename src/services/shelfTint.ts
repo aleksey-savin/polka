@@ -9,14 +9,20 @@ const YEAR_FRESH = 2020
 
 export const SHELF_NEUTRAL = 'oklch(0.936 0.008 95)'
 
-export function medianYear(years: Array<number | null | undefined>): number | null {
+export function medianYear(
+  years: Array<number | null | undefined>,
+): number | null {
   const valid = years
-    .filter((y): y is number => typeof y === 'number' && Number.isFinite(y) && y > 0)
+    .filter(
+      (y): y is number => typeof y === 'number' && Number.isFinite(y) && y > 0,
+    )
     .sort((a, b) => a - b)
   if (valid.length === 0) return null
   const at = (i: number): number => valid[i] ?? 0 // длина проверена — fallback не срабатывает
   const mid = Math.floor(valid.length / 2)
-  return valid.length % 2 === 1 ? at(mid) : Math.round((at(mid - 1) + at(mid)) / 2)
+  return valid.length % 2 === 1
+    ? at(mid)
+    : Math.round((at(mid - 1) + at(mid)) / 2)
 }
 
 export interface ShelfTint {
@@ -27,7 +33,10 @@ export interface ShelfTint {
 export function shelfTint(years: Array<number | null | undefined>): ShelfTint {
   const median = medianYear(years)
   if (median === null) return { color: SHELF_NEUTRAL, medianYear: null }
-  const t = Math.min(1, Math.max(0, (median - YEAR_OLD) / (YEAR_FRESH - YEAR_OLD)))
+  const t = Math.min(
+    1,
+    Math.max(0, (median - YEAR_OLD) / (YEAR_FRESH - YEAR_OLD)),
+  )
   const lerp = (a: number, b: number) => a + (b - a) * t
   const l = lerp(OLD.l, FRESH.l).toFixed(3)
   const c = lerp(OLD.c, FRESH.c).toFixed(3)

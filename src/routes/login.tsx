@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
+import { z } from 'zod'
 
 import { Logo } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
@@ -10,10 +11,11 @@ import { authClient } from '@/lib/auth-client'
 import { getPublicConfig, getSession } from '@/server/session'
 
 export const Route = createFileRoute('/login')({
-  beforeLoad: async () => {
+  validateSearch: z.object({ redirect: z.string().optional() }),
+  beforeLoad: async ({ search }) => {
     const session = await getSession()
     if (session) {
-      throw redirect({ to: '/libraries' })
+      throw redirect({ href: search.redirect ?? '/libraries' })
     }
   },
   loader: () => getPublicConfig(),
@@ -22,6 +24,7 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const { registrationOpen } = Route.useLoaderData()
+  const { redirect: redirectTo } = Route.useSearch()
   const router = useRouter()
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn')
   const [name, setName] = useState('')
@@ -52,7 +55,11 @@ function LoginPage() {
       )
       return
     }
-    await router.navigate({ to: '/libraries' })
+    if (redirectTo) {
+      await router.navigate({ href: redirectTo })
+    } else {
+      await router.navigate({ to: '/libraries' })
+    }
   }
 
   return (

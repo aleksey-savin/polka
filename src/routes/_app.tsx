@@ -4,10 +4,13 @@ import { AppShell } from '@/components/layout/AppShell'
 import { getSession } from '@/server/session'
 
 export const Route = createFileRoute('/_app')({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const session = await getSession()
     if (!session) {
-      throw redirect({ to: '/login' })
+      throw redirect({
+        to: '/login',
+        search: location.pathname === '/' ? {} : { redirect: location.href },
+      })
     }
     return { user: session.user }
   },

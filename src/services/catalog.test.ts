@@ -9,12 +9,25 @@ process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-test-'))
 
 const { db } = await import('@/db')
 const { user } = await import('@/db/schema/auth')
-const { acceptInvite, createInvite, createLibrary, getLibraryOverview, listMyLibraries } =
-  await import('./libraries')
-const { createShelf, deleteShelf, getShelfView, updateShelf } = await import('./shelves')
-const { createBook, getBookCard, listBooks, moveBooks, requireBookAccess, updateBook } =
-  await import('./books')
-const { getSeriesView, listSeries, seriesNumberSortKey, suggestSeries } = await import('./series')
+const {
+  acceptInvite,
+  createInvite,
+  createLibrary,
+  getLibraryOverview,
+  listMyLibraries,
+} = await import('./libraries')
+const { createShelf, deleteShelf, getShelfView, updateShelf } =
+  await import('./shelves')
+const {
+  createBook,
+  getBookCard,
+  listBooks,
+  moveBooks,
+  requireBookAccess,
+  updateBook,
+} = await import('./books')
+const { getSeriesView, listSeries, seriesNumberSortKey, suggestSeries } =
+  await import('./series')
 const { listMyTags } = await import('./tags')
 const { AppError } = await import('./errors')
 
@@ -120,7 +133,10 @@ describe('каталог: сквозной сценарий', () => {
 
   test('обзор библиотеки: патина и корешки', async () => {
     const overview = await getLibraryOverview(alex, libraryId)
-    expect(overview.members.map((m) => m.name).sort()).toEqual(['Алексей', 'Оля'])
+    expect(overview.members.map((m) => m.name).sort()).toEqual([
+      'Алексей',
+      'Оля',
+    ])
     const shelfRow = overview.shelves.find((s) => s.id === shelfId)
     expect(shelfRow?.bookCount).toBe(2)
     expect(shelfRow?.tint.medianYear).toBe(1993)
@@ -139,7 +155,10 @@ describe('каталог: сквозной сценарий', () => {
   })
 
   test('виш-лист: личный, «купил» при перемещении на полку', async () => {
-    const wish = await createBook(alex, { title: 'Град обреченный', wishlist: true })
+    const wish = await createBook(alex, {
+      title: 'Град обреченный',
+      wishlist: true,
+    })
     const wishRows = await listBooks(alex, { status: 'wishlist' })
     expect(wishRows.rows.map((r) => r.id)).toContain(wish.id)
     // у Оли чужой виш не виден
@@ -154,7 +173,9 @@ describe('каталог: сквозной сценарий', () => {
   test('посторонний не видит ничего', async () => {
     expect((await listBooks(stranger, {})).rows).toHaveLength(0)
     expect(requireBookAccess(stranger, bookId)).rejects.toThrow(AppError)
-    expect(getLibraryOverview(stranger, libraryId)).rejects.toThrow('Нет доступа')
+    expect(getLibraryOverview(stranger, libraryId)).rejects.toThrow(
+      'Нет доступа',
+    )
   })
 
   test('редактирование книги обновляет нормализованные поля', async () => {

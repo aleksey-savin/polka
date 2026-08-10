@@ -15,7 +15,11 @@ import { Label } from '@/components/ui/label'
 import { createLibraryFn, createInviteFn } from '@/server/libraries'
 import { createShelfFn } from '@/server/shelves'
 
-export function NewLibraryDialog({ onCreated }: { onCreated: (id: string) => void }) {
+export function NewLibraryDialog({
+  onCreated,
+}: {
+  onCreated: (id: string) => void
+}) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
@@ -43,7 +47,9 @@ export function NewLibraryDialog({ onCreated }: { onCreated: (id: string) => voi
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Новая библиотека</DialogTitle>
-          <DialogDescription>Физическое место, где стоят книги: дом, дача, кабинет.</DialogDescription>
+          <DialogDescription>
+            Физическое место, где стоят книги: дом, дача, кабинет.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-1.5">
           <Label htmlFor="lib-name">Название</Label>
@@ -65,7 +71,13 @@ export function NewLibraryDialog({ onCreated }: { onCreated: (id: string) => voi
   )
 }
 
-export function NewShelfDialog({ libraryId, onCreated }: { libraryId: string; onCreated: () => void }) {
+export function NewShelfDialog({
+  libraryId,
+  onCreated,
+}: {
+  libraryId: string
+  onCreated: () => void
+}) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
@@ -117,7 +129,13 @@ export function NewShelfDialog({ libraryId, onCreated }: { libraryId: string; on
   )
 }
 
-export function InviteDialog({ libraryId, libraryName }: { libraryId: string; libraryName: string }) {
+export function InviteDialog({
+  libraryId,
+  libraryName,
+}: {
+  libraryId: string
+  libraryName: string
+}) {
   const [link, setLink] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -142,7 +160,10 @@ export function InviteDialog({ libraryId, libraryName }: { libraryId: string; li
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button type="button" className="text-sm font-semibold text-accent-foreground">
+        <button
+          type="button"
+          className="text-sm font-semibold text-accent-foreground"
+        >
           + пригласить
         </button>
       </DialogTrigger>
@@ -150,14 +171,22 @@ export function InviteDialog({ libraryId, libraryName }: { libraryId: string; li
         <DialogHeader>
           <DialogTitle>Совладелец для «{libraryName}»</DialogTitle>
           <DialogDescription>
-            Отправьте ссылку — человек войдёт в свой аккаунт и станет полноправным участником библиотеки:
-            книги, полки и выдачи станут общими. Оценки и заметки у каждого останутся свои.
+            Отправьте ссылку — человек войдёт в свой аккаунт и станет
+            полноправным участником библиотеки: книги, полки и выдачи станут
+            общими. Оценки и заметки у каждого останутся свои.
           </DialogDescription>
         </DialogHeader>
         {link ? (
           <div className="grid gap-2">
-            <Input readOnly value={link} className="font-mono text-xs" onFocus={(e) => e.target.select()} />
-            <Button onClick={() => void copy()}>{copied ? 'Скопировано' : 'Скопировать ссылку'}</Button>
+            <Input
+              readOnly
+              value={link}
+              className="font-mono text-xs"
+              onFocus={(e) => e.target.select()}
+            />
+            <Button onClick={() => void copy()}>
+              {copied ? 'Скопировано' : 'Скопировать ссылку'}
+            </Button>
           </div>
         ) : (
           <DialogFooter>

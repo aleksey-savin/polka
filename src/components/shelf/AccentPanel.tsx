@@ -40,7 +40,8 @@ export function AccentPanel({
 
   const optionBase =
     'inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-[13px] text-muted-foreground disabled:opacity-50'
-  const activeRing = 'border-primary font-semibold text-accent-foreground shadow-[0_0_0_1px_var(--primary)]'
+  const activeRing =
+    'border-primary font-semibold text-accent-foreground shadow-[0_0_0_1px_var(--primary)]'
 
   return (
     <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border bg-card px-4 py-3.5 shadow-xs">
@@ -53,9 +54,14 @@ export function AccentPanel({
       >
         <i
           className="size-[22px] rounded-full border border-foreground/10"
-          style={{ background: `linear-gradient(90deg, var(--patina-old), var(--patina-fresh))` }}
+          style={{
+            background: `linear-gradient(90deg, var(--patina-old), var(--patina-fresh))`,
+          }}
         />
-        Авто-патина{tint.medianYear !== null && accentColor === null ? ` · сейчас ${tint.medianYear}` : ''}
+        Авто-патина
+        {tint.medianYear !== null && accentColor === null
+          ? ` · сейчас ${tint.medianYear}`
+          : ''}
       </button>
       <div className="flex gap-1.5" role="group" aria-label="Пресеты цвета">
         {ACCENT_PRESETS.map((p) => (
@@ -67,7 +73,10 @@ export function AccentPanel({
             onClick={() => void apply(p.value)}
             className={`${optionBase} px-1.5 ${accentColor === p.value ? activeRing : ''}`}
           >
-            <i className="size-[22px] rounded-full border border-foreground/10" style={{ background: p.value }} />
+            <i
+              className="size-[22px] rounded-full border border-foreground/10"
+              style={{ background: p.value }}
+            />
           </button>
         ))}
       </div>

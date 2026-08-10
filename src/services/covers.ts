@@ -13,20 +13,32 @@ function coversDir(): string {
 }
 
 /** Сохраняет обложку книги: ресайз до ~600px по ширине, webp. Возвращает относительный путь. */
-export async function saveCover(bookId: string, bytes: ArrayBuffer): Promise<string> {
+export async function saveCover(
+  bookId: string,
+  bytes: ArrayBuffer,
+): Promise<string> {
   if (bytes.byteLength === 0) throw new AppError('Файл пустой')
-  if (bytes.byteLength > MAX_BYTES) throw new AppError('Файл больше 10 МБ — выберите картинку поменьше')
+  if (bytes.byteLength > MAX_BYTES)
+    throw new AppError('Файл больше 10 МБ — выберите картинку поменьше')
 
   const dir = coversDir()
   const tmpPath = join(dir, `${bookId}.orig`)
   const outPath = join(dir, `${bookId}.webp`)
   await Bun.write(tmpPath, bytes)
   try {
-    await Bun.file(tmpPath).image().resize(600, 900, { fit: 'inside' }).webp({ quality: 82 }).write(outPath)
+    await Bun.file(tmpPath)
+      .image()
+      .resize(600, 900, { fit: 'inside' })
+      .webp({ quality: 82 })
+      .write(outPath)
   } catch {
-    throw new AppError('Не удалось прочитать картинку — поддерживаются JPEG, PNG и WebP')
+    throw new AppError(
+      'Не удалось прочитать картинку — поддерживаются JPEG, PNG и WebP',
+    )
   } finally {
-    await Bun.file(tmpPath).delete().catch(() => {})
+    await Bun.file(tmpPath)
+      .delete()
+      .catch(() => {})
   }
   return `covers/${bookId}.webp`
 }
@@ -40,5 +52,7 @@ export function coverAbsolutePath(relativePath: string): string {
 }
 
 export async function deleteCover(relativePath: string): Promise<void> {
-  await Bun.file(coverAbsolutePath(relativePath)).delete().catch(() => {})
+  await Bun.file(coverAbsolutePath(relativePath))
+    .delete()
+    .catch(() => {})
 }

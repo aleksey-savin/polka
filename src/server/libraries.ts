@@ -22,22 +22,33 @@ export const listMyLibrariesFn = createServerFn({ method: 'GET' })
 export const getLibraryOverviewFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .validator(byLibrary)
-  .handler(({ context, data }) => getLibraryOverview(context.user.id, data.libraryId))
+  .handler(({ context, data }) =>
+    getLibraryOverview(context.user.id, data.libraryId),
+  )
 
 export const createLibraryFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
-  .validator(z.object({ name: z.string().trim().min(1, 'Название обязательно'), description: z.string().optional() }))
+  .validator(
+    z.object({
+      name: z.string().trim().min(1, 'Название обязательно'),
+      description: z.string().optional(),
+    }),
+  )
   .handler(({ context, data }) => createLibrary(context.user.id, data))
 
 export const renameLibraryFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .validator(byLibrary.extend({ name: z.string().trim().min(1) }))
-  .handler(({ context, data }) => renameLibrary(context.user.id, data.libraryId, data.name))
+  .handler(({ context, data }) =>
+    renameLibrary(context.user.id, data.libraryId, data.name),
+  )
 
 export const deleteLibraryFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .validator(byLibrary)
-  .handler(({ context, data }) => deleteLibrary(context.user.id, data.libraryId))
+  .handler(({ context, data }) =>
+    deleteLibrary(context.user.id, data.libraryId),
+  )
 
 export const createInviteFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
@@ -52,4 +63,6 @@ export const acceptInviteFn = createServerFn({ method: 'POST' })
 export const removeMemberFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .validator(byLibrary.extend({ userId: z.string() }))
-  .handler(({ context, data }) => removeMember(context.user.id, data.libraryId, data.userId))
+  .handler(({ context, data }) =>
+    removeMember(context.user.id, data.libraryId, data.userId),
+  )

@@ -18,10 +18,16 @@ import { Route as AppLoansRouteImport } from './routes/_app/loans'
 import { Route as AppRequestsRouteImport } from './routes/_app/requests'
 import { Route as AppWishlistRouteImport } from './routes/_app/wishlist'
 import { Route as AppBooksIndexRouteImport } from './routes/_app/books.index'
+import { Route as AppBooksBookIdRouteImport } from './routes/_app/books.$bookId'
+import { Route as AppBooksNewRouteImport } from './routes/_app/books.new'
+import { Route as AppInviteTokenRouteImport } from './routes/_app/invite.$token'
 import { Route as AppLibrariesIndexRouteImport } from './routes/_app/libraries.index'
 import { Route as AppSeriesIndexRouteImport } from './routes/_app/series.index'
+import { Route as AppSeriesSeriesIdRouteImport } from './routes/_app/series.$seriesId'
+import { Route as AppShelvesShelfIdRouteImport } from './routes/_app/shelves.$shelfId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as ApiCoversBookIdRouteImport } from './routes/api/covers.$bookId'
+import { Route as AppBooksBookIdEditRouteImport } from './routes/_app/books_.$bookId.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -67,6 +73,21 @@ const AppBooksIndexRoute = AppBooksIndexRouteImport.update({
   path: '/books/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBooksBookIdRoute = AppBooksBookIdRouteImport.update({
+  id: '/books/$bookId',
+  path: '/books/$bookId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBooksNewRoute = AppBooksNewRouteImport.update({
+  id: '/books/new',
+  path: '/books/new',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInviteTokenRoute = AppInviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLibrariesIndexRoute = AppLibrariesIndexRouteImport.update({
   id: '/libraries/',
   path: '/libraries/',
@@ -75,6 +96,16 @@ const AppLibrariesIndexRoute = AppLibrariesIndexRouteImport.update({
 const AppSeriesIndexRoute = AppSeriesIndexRouteImport.update({
   id: '/series/',
   path: '/series/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSeriesSeriesIdRoute = AppSeriesSeriesIdRouteImport.update({
+  id: '/series/$seriesId',
+  path: '/series/$seriesId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppShelvesShelfIdRoute = AppShelvesShelfIdRouteImport.update({
+  id: '/shelves/$shelfId',
+  path: '/shelves/$shelfId',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -87,6 +118,11 @@ const ApiCoversBookIdRoute = ApiCoversBookIdRouteImport.update({
   path: '/api/covers/$bookId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppBooksBookIdEditRoute = AppBooksBookIdEditRouteImport.update({
+  id: '/books_/$bookId/edit',
+  path: '/books/$bookId/edit',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,11 +132,17 @@ export interface FileRoutesByFullPath {
   '/loans': typeof AppLoansRoute
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
+  '/books/$bookId': typeof AppBooksBookIdRoute
+  '/books/new': typeof AppBooksNewRoute
+  '/invite/$token': typeof AppInviteTokenRoute
+  '/series/$seriesId': typeof AppSeriesSeriesIdRoute
+  '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/covers/$bookId': typeof ApiCoversBookIdRoute
   '/books/': typeof AppBooksIndexRoute
   '/libraries/': typeof AppLibrariesIndexRoute
   '/series/': typeof AppSeriesIndexRoute
+  '/books/$bookId/edit': typeof AppBooksBookIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,11 +152,17 @@ export interface FileRoutesByTo {
   '/loans': typeof AppLoansRoute
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
+  '/books/$bookId': typeof AppBooksBookIdRoute
+  '/books/new': typeof AppBooksNewRoute
+  '/invite/$token': typeof AppInviteTokenRoute
+  '/series/$seriesId': typeof AppSeriesSeriesIdRoute
+  '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/covers/$bookId': typeof ApiCoversBookIdRoute
   '/books': typeof AppBooksIndexRoute
   '/libraries': typeof AppLibrariesIndexRoute
   '/series': typeof AppSeriesIndexRoute
+  '/books/$bookId/edit': typeof AppBooksBookIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -126,11 +174,17 @@ export interface FileRoutesById {
   '/_app/loans': typeof AppLoansRoute
   '/_app/requests': typeof AppRequestsRoute
   '/_app/wishlist': typeof AppWishlistRoute
+  '/_app/books/$bookId': typeof AppBooksBookIdRoute
+  '/_app/books/new': typeof AppBooksNewRoute
+  '/_app/invite/$token': typeof AppInviteTokenRoute
+  '/_app/series/$seriesId': typeof AppSeriesSeriesIdRoute
+  '/_app/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/covers/$bookId': typeof ApiCoversBookIdRoute
   '/_app/books/': typeof AppBooksIndexRoute
   '/_app/libraries/': typeof AppLibrariesIndexRoute
   '/_app/series/': typeof AppSeriesIndexRoute
+  '/_app/books_/$bookId/edit': typeof AppBooksBookIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -142,11 +196,17 @@ export interface FileRouteTypes {
     | '/loans'
     | '/requests'
     | '/wishlist'
+    | '/books/$bookId'
+    | '/books/new'
+    | '/invite/$token'
+    | '/series/$seriesId'
+    | '/shelves/$shelfId'
     | '/api/auth/$'
     | '/api/covers/$bookId'
     | '/books/'
     | '/libraries/'
     | '/series/'
+    | '/books/$bookId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -156,11 +216,17 @@ export interface FileRouteTypes {
     | '/loans'
     | '/requests'
     | '/wishlist'
+    | '/books/$bookId'
+    | '/books/new'
+    | '/invite/$token'
+    | '/series/$seriesId'
+    | '/shelves/$shelfId'
     | '/api/auth/$'
     | '/api/covers/$bookId'
     | '/books'
     | '/libraries'
     | '/series'
+    | '/books/$bookId/edit'
   id:
     | '__root__'
     | '/'
@@ -171,11 +237,17 @@ export interface FileRouteTypes {
     | '/_app/loans'
     | '/_app/requests'
     | '/_app/wishlist'
+    | '/_app/books/$bookId'
+    | '/_app/books/new'
+    | '/_app/invite/$token'
+    | '/_app/series/$seriesId'
+    | '/_app/shelves/$shelfId'
     | '/api/auth/$'
     | '/api/covers/$bookId'
     | '/_app/books/'
     | '/_app/libraries/'
     | '/_app/series/'
+    | '/_app/books_/$bookId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -251,6 +323,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBooksIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/books/$bookId': {
+      id: '/_app/books/$bookId'
+      path: '/books/$bookId'
+      fullPath: '/books/$bookId'
+      preLoaderRoute: typeof AppBooksBookIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/books/new': {
+      id: '/_app/books/new'
+      path: '/books/new'
+      fullPath: '/books/new'
+      preLoaderRoute: typeof AppBooksNewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/invite/$token': {
+      id: '/_app/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof AppInviteTokenRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/libraries/': {
       id: '/_app/libraries/'
       path: '/libraries'
@@ -263,6 +356,20 @@ declare module '@tanstack/react-router' {
       path: '/series'
       fullPath: '/series/'
       preLoaderRoute: typeof AppSeriesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/series/$seriesId': {
+      id: '/_app/series/$seriesId'
+      path: '/series/$seriesId'
+      fullPath: '/series/$seriesId'
+      preLoaderRoute: typeof AppSeriesSeriesIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/shelves/$shelfId': {
+      id: '/_app/shelves/$shelfId'
+      path: '/shelves/$shelfId'
+      fullPath: '/shelves/$shelfId'
+      preLoaderRoute: typeof AppShelvesShelfIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
@@ -279,6 +386,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCoversBookIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/books_/$bookId/edit': {
+      id: '/_app/books_/$bookId/edit'
+      path: '/books/$bookId/edit'
+      fullPath: '/books/$bookId/edit'
+      preLoaderRoute: typeof AppBooksBookIdEditRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -288,9 +402,15 @@ interface AppRouteChildren {
   AppLoansRoute: typeof AppLoansRoute
   AppRequestsRoute: typeof AppRequestsRoute
   AppWishlistRoute: typeof AppWishlistRoute
+  AppBooksBookIdRoute: typeof AppBooksBookIdRoute
+  AppBooksNewRoute: typeof AppBooksNewRoute
+  AppInviteTokenRoute: typeof AppInviteTokenRoute
+  AppSeriesSeriesIdRoute: typeof AppSeriesSeriesIdRoute
+  AppShelvesShelfIdRoute: typeof AppShelvesShelfIdRoute
   AppBooksIndexRoute: typeof AppBooksIndexRoute
   AppLibrariesIndexRoute: typeof AppLibrariesIndexRoute
   AppSeriesIndexRoute: typeof AppSeriesIndexRoute
+  AppBooksBookIdEditRoute: typeof AppBooksBookIdEditRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -299,9 +419,15 @@ const AppRouteChildren: AppRouteChildren = {
   AppLoansRoute: AppLoansRoute,
   AppRequestsRoute: AppRequestsRoute,
   AppWishlistRoute: AppWishlistRoute,
+  AppBooksBookIdRoute: AppBooksBookIdRoute,
+  AppBooksNewRoute: AppBooksNewRoute,
+  AppInviteTokenRoute: AppInviteTokenRoute,
+  AppSeriesSeriesIdRoute: AppSeriesSeriesIdRoute,
+  AppShelvesShelfIdRoute: AppShelvesShelfIdRoute,
   AppBooksIndexRoute: AppBooksIndexRoute,
   AppLibrariesIndexRoute: AppLibrariesIndexRoute,
   AppSeriesIndexRoute: AppSeriesIndexRoute,
+  AppBooksBookIdEditRoute: AppBooksBookIdEditRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -316,3 +442,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

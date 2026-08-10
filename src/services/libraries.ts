@@ -2,12 +2,18 @@ import { and, asc, count, eq, inArray, isNull } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { user } from '@/db/schema/auth'
-import { book, library, libraryInvite, libraryMember, shelf } from '@/db/schema/catalog'
+import {
+  book,
+  library,
+  libraryInvite,
+  libraryMember,
+  shelf,
+} from '@/db/schema/catalog'
 import { AppError } from './errors'
 import { assertMember, assertOwner, memberLibraryIds } from './members'
 import { randomToken } from './random'
-import {  shelfTint } from './shelfTint'
-import type {ShelfTint} from './shelfTint';
+import { shelfTint } from './shelfTint'
+import type { ShelfTint } from './shelfTint'
 
 export interface LibrarySummary {
   id: string
@@ -17,7 +23,9 @@ export interface LibrarySummary {
 }
 
 /** Библиотеки пользователя для табов. */
-export async function listMyLibraries(userId: string): Promise<Array<LibrarySummary>> {
+export async function listMyLibraries(
+  userId: string,
+): Promise<Array<LibrarySummary>> {
   const ids = await memberLibraryIds(userId)
   if (ids.length === 0) return []
   const rows = await db
@@ -28,7 +36,10 @@ export async function listMyLibraries(userId: string): Promise<Array<LibrarySumm
       bookCount: count(book.id),
     })
     .from(library)
-    .leftJoin(book, and(eq(book.libraryId, library.id), eq(book.status, 'in_library')))
+    .leftJoin(
+      book,
+      and(eq(book.libraryId, library.id), eq(book.status, 'in_library')),
+    )
     .where(inArray(library.id, ids))
     .groupBy(library.id)
     .orderBy(asc(library.position), asc(library.createdAt))
@@ -41,7 +52,12 @@ export interface ShelfOverview {
   accentColor: string | null
   bookCount: number
   tint: ShelfTint
-  books: Array<{ id: string; title: string; authors: string; pages: number | null }>
+  books: Array<{
+    id: string
+    title: string
+    authors: string
+    pages: number | null
+  }>
 }
 
 export interface LibraryOverview {
@@ -61,7 +77,10 @@ const SPINES_PER_SHELF = 40
 const UNSORTED_PREVIEW = 5
 
 /** Полный обзор библиотеки: полки с патиной и корешками, стопка «Неразобранное», участники. */
-export async function getLibraryOverview(userId: string, libraryId: string): Promise<LibraryOverview> {
+export async function getLibraryOverview(
+  userId: string,
+  libraryId: string,
+): Promise<LibraryOverview> {
   const membership = await assertMember(userId, libraryId)
   const [lib] = await db.select().from(library).where(eq(library.id, libraryId))
   if (!lib) throw new AppError('Библиотека не найдена', 'not_found')
@@ -118,12 +137,21 @@ export async function getLibraryOverview(userId: string, libraryId: string): Pro
         accentColor: s.accentColor,
         bookCount: books.length,
         tint: shelfTint(books.map((b) => b.year)),
-        books: books.slice(0, SPINES_PER_SHELF).map(({ id, title, authors, pages }) => ({ id, title, authors, pages })),
+        books: books
+          .slice(0, SPINES_PER_SHELF)
+          .map(({ id, title, authors, pages }) => ({
+            id,
+            title,
+            authors,
+            pages,
+          })),
       }
     }),
     unsorted: {
       count: unsorted.length,
-      books: unsorted.slice(0, UNSORTED_PREVIEW).map(({ id, title, authors }) => ({ id, title, authors })),
+      books: unsorted
+        .slice(0, UNSORTED_PREVIEW)
+        .map(({ id, title, authors }) => ({ id, title, authors })),
     },
   }
 }
@@ -146,35 +174,55 @@ export async function createLibrary(
     })
     .returning({ id: library.id })
   if (!created) throw new AppError('Не удалось создать библиотеку')
-  await db.insert(libraryMember).values({ libraryId: created.id, userId, role: 'owner' })
+  await db
+    .insert(libraryMember)
+    .values({ libraryId: created.id, userId, role: 'owner' })
   return created
 }
 
-export async function renameLibrary(userId: string, libraryId: string, name: string): Promise<void> {
+export async function renameLibrary(
+  userId: string,
+  libraryId: string,
+  name: string,
+): Promise<void> {
   await assertMember(userId, libraryId)
   await db.update(library).set({ name }).where(eq(library.id, libraryId))
 }
 
-export async function deleteLibrary(userId: string, libraryId: string): Promise<void> {
+export async function deleteLibrary(
+  userId: string,
+  libraryId: string,
+): Promise<void> {
   await assertOwner(userId, libraryId)
   await db.delete(library).where(eq(library.id, libraryId))
 }
 
 // ── Инвайты и участники ────────────────────────────────────────────────
 
-export async function createInvite(userId: string, libraryId: string): Promise<{ token: string }> {
+export async function createInvite(
+  userId: string,
+  libraryId: string,
+): Promise<{ token: string }> {
   await assertOwner(userId, libraryId)
   const token = randomToken()
   await db.insert(libraryInvite).values({ libraryId, token, createdBy: userId })
   return { token }
 }
 
-export async function revokeInvites(userId: string, libraryId: string): Promise<void> {
+export async function revokeInvites(
+  userId: string,
+  libraryId: string,
+): Promise<void> {
   await assertOwner(userId, libraryId)
   await db
     .update(libraryInvite)
     .set({ revokedAt: new Date() })
-    .where(and(eq(libraryInvite.libraryId, libraryId), isNull(libraryInvite.revokedAt)))
+    .where(
+      and(
+        eq(libraryInvite.libraryId, libraryId),
+        isNull(libraryInvite.revokedAt),
+      ),
+    )
 }
 
 /** Принять инвайт: идемпотентно, возвращает библиотеку. */
@@ -183,31 +231,60 @@ export async function acceptInvite(
   token: string,
 ): Promise<{ libraryId: string; libraryName: string }> {
   const [invite] = await db
-    .select({ id: libraryInvite.id, libraryId: libraryInvite.libraryId, revokedAt: libraryInvite.revokedAt })
+    .select({
+      id: libraryInvite.id,
+      libraryId: libraryInvite.libraryId,
+      revokedAt: libraryInvite.revokedAt,
+    })
     .from(libraryInvite)
     .where(eq(libraryInvite.token, token))
   if (!invite || invite.revokedAt) {
-    throw new AppError('Приглашение не действует — попросите новую ссылку', 'not_found')
+    throw new AppError(
+      'Приглашение не действует — попросите новую ссылку',
+      'not_found',
+    )
   }
-  const [lib] = await db.select({ name: library.name }).from(library).where(eq(library.id, invite.libraryId))
+  const [lib] = await db
+    .select({ name: library.name })
+    .from(library)
+    .where(eq(library.id, invite.libraryId))
   if (!lib) throw new AppError('Библиотека уже удалена', 'not_found')
 
   const existing = await db
     .select()
     .from(libraryMember)
-    .where(and(eq(libraryMember.libraryId, invite.libraryId), eq(libraryMember.userId, userId)))
+    .where(
+      and(
+        eq(libraryMember.libraryId, invite.libraryId),
+        eq(libraryMember.userId, userId),
+      ),
+    )
   if (existing.length === 0) {
-    await db.insert(libraryMember).values({ libraryId: invite.libraryId, userId, role: 'member' })
+    await db
+      .insert(libraryMember)
+      .values({ libraryId: invite.libraryId, userId, role: 'member' })
   }
   return { libraryId: invite.libraryId, libraryName: lib.name }
 }
 
-export async function removeMember(userId: string, libraryId: string, targetUserId: string): Promise<void> {
+export async function removeMember(
+  userId: string,
+  libraryId: string,
+  targetUserId: string,
+): Promise<void> {
   await assertOwner(userId, libraryId)
   if (targetUserId === userId) {
-    throw new AppError('Создатель не может удалить себя — удалите библиотеку целиком', 'invalid')
+    throw new AppError(
+      'Создатель не может удалить себя — удалите библиотеку целиком',
+      'invalid',
+    )
   }
   await db
     .delete(libraryMember)
-    .where(and(eq(libraryMember.libraryId, libraryId), eq(libraryMember.userId, targetUserId)))
+    .where(
+      and(
+        eq(libraryMember.libraryId, libraryId),
+        eq(libraryMember.userId, targetUserId),
+      ),
+    )
 }

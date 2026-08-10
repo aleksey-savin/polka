@@ -21,7 +21,10 @@ export interface SpineAppearance {
   height: number
 }
 
-export function spineFor(title: string, pages?: number | null): SpineAppearance {
+export function spineFor(
+  title: string,
+  pages?: number | null,
+): SpineAppearance {
   const hash = hashString(title)
   const color = PALETTE[hash % PALETTE.length] ?? '#E8E2D4'
   const heights = [124, 132, 138, 148]

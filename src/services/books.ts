@@ -28,7 +28,10 @@ export interface BookInput {
   wishlist?: boolean
 }
 
-async function assertShelfInLibrary(shelfId: string, libraryId: string): Promise<void> {
+async function assertShelfInLibrary(
+  shelfId: string,
+  libraryId: string,
+): Promise<void> {
   const [found] = await db
     .select({ libraryId: shelf.libraryId })
     .from(shelf)
@@ -41,17 +44,32 @@ async function assertShelfInLibrary(shelfId: string, libraryId: string): Promise
 async function placementFor(
   userId: string,
   input: Pick<BookInput, 'libraryId' | 'shelfId' | 'wishlist'>,
-): Promise<{ libraryId: string | null; shelfId: string | null; status: 'in_library' | 'wishlist' }> {
-  if (input.wishlist) return { libraryId: null, shelfId: null, status: 'wishlist' }
-  if (!input.libraryId) throw new AppError('Выберите библиотеку или отметьте «Хочу»', 'invalid')
+): Promise<{
+  libraryId: string | null
+  shelfId: string | null
+  status: 'in_library' | 'wishlist'
+}> {
+  if (input.wishlist)
+    return { libraryId: null, shelfId: null, status: 'wishlist' }
+  if (!input.libraryId)
+    throw new AppError('Выберите библиотеку или отметьте «Хочу»', 'invalid')
   await assertMember(userId, input.libraryId)
   if (input.shelfId) await assertShelfInLibrary(input.shelfId, input.libraryId)
-  return { libraryId: input.libraryId, shelfId: input.shelfId ?? null, status: 'in_library' }
+  return {
+    libraryId: input.libraryId,
+    shelfId: input.shelfId ?? null,
+    status: 'in_library',
+  }
 }
 
-export async function createBook(userId: string, input: BookInput): Promise<{ id: string }> {
+export async function createBook(
+  userId: string,
+  input: BookInput,
+): Promise<{ id: string }> {
   const placement = await placementFor(userId, input)
-  const seriesId = input.seriesName ? await resolveSeriesByName(userId, input.seriesName) : null
+  const seriesId = input.seriesName
+    ? await resolveSeriesByName(userId, input.seriesName)
+    : null
   const [created] = await db
     .insert(book)
     .values({
@@ -91,10 +109,16 @@ export async function requireBookAccess(userId: string, bookId: string) {
   return row
 }
 
-export async function updateBook(userId: string, bookId: string, input: BookInput): Promise<void> {
+export async function updateBook(
+  userId: string,
+  bookId: string,
+  input: BookInput,
+): Promise<void> {
   const current = await requireBookAccess(userId, bookId)
   const placement = await placementFor(userId, input)
-  const seriesId = input.seriesName ? await resolveSeriesByName(userId, input.seriesName) : null
+  const seriesId = input.seriesName
+    ? await resolveSeriesByName(userId, input.seriesName)
+    : null
   await db
     .update(book)
     .set({
@@ -123,7 +147,10 @@ export async function updateBook(userId: string, bookId: string, input: BookInpu
   if (input.tags) await setBookTags(userId, bookId, input.tags)
 }
 
-export async function deleteBook(userId: string, bookId: string): Promise<void> {
+export async function deleteBook(
+  userId: string,
+  bookId: string,
+): Promise<void> {
   const row = await requireBookAccess(userId, bookId)
   await db.delete(book).where(eq(book.id, bookId))
   if (row.coverPath) await deleteCover(row.coverPath)
@@ -137,7 +164,8 @@ export async function moveBooks(
 ): Promise<void> {
   if (bookIds.length === 0) return
   await assertMember(userId, target.libraryId)
-  if (target.shelfId) await assertShelfInLibrary(target.shelfId, target.libraryId)
+  if (target.shelfId)
+    await assertShelfInLibrary(target.shelfId, target.libraryId)
   for (const id of bookIds) await requireBookAccess(userId, id)
   await db
     .update(book)
@@ -174,7 +202,10 @@ export interface BookCard {
   addedBy: string
 }
 
-export async function getBookCard(userId: string, bookId: string): Promise<BookCard> {
+export async function getBookCard(
+  userId: string,
+  bookId: string,
+): Promise<BookCard> {
   const row = await requireBookAccess(userId, bookId)
   const [joined] = await db
     .select({
@@ -270,7 +301,11 @@ export async function listBooks(
   if (filters.query?.trim()) {
     const q = `%${sanitizeLike(normalizeForSearch(filters.query))}%`
     conditions.push(
-      or(like(book.titleNorm, q), like(book.authorsNorm, q), like(series.nameNorm, q)),
+      or(
+        like(book.titleNorm, q),
+        like(book.authorsNorm, q),
+        like(series.nameNorm, q),
+      ),
     )
   }
 
