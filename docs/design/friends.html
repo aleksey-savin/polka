@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polka · Друзья — макет</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,600;8..30,700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .page-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 14px; }
+  .page-head h1 { font-size: 30px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 22px; border-bottom: 1px solid var(--line); }
+  .tabs a { text-decoration: none; color: var(--ink-soft); font-weight: 600; font-size: 14px; padding: 9px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs a[aria-current] { color: var(--lamp-deep); border-color: var(--lamp); }
+
+  /* Карточка сохранённой полки: мини-полка с патиной владельца */
+  .saved { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+  .saved-card { padding: 16px 18px 14px; display: grid; gap: 10px; align-content: start; }
+  .saved-card .who { font-size: 12.5px; color: var(--stamp); font-weight: 600; }
+  .saved-card h3 { font-family: var(--font-display); font-size: 19px; }
+  .mini-shelf { display: flex; align-items: flex-end; gap: 2px; padding: 0 8px; }
+  .mini-shelf i { border-radius: 2px 2px 0 0; box-shadow: var(--shadow-spine); }
+  .mini-board { height: 7px; border-radius: 2px;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--board) 88%, #fff), color-mix(in oklab, var(--board) 82%, #232B38)); }
+  .saved-card .meta { font-size: 12.5px; color: var(--ink-soft); }
+  .saved-card .row-btns { display: flex; gap: 8px; }
+  .saved-card .row-btns .btn { padding: 8px 12px; font-size: 13px; }
+
+  .add-by-link { margin-top: 22px; padding: 14px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .add-by-link input { flex: 1; min-width: 220px; font: 400 13.5px var(--font-data); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--paper); }
+
+  /* Мои ссылки */
+  .mine { margin-top: 40px; }
+  .mine .head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+  .mine h2 { font-size: 19px; }
+  .links { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .links th { text-align: left; font-family: var(--font-data); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); padding: 8px 12px; }
+  .links td { padding: 11px 12px; border-top: 1px solid var(--line); }
+  .links .tok { font-family: var(--font-data); font-size: 12.5px; color: var(--ink-soft); }
+  .links .btn { padding: 7px 12px; font-size: 13px; }
+  .revoke { background: none; border: 0; color: var(--stamp-red); font-weight: 600; font-size: 13px; }
+  @media (max-width: 700px) { .links thead { display: none; } .links td { display: block; border: 0; padding: 4px 12px; } .links tr { display: block; border-top: 1px solid var(--line); padding: 8px 0; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="library.html"><span class="word">Полка</span><span class="mini-spine"><i></i></span><span class="mini-spine"><i></i></span></a>
+  <nav class="nav">
+    <a href="library.html">Библиотека</a>
+    <a href="catalog.html">Каталог</a>
+    <a href="#">Серии</a><a href="#">Хочу</a>
+    <a href="loans.html">На руках</a>
+    <a href="friends.html" aria-current="page">Друзья</a>
+    <a href="#">Заявки<span class="badge">1</span></a>
+  </nav>
+  <div class="grow"></div>
+  <a class="btn" href="add.html">+ Добавить книгу</a>
+</header>
+
+<main class="container">
+  <div class="page-head"><h1>Друзья</h1><span class="shelf-meta"><b>3</b> сохранённые полки · <b>2</b> мои ссылки</span></div>
+
+  <nav class="tabs">
+    <a href="#" aria-current="page">Полки друзей · 3</a>
+    <a href="#">Мои ссылки · 2</a>
+  </nav>
+
+  <div class="saved">
+    <div class="card saved-card">
+      <span class="who">у Димы</span>
+      <h3>Фантастика</h3>
+      <div>
+        <div class="mini-shelf">
+          <i style="width:12px;height:38px;background:#C9D2C5"></i><i style="width:9px;height:34px;background:#4A5A6E"></i>
+          <i style="width:14px;height:40px;background:#E8E2D4"></i><i style="width:10px;height:33px;background:#CBD3DD"></i>
+          <i style="width:12px;height:37px;background:#D8CBD4"></i>
+        </div>
+        <div class="mini-board" style="--board:#DDBE8A"></div>
+      </div>
+      <span class="meta">31 книга · медиана 1992 · сохранена в июле</span>
+      <div class="row-btns"><a class="btn secondary" href="share.html">Открыть</a><button class="revoke">Убрать</button></div>
+    </div>
+
+    <div class="card saved-card">
+      <span class="who">у Маши</span>
+      <h3>Все книги</h3>
+      <div>
+        <div class="mini-shelf">
+          <i style="width:11px;height:36px;background:#E3D3C0"></i><i style="width:13px;height:40px;background:#A3BE9C"></i>
+          <i style="width:9px;height:32px;background:#D9CDB8"></i><i style="width:12px;height:38px;background:#CBD3DD"></i>
+          <i style="width:10px;height:35px;background:#6E5A4A"></i><i style="width:12px;height:39px;background:#D8CBD4"></i>
+        </div>
+        <div class="mini-board" style="--board:#EFE9DC"></div>
+      </div>
+      <span class="meta">156 книг · медиана 2014 · сохранена в июне</span>
+      <div class="row-btns"><a class="btn secondary" href="share.html">Открыть</a><button class="revoke">Убрать</button></div>
+    </div>
+
+    <div class="card saved-card">
+      <span class="who">у Оли</span>
+      <h3>Детское</h3>
+      <div>
+        <div class="mini-shelf">
+          <i style="width:10px;height:34px;background:#E9ADBC"></i><i style="width:13px;height:38px;background:#9FBEDC"></i>
+          <i style="width:11px;height:36px;background:#A8CFC0"></i><i style="width:9px;height:31px;background:#DFAE54"></i>
+        </div>
+        <div class="mini-board" style="--board:#E9ADBC"></div>
+      </div>
+      <span class="meta">16 книг · цвет задан Олей · сохранена вчера</span>
+      <div class="row-btns"><a class="btn secondary" href="share.html">Открыть</a><button class="revoke">Убрать</button></div>
+    </div>
+  </div>
+
+  <div class="card add-by-link">
+    <b style="font-size:13.5px">Добавить полку друга:</b>
+    <input value="https://polka.example.ru/s/K3n9…" aria-label="Ссылка">
+    <button class="btn">Сохранить себе</button>
+    <span class="hint">…или просто откройте присланную ссылку и нажмите «Сохранить себе» там.</span>
+  </div>
+
+  <!-- Вторая вкладка (показана ниже для макета) -->
+  <section class="mine">
+    <div class="head"><h2>Мои ссылки</h2><span class="hint">вкладка «Мои ссылки» · исходящий шэринг</span></div>
+    <div class="card" style="overflow-x:auto">
+      <table class="links">
+        <thead><tr><th>Что открыто</th><th>Ссылка</th><th>Заявки</th><th>Создана</th><th></th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>Дом · Фантастика</b> <span class="hint">(полка)</span></td>
+            <td class="tok">polka.example.ru/s/aG7xQ…</td>
+            <td><span class="badge" style="background:var(--stamp)">1</span> новая</td>
+            <td>12 июл 2026</td>
+            <td><button class="btn secondary">Копировать</button></td>
+            <td><button class="revoke">Отозвать</button></td>
+          </tr>
+          <tr>
+            <td><b>Дом</b> <span class="hint">(вся библиотека)</span></td>
+            <td class="tok">polka.example.ru/s/Zt2mE…</td>
+            <td>—</td>
+            <td>29 июн 2026</td>
+            <td><button class="btn secondary">Копировать</button></td>
+            <td><button class="revoke">Отозвать</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="hint" style="margin-top:10px">Отзыв ссылки мгновенно закрывает витрину и убирает полку из «Друзей» у всех, кто её сохранил.</p>
+    <button class="btn" style="margin-top:12px">Создать ссылку</button>
+  </section>
+</main>
+
+</body>
+</html>

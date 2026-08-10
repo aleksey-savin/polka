@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polka · Каталог — макет</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Piazzolla:opsz,wght@8..30,500;8..30,600;8..30,700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .page-head { display: flex; align-items: baseline; gap: 16px; }
+  .page-head h1 { font-size: 30px; }
+
+  .searchbar { display: flex; gap: 10px; margin: 18px 0 12px; }
+  .searchbar input { flex: 1; font: 500 17px var(--font-ui); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 12px; padding: 13px 18px; background: var(--card); }
+  .searchbar input:focus { outline: 2px solid var(--lamp); border-color: transparent; }
+
+  .scope { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .scope a { text-decoration: none; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); padding: 8px 16px; border-radius: 999px; }
+  .scope a[aria-current] { background: var(--ink); color: #fff; }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 6px; }
+  .filters .chip { cursor: pointer; padding: 6px 12px; background: var(--card); }
+  .filters .chip.on { border-color: var(--lamp); color: var(--lamp-deep); font-weight: 600; }
+
+  .count { font-family: var(--font-data); font-size: 12px; color: var(--ink-soft); margin: 14px 4px 8px; }
+
+  .row { display: flex; align-items: center; gap: 14px; padding: 10px 14px; }
+  .row + .row { margin-top: 8px; }
+  .row .mini { flex: none; width: 26px; height: 64px; border-radius: 3px; box-shadow: var(--shadow-spine); }
+  .row .t { flex: 1; min-width: 180px; }
+  .row .t b { font-family: var(--font-display); font-size: 16px; font-weight: 600; }
+  .row .t span { display: block; font-size: 13px; color: var(--ink-soft); }
+  .row .place { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
+  .row .place b { color: var(--ink); font-weight: 500; }
+  .row .meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .row .stars-s { color: #C9A23B; font-size: 13px; letter-spacing: 1px; }
+  .row .year { font-family: var(--font-data); font-size: 12px; color: var(--ink-soft); }
+
+  .friends-head { display: flex; align-items: baseline; gap: 12px; margin: 34px 4px 8px; }
+  .friends-head h2 { font-size: 19px; }
+  .owner { font-size: 12.5px; color: var(--stamp); font-weight: 600; white-space: nowrap; }
+  .row .ask { padding: 7px 12px; font-size: 13px; }
+  .busy { font-size: 12.5px; color: var(--ink-soft); }
+
+  .friends-strip { margin-top: 26px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  @media (max-width: 640px) { .row { flex-wrap: wrap; } .row .place { width: 100%; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="library.html"><span class="word">Полка</span><span class="mini-spine"><i></i></span><span class="mini-spine"><i></i></span></a>
+  <nav class="nav">
+    <a href="library.html">Библиотека</a>
+    <a href="catalog.html" aria-current="page">Каталог</a>
+    <a href="#">Серии</a><a href="#">Хочу</a>
+    <a href="loans.html">На руках</a>
+    <a href="friends.html">Друзья</a>
+    <a href="#">Заявки<span class="badge">1</span></a>
+  </nav>
+  <div class="grow"></div>
+  <a class="btn" href="add.html">+ Добавить книгу</a>
+</header>
+
+<main class="container">
+  <div class="page-head"><h1>Каталог</h1><span class="shelf-meta"><b>87</b> своих книг · <b>203</b> у друзей</span></div>
+
+  <div class="searchbar">
+    <input value="стругацкие" aria-label="Поиск">
+    <nav class="scope" aria-label="Где ищем">
+      <a href="#" aria-current="page">Мои книги · 3</a>
+      <a href="#">У друзей · 2</a>
+    </nav>
+  </div>
+
+  <div class="filters">
+    <span class="chip on">Дом ✕</span>
+    <span class="chip">Библиотека ▾</span>
+    <span class="chip">Полка ▾</span>
+    <span class="chip">Серия ▾</span>
+    <span class="chip">Тэг ▾</span>
+    <span class="chip">Владение ▾</span>
+    <span class="chip">Чтение ▾</span>
+  </div>
+
+  <p class="count">НАЙДЕНО 3 ИЗ 87 · «СТРУГАЦКИЕ» — ищем без учёта регистра и «ё»</p>
+
+  <a class="card row" href="book.html" style="text-decoration:none">
+    <div class="mini" style="background:#C9D2C5"></div>
+    <div class="t"><b>Трудно быть богом</b><span>Аркадий и Борис Стругацкие</span></div>
+    <span class="place">стоит: <b>Дом · Фантастика</b></span>
+    <div class="meta"><span class="chip series">Миры братьев Стругацких</span><span class="stars-s">★★★★★</span><span class="year">1989</span></div>
+  </a>
+
+  <a class="card row" href="book.html" style="text-decoration:none">
+    <div class="mini" style="background:#E8E2D4"></div>
+    <div class="t"><b>Пикник на обочине</b><span>Аркадий и Борис Стругацкие</span></div>
+    <span class="place">стоит: <b>Дом · Фантастика</b></span>
+    <div class="meta"><span class="stamp" style="font-size:10px">На руках</span><span class="year">1997</span></div>
+  </a>
+
+  <a class="card row" href="book.html" style="text-decoration:none">
+    <div class="mini" style="background:#CBD3DD"></div>
+    <div class="t"><b>Град обреченный</b><span>Аркадий и Борис Стругацкие</span></div>
+    <span class="place">лежит: <b>Дом · Неразобранное</b></span>
+    <div class="meta"><span class="year">2016</span></div>
+  </a>
+
+  <!-- Второй скоуп показан здесь же, чтобы был виден на макете -->
+  <div class="friends-head"><h2>У друзей</h2><span class="hint">скоуп «У друзей · 2» — публичные поля, как на витрине</span></div>
+
+  <div class="card row">
+    <div class="mini" style="background:#D8CBD4"></div>
+    <div class="t"><b>Улитка на склоне</b><span>Аркадий и Борис Стругацкие</span></div>
+    <span class="owner">у Димы · Фантастика</span>
+    <div class="meta"><span class="year">1988</span><button class="btn secondary ask">Хочу почитать</button></div>
+  </div>
+
+  <div class="card row">
+    <div class="mini" style="background:#E3D3C0"></div>
+    <div class="t"><b>Понедельник начинается в субботу</b><span>Аркадий и Борис Стругацкие</span></div>
+    <span class="owner">у Маши · Любимое</span>
+    <div class="meta"><span class="year">2015</span><span class="busy">на руках — загляните позже</span></div>
+  </div>
+
+  <div class="card friends-strip">
+    Ищем по сохранённым полкам: <b>Маша · Все книги</b>, <b>Дима · Фантастика</b>
+    <a class="btn ghost" href="friends.html" style="margin-left:auto">Управлять в «Друзьях» →</a>
+  </div>
+</main>
+
+</body>
+</html>

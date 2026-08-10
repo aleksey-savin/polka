@@ -39,16 +39,17 @@ polka/
     │   ├── s.$token.tsx              # публичная витрина — ВНЕ _app-гарда
     │   ├── _app.tsx                  # layout с beforeLoad-гардом сессии
     │   ├── _app/                     # libraries.index, libraries.$libraryId,
-    │   │                             # shelves.$shelfId, books.index, books.$bookId,
-    │   │                             # series.index, series.$seriesId,
-    │   │                             # add, wishlist, loans, requests
+    │   │                             # shelves.$shelfId, books.index (каталог, скоупы
+    │   │                             # «мои»/«у друзей»), books.$bookId,
+    │   │                             # series.index, series.$seriesId, add, wishlist,
+    │   │                             # loans, requests, friends (полки друзей + мои ссылки)
     │   └── api/
     │       ├── auth.$.ts             # better-auth catch-all (server.handlers)
     │       └── covers.$bookId.ts     # отдача файлов обложек
     ├── server/                       # createServerFn: тонкие обёртки
     │   ├── middleware.ts             # сессия из getRequestHeaders()
     │   └── libraries.ts shelves.ts books.ts series.ts tags.ts
-    │       lookup.ts covers.ts loans.ts shares.ts requests.ts
+    │       lookup.ts covers.ts loans.ts shares.ts savedShares.ts requests.ts
     ├── services/                     # чистая логика, покрыта bun test
     │   ├── isbn.ts                   # валидация, 10↔13, EAN-13 → ISBN
     │   ├── search.ts                 # нормализация кириллицы, построение LIKE
@@ -73,11 +74,14 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 
 | Таблица | Колонки | Ограничения |
 |---|---|---|
-| `library` | id, ownerId→user (cascade), name, description?, position, createdAt | idx (ownerId) |
+| `library` | id, name, description?, position, createdBy→user, createdAt | владение — через `library_member` |
+| `library_member` | libraryId→library (cascade), userId→user (cascade), role ('owner'\|'member'), joinedAt | PK (libraryId, userId); idx (userId). Совладение: все участники полноправны в каталоге; 'owner' (создатель) управляет участниками и удалением библиотеки |
+| `library_invite` | id, libraryId→library (cascade), token unique, createdBy→user, createdAt, revokedAt? | инвайт-ссылка: залогиненный открывает → становится участником |
 | `shelf` | id, libraryId→library (cascade), name, position, accentColor? (NULL = авто-патина), createdAt | unique (libraryId, name) |
-| `series` | id, ownerId→user, name, nameNorm, description?, createdAt | unique (ownerId, name) |
-| `book` | id, ownerId→user, libraryId?→library (NULL только при wishlist), shelfId?→shelf (set null; NULL = «Неразобранное»), title, authors, isbn10?, isbn13?, publisher?, year?, seriesId?→series (set null), seriesNumber? (текст), pages?, language='ru', annotation?, coverPath?, notes?, status ('in_library'\|'wishlist'\|'gifted'\|'lost'), giftedTo?, giftedAt?, readingStatus ('unread'\|'reading'\|'read'\|'abandoned'), readAt?, rating? CHECK 1–5, review?, reviewedAt?, titleNorm, authorsNorm, createdAt, updatedAt | idx: (ownerId), (libraryId, shelfId), (isbn13), (seriesId), (status), (readingStatus) |
-| `tag` | id, ownerId, name | unique (ownerId, name) |
+| `series` | id, ownerId→user, name, nameNorm, description?, createdAt | unique (ownerId, name); личный словарь, но в общей библиотеке привязанные серии видны всем участникам, autocomplete — по сериям всех участников |
+| `book` | id, addedBy→user (кто добавил; для wishlist — чей виш), libraryId?→library (NULL только при wishlist), shelfId?→shelf (set null; NULL = «Неразобранное»), title, authors, isbn10?, isbn13?, publisher?, year?, seriesId?→series (set null), seriesNumber? (текст), pages?, language='ru', annotation?, coverPath?, status ('in_library'\|'wishlist'\|'gifted'\|'lost'), giftedTo?, giftedAt?, titleNorm, authorsNorm, createdAt, updatedAt | idx: (addedBy), (libraryId, shelfId), (isbn13), (seriesId), (status). Личных полей нет — они в `book_personal` |
+| `book_personal` | userId→user (cascade), bookId→book (cascade), readingStatus ('unread'\|'reading'\|'read'\|'abandoned') default 'unread', readAt?, rating? CHECK 1–5, review?, reviewedAt?, notes? | PK (userId, bookId). Личный слой каждого участника: чтение, оценка, рецензия, приватные заметки |
+| `tag` | id, ownerId, name | unique (ownerId, name); тэги на книгах общей библиотеки видны всем участникам |
 | `book_tag` | bookId (cascade), tagId (cascade) | PK (bookId, tagId) |
 
 **circulation.ts**
@@ -85,14 +89,17 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 | Таблица | Колонки | Ограничения |
 |---|---|---|
 | `loan` | id, bookId→book (cascade), borrowerName, note?, lentAt, dueAt?, returnedAt?, requestId?→borrow_request, createdAt | **частичный unique (bookId) WHERE returnedAt IS NULL** — одна активная выдача на книгу |
-| `share` | id, ownerId, token unique (≥24 случайных байт, base64url), scope ('library'\|'shelf'), libraryId?, shelfId?, allowRequests=1, createdAt, revokedAt? | CHECK: заполнено ровно одно из libraryId/shelfId согласно scope |
-| `borrow_request` | id, shareId→share (cascade), bookId→book (cascade), guestName, note?, status ('pending'\|'approved'\|'declined'), createdAt, resolvedAt? | approve → создаёт loan (borrowerName=guestName, loan.requestId) |
+| `share` | id, createdBy→user, token unique (≥24 случайных байт, base64url), scope ('library'\|'shelf'), libraryId?, shelfId?, allowRequests=1, createdAt, revokedAt? | CHECK: заполнено ровно одно из libraryId/shelfId согласно scope; создать может любой участник библиотеки |
+| `borrow_request` | id, shareId→share (cascade), bookId→book (cascade), guestName, requesterUserId?→user (set null — заявка залогиненного), note?, status ('pending'\|'approved'\|'declined'), createdAt, resolvedAt? | approve → создаёт loan (borrowerName=guestName, loan.requestId) |
+| `saved_share` | userId→user (cascade), shareId→share (cascade), savedAt | PK (userId, shareId) — «полки друзей»: сохранённые чужие ссылки |
 | `lookup_cache` | isbn13 PK, source, rawJson, fetchedAt | кэш ответов метаданных |
 
 Инварианты, которые следит сервисный слой:
-- `book.status='wishlist'` ⇔ `libraryId IS NULL`; при остальных статусах `libraryId NOT NULL`.
+- `book.status='wishlist'` ⇔ `libraryId IS NULL` (личный виш, доступ по `addedBy`); при остальных статусах `libraryId NOT NULL`.
 - `shelfId` принадлежит той же `libraryId` (проверка при записи).
 - «На руках» — вычислимо: существует loan с `returnedAt IS NULL`.
+
+**Авторизация каталога — только через членство.** Единый хелпер `assertMember(libraryId, userId)` (join `library_member`) во всех сервисах: доступ к книге/полке/выдаче/заявке определяется членством в её библиотеке, а не `addedBy`. Wishlist-книги (без библиотеки) — только их `addedBy`. Действия «owner»: удаление библиотеки, управление участниками и инвайтами. Личный слой (`book_personal`) пишет только его `userId`; читают участники библиотеки книги (карточка показывает оценки всех участников).
 
 ## Аутентификация (better-auth)
 
@@ -118,6 +125,8 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 ## Поиск и кириллица
 
 `LOWER()`/`LIKE` в SQLite сворачивают регистр **только ASCII** — «Стругацкие» не найдётся по «стругацкие». Решение: теневые колонки `titleNorm`, `authorsNorm` у книги и `nameNorm` у серии, заполняются в JS (`.toLowerCase().trim()` + схлопывание пробелов, `ё`→`е`) при каждой записи; поиск — `LIKE '%…%'` по ним (+ join series для поиска по названию серии). FTS5 — осознанно после MVP.
+
+Скоуп «У друзей»: тот же поиск, но по книгам из сохранённых шэров (`saved_share` → `share` (не отозван) → библиотека/полка → книги), наружу — **тот же публичный allowlist полей, что и на витрине**; свои заметки/выдачи/оценки чужих книг не утекают.
 
 ## Живые полки (визуальная фишка)
 
