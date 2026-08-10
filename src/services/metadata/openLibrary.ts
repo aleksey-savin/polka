@@ -1,11 +1,10 @@
 /** Open Library: вежливый User-Agent, ≤3 rps; русское покрытие слабое, но старые издания находит. */
+import { POLKA_USER_AGENT } from '@/services/userAgent'
 import { yearFrom } from './types'
 import type { MetadataDraft, SourceResult } from './types'
 
 const TIMEOUT = 4000
-const HEADERS = {
-  'User-Agent': 'Polka/0.1 (домашняя библиотека; apslam88@gmail.com)',
-}
+const HEADERS = { 'User-Agent': POLKA_USER_AGENT }
 
 interface OlBook {
   title?: string

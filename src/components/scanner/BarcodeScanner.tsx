@@ -23,7 +23,8 @@ export function BarcodeScanner({
 
     async function start() {
       // В типах DOM mediaDevices «всегда есть», в реальности — нет (insecure context, старые браузеры)
-      const mediaDevices = (navigator as { mediaDevices?: MediaDevices }).mediaDevices
+      const mediaDevices = (navigator as { mediaDevices?: MediaDevices })
+        .mediaDevices
       if (!mediaDevices) {
         setState('unsupported')
         return
@@ -65,7 +66,9 @@ export function BarcodeScanner({
             for (const code of codes) {
               const parsed = parseIsbn(code.rawValue)
               if (parsed) {
-                ;(navigator as { vibrate?: (ms: number) => boolean }).vibrate?.(80)
+                ;(navigator as { vibrate?: (ms: number) => boolean }).vibrate?.(
+                  80,
+                )
                 onDetected(parsed.isbn13)
                 return // остановились: родитель закроет/перезапустит сканер
               }

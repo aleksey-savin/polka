@@ -3,6 +3,7 @@ import { join } from 'node:path'
 
 import { env } from '@/lib/env'
 import { AppError } from './errors'
+import { POLKA_USER_AGENT } from './userAgent'
 
 const MAX_BYTES = 10 * 1024 * 1024
 
@@ -53,7 +54,7 @@ export async function saveCoverFromUrl(
     throw new AppError('Обложка скачивается только по https')
   const res = await fetch(url, {
     signal: AbortSignal.timeout(8000),
-    headers: { 'User-Agent': 'Polka/0.1 (домашняя библиотека)' },
+    headers: { 'User-Agent': POLKA_USER_AGENT },
   })
   if (!res.ok) throw new AppError(`Источник обложки ответил ${res.status}`)
   return saveCover(bookId, await res.arrayBuffer())
