@@ -20,6 +20,10 @@ services:
     image: containrrr/watchtower
     container_name: polka-watchtower
     restart: unless-stopped
+    environment:
+      # watchtower собран со старым docker-клиентом (API 1.25); новые демоны
+      # требуют ≥1.40 — форсируем версию API, иначе рестарт-луп.
+      DOCKER_API_VERSION: '1.44'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --interval 300 --cleanup polka
