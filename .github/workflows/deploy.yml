@@ -47,25 +47,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    env:
-      VPS_HOST: ${{ secrets.VPS_HOST }}
-    steps:
-      - name: Нет секретов VPS — пропускаем
-        if: env.VPS_HOST == ''
-        run: echo "Секреты VPS_HOST/VPS_USER/VPS_SSH_KEY не заданы — деплой пропущен."
-      - name: Деплой на VPS
-        if: env.VPS_HOST != ''
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /opt/polka
-            docker compose pull
-            docker compose up -d
-            docker image prune -f
+# Деплой — pull-моделью: Watchtower на VPS сам подтягивает свежий образ из GHCR
+# (VPS за reverse-proxy, входящего ssh нет — секреты не нужны).

@@ -156,7 +156,7 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 - PRAGMA на старте: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`.
 - Docker: multi-stage от `oven/bun:1.3`, в рантайм — `dist/`, `drizzle/`, `server.ts`, `public/` **плюс production `node_modules`** (`bun install --production` в рантайм-слое: серверный бандл Vite экстернализует зависимости); `ENV DATA_DIR=/data`, `VOLUME /data`, порт 3000.
 - VPS: контейнер за **Nginx Proxy Manager** (существующий у владельца) — NPM терминирует HTTPS на поддомене и проксирует на порт контейнера. HTTPS обязателен: без него не работает камера-сканер. better-auth читает клиентский IP из `x-forwarded-for`/`x-real-ip` (`advanced.ipAddress.ipAddressHeaders`) — для rate-limit за прокси.
-- CD: GitHub Actions на пуш в `main` → сборка образа → GHCR → ssh на VPS → `docker compose pull && up -d`. Этот инстанс — живое дев-превью, по готовности MVP он же становится боевым. (GitHub Pages для приложения непригоден — SSR+БД; туда при желании выкладываются только статические макеты дизайна.)
+- CD **pull-моделью** (VPS за reverse-proxy, входящего ssh нет): GitHub Actions на пуш в `main` → проверки → сборка образа → публичный GHCR; на VPS рядом с приложением живёт **watchtower** (`--interval 300 --cleanup polka`) и сам перекатывает контейнер на свежий образ. Секреты GitHub не нужны. Этот инстанс — живое дев-превью, по готовности MVP он же становится боевым. (GitHub Pages для приложения непригоден — SSR+БД; туда при желании выкладываются только статические макеты дизайна.)
 - Бэкап: остановить контейнер и скопировать весь `/data` (WAL = три файла БД + covers), либо `sqlite3 polka.db ".backup"` на горячую. Процедура — в README.
 
 ## Переменные окружения

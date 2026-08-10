@@ -1,5 +1,7 @@
 # VPS: контейнер за Nginx Proxy Manager.
 # NPM проксирует поддомен → polka:3000 (общая docker-сеть) или host:3000 (ports ниже).
+# Деплой pull-моделью: watchtower раз в 5 минут проверяет GHCR и сам
+# перекатывает polka на свежий образ (пакет ghcr.io должен быть публичным).
 services:
   polka:
     image: ghcr.io/aleksey-savin/polka:latest
@@ -13,6 +15,14 @@ services:
       REGISTRATION_OPEN: ${REGISTRATION_OPEN:-true}
     volumes:
       - polka-data:/data
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: polka-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup polka
 
 volumes:
   polka-data:

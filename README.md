@@ -30,6 +30,6 @@ bun run typecheck && bun run lint && bun test
 bun run build && bun run start        # локальная проверка прод-сборки
 ```
 
-На VPS: каталог `/opt/polka` с `compose.yaml` и `.env` (по образцу `.env.example`), `docker compose up -d`; NPM проксирует поддомен на порт 3000 контейнера (HTTPS обязателен — иначе не работает камера-сканер). Каждый пуш в `main` собирает образ в GHCR и деплоит через GitHub Actions — нужны секреты репозитория `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (без них деплой-шаг просто пропускается).
+На VPS: каталог `/opt/polka` с `compose.yaml` и `.env` (по образцу `.env.example`), `docker compose up -d`; NPM проксирует поддомен на порт 3000 контейнера (HTTPS обязателен — иначе не работает камера-сканер). Деплой pull-моделью: пуш в `main` собирает образ в GHCR, а **watchtower** на VPS (он в том же `compose.yaml`) раз в 5 минут сам подтягивает свежий образ — никаких секретов и входящего ssh не нужно. Требование одно: пакет `ghcr.io/aleksey-savin/polka` должен быть **публичным** (Packages → Package settings → Change visibility).
 
 Бэкап: остановить контейнер и скопировать volume `/data` целиком (в нём `polka.db` с WAL-файлами и обложки).
