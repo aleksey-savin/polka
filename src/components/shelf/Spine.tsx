@@ -37,7 +37,9 @@ export function Spine({
   const look = spineFor(title, pages, { heightMm, coverType })
   const color = coverColor ?? look.color
   const darkBg = coverColor ? textToneFor(coverColor) === 'light' : look.dark
-  const label = authors ? `${lastName(authors)} · ${title}` : title
+  const author = authors ? lastName(authors) : ''
+  // на толстом корешке автор и название — двумя вертикальными строками
+  const twoLines = Boolean(author) && look.width >= 30
   const gift = coverType === 'gift'
   return (
     <Link
@@ -92,9 +94,20 @@ export function Spine({
               : 'rgba(35,43,56,.82)',
         }}
       >
-        <span className="block max-h-[94%] overflow-hidden text-ellipsis">
-          {label}
-        </span>
+        {twoLines ? (
+          <span className="flex max-h-[94%] flex-col items-center gap-[2px] overflow-hidden">
+            <span className="block max-h-full overflow-hidden text-[10px] leading-[1.15] font-normal text-ellipsis opacity-75">
+              {author}
+            </span>
+            <span className="block max-h-full overflow-hidden text-ellipsis">
+              {title}
+            </span>
+          </span>
+        ) : (
+          <span className="block max-h-[94%] overflow-hidden text-ellipsis">
+            {author ? `${author} · ${title}` : title}
+          </span>
+        )}
       </span>
     </Link>
   )
