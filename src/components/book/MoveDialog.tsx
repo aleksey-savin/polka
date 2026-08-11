@@ -97,6 +97,13 @@ export function MoveDialog({
     shelfId === ''
       ? 'Неразобранное'
       : (shelves.find((s) => s.id === shelfId)?.name ?? '')
+
+  // Тап по готовой полке закрывает форму создания — выбор всегда один
+  const selectShelf = (id: string) => {
+    setShelfId(id)
+    setCreating(false)
+    setNewName('')
+  }
   const isCurrent = (id: string) =>
     libraryId === defaultLibraryId &&
     defaultShelfId !== undefined &&
@@ -174,18 +181,18 @@ export function MoveDialog({
             <div className="grid gap-1.5">
               <ShelfOption
                 name="Неразобранное"
-                checked={shelfId === ''}
+                checked={!creating && shelfId === ''}
                 current={isCurrent('')}
-                onSelect={() => setShelfId('')}
+                onSelect={() => selectShelf('')}
               />
               {shelves.map((s) => (
                 <ShelfOption
                   key={s.id}
                   name={s.name}
                   count={s.bookCount}
-                  checked={shelfId === s.id}
+                  checked={!creating && shelfId === s.id}
                   current={isCurrent(s.id)}
-                  onSelect={() => setShelfId(s.id)}
+                  onSelect={() => selectShelf(s.id)}
                 />
               ))}
               {creating ? (
@@ -231,10 +238,16 @@ export function MoveDialog({
             size="lg"
             onClick={() => void submit()}
             loading={busy}
-            disabled={!libraryId}
+            disabled={!libraryId || creating}
           >
-            Переместить{' '}
-            {shelfId === '' ? 'в «Неразобранное»' : `на «${targetName}»`}
+            {creating ? (
+              'Сначала создайте полку'
+            ) : (
+              <>
+                Переместить{' '}
+                {shelfId === '' ? 'в «Неразобранное»' : `на «${targetName}»`}
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
