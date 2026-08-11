@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useRouter, useRouterState } from '@tanstack/react-router'
-import { BookOpen, Bookmark, House, LogOut, Plus, Users } from 'lucide-react'
+import { Bookmark, House, LogOut, Plus, Search, Users } from 'lucide-react'
 
 import { LogoLink } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
@@ -17,10 +17,10 @@ import { authClient } from '@/lib/auth-client'
 import { countPendingRequestsFn } from '@/server/shares'
 
 const sections = [
-  { to: '/libraries', label: 'Библиотека' },
-  { to: '/books', label: 'Каталог' },
-  { to: '/series', label: 'Серии' },
   { to: '/reading', label: 'Чтение' },
+  { to: '/books', label: 'Каталог' },
+  { to: '/libraries', label: 'Библиотека' },
+  { to: '/series', label: 'Серии' },
   { to: '/friends', label: 'Друзья' },
   { to: '/requests', label: 'Заявки' },
 ] as const
@@ -106,14 +106,14 @@ export function AppShell({
         className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t bg-card px-2 pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:hidden"
       >
         <TabLink
-          to="/libraries"
-          label="Библиотека"
-          icon={<House className="size-5" />}
+          to="/reading"
+          label="Чтение"
+          icon={<Bookmark className="size-5" />}
         />
         <TabLink
           to="/books"
-          label="Каталог"
-          icon={<BookOpen className="size-5" />}
+          label="Поиск"
+          icon={<Search className="size-5" />}
         />
         <Link
           to="/add"
@@ -125,9 +125,9 @@ export function AppShell({
           </span>
         </Link>
         <TabLink
-          to="/reading"
-          label="Чтение"
-          icon={<Bookmark className="size-5" />}
+          to="/libraries"
+          label="Библиотека"
+          icon={<House className="size-5" />}
         />
         <TabLink
           to="/friends"
