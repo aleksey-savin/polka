@@ -108,38 +108,40 @@ function CatalogPage() {
         </span>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2.5">
-        <Input
-          className="h-12 min-w-52 flex-1 rounded-xl text-[16px]"
-          placeholder="Название, автор или серия…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          autoComplete="off"
-        />
-        <div className="flex rounded-full border bg-card p-1">
-          {(
-            [
-              ['mine', 'Мои книги'],
-              ['friends', 'У друзей'],
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              className={
-                scope === key
-                  ? 'rounded-full bg-foreground px-3.5 py-1.5 text-[13px] font-semibold text-white'
-                  : 'rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-muted-foreground'
-              }
-              onClick={() =>
-                setFilter({ scope: key === 'mine' ? undefined : key })
-              }
-            >
-              {label}
-            </button>
-          ))}
+      {selected.length === 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          <Input
+            className="h-12 min-w-52 flex-1 rounded-xl text-[16px]"
+            placeholder="Название, автор или серия…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            autoComplete="off"
+          />
+          <div className="flex rounded-full border bg-card p-1">
+            {(
+              [
+                ['mine', 'Мои книги'],
+                ['friends', 'У друзей'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={
+                  scope === key
+                    ? 'rounded-full bg-foreground px-3.5 py-1.5 text-[13px] font-semibold text-white'
+                    : 'rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-muted-foreground'
+                }
+                onClick={() =>
+                  setFilter({ scope: key === 'mine' ? undefined : key })
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {data.kind === 'mine' ? (
         <MineResults
@@ -181,6 +183,8 @@ function MineResults({
       cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
     )
 
+  const selectionMode = selected.length > 0
+
   // Дефолты для шторки перемещения — из выбранных книг, а не «первая по списку»
   const selectedRows = result.rows.filter((r) => selected.includes(r.id))
   const libIds = new Set(selectedRows.map((r) => r.libraryId))
@@ -200,103 +204,102 @@ function MineResults({
     : undefined
   return (
     <>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <select
-          className={selectCls}
-          value={search.library ?? ''}
-          onChange={(e) =>
-            setFilter({
-              library: e.target.value || undefined,
-              shelf: undefined,
-            })
-          }
-          aria-label="Библиотека"
-        >
-          <option value="">Все библиотеки</option>
-          {libraries.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name}
-            </option>
-          ))}
-        </select>
-        {search.library && (
+      {!selectionMode && (
+        <div className="mt-3 flex flex-wrap gap-2">
           <select
             className={selectCls}
-            value={search.shelf ?? ''}
-            onChange={(e) => setFilter({ shelf: e.target.value || undefined })}
-            aria-label="Полка"
+            value={search.library ?? ''}
+            onChange={(e) =>
+              setFilter({
+                library: e.target.value || undefined,
+                shelf: undefined,
+              })
+            }
+            aria-label="Библиотека"
           >
-            <option value="">Все полки</option>
-            <option value="unsorted">Неразобранное</option>
+            <option value="">Все библиотеки</option>
+            {libraries.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
           </select>
-        )}
-        <select
-          className={selectCls}
-          value={search.series ?? ''}
-          onChange={(e) => setFilter({ series: e.target.value || undefined })}
-          aria-label="Серия"
-        >
-          <option value="">Все серии</option>
-          {series.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className={selectCls}
-          value={search.tag ?? ''}
-          onChange={(e) => setFilter({ tag: e.target.value || undefined })}
-          aria-label="Тэг"
-        >
-          <option value="">Все тэги</option>
-          {tags.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className={selectCls}
-          value={search.status ?? ''}
-          onChange={(e) =>
-            setFilter({
-              status: (e.target.value || undefined) as typeof search.status,
-            })
-          }
-          aria-label="Владение"
-        >
-          <option value="">Любой статус</option>
-          <option value="in_library">В библиотеке</option>
-          <option value="lent">На руках</option>
-          <option value="wishlist">Хочу</option>
-          <option value="gifted">Подарены</option>
-          <option value="lost">Потеряны</option>
-        </select>
-        <select
-          className={selectCls}
-          value={search.reading ?? ''}
-          onChange={(e) =>
-            setFilter({
-              reading: (e.target.value || undefined) as typeof search.reading,
-            })
-          }
-          aria-label="Чтение"
-        >
-          <option value="">Любое чтение</option>
-          <option value="reading">Читаю</option>
-          <option value="read">Прочитаны</option>
-          <option value="abandoned">Брошены</option>
-          <option value="unread">Не читал</option>
-        </select>
-      </div>
+          {search.library && (
+            <select
+              className={selectCls}
+              value={search.shelf ?? ''}
+              onChange={(e) =>
+                setFilter({ shelf: e.target.value || undefined })
+              }
+              aria-label="Полка"
+            >
+              <option value="">Все полки</option>
+              <option value="unsorted">Неразобранное</option>
+            </select>
+          )}
+          <select
+            className={selectCls}
+            value={search.series ?? ''}
+            onChange={(e) => setFilter({ series: e.target.value || undefined })}
+            aria-label="Серия"
+          >
+            <option value="">Все серии</option>
+            {series.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className={selectCls}
+            value={search.tag ?? ''}
+            onChange={(e) => setFilter({ tag: e.target.value || undefined })}
+            aria-label="Тэг"
+          >
+            <option value="">Все тэги</option>
+            {tags.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className={selectCls}
+            value={search.status ?? ''}
+            onChange={(e) =>
+              setFilter({
+                status: (e.target.value || undefined) as typeof search.status,
+              })
+            }
+            aria-label="Владение"
+          >
+            <option value="">Любой статус</option>
+            <option value="in_library">В библиотеке</option>
+            <option value="lent">На руках</option>
+            <option value="wishlist">Хочу</option>
+            <option value="gifted">Подарены</option>
+            <option value="lost">Потеряны</option>
+          </select>
+          <select
+            className={selectCls}
+            value={search.reading ?? ''}
+            onChange={(e) =>
+              setFilter({
+                reading: (e.target.value || undefined) as typeof search.reading,
+              })
+            }
+            aria-label="Чтение"
+          >
+            <option value="">Любое чтение</option>
+            <option value="reading">Читаю</option>
+            <option value="read">Прочитаны</option>
+            <option value="abandoned">Брошены</option>
+            <option value="unread">Не читал</option>
+          </select>
+        </div>
+      )}
 
       <div className="mt-5 grid gap-2">
-        {selected.length > 0 && (
-          <p className="text-[12.5px] text-muted-foreground">
-            Режим выбора: тапайте по карточкам, чтобы отметить книги.
-          </p>
-        )}
         {result.rows.length === 0 ? (
           <Card>
             <CardContent className="grid justify-items-center gap-3 py-12 text-center text-muted-foreground">
@@ -311,40 +314,46 @@ function MineResults({
             </CardContent>
           </Card>
         ) : (
-          result.rows.map((b) => (
-            <div
-              key={b.id}
-              onClickCapture={(e) => {
-                // режим выбора: вся карточка — одна большая цель
-                if (selected.length > 0) {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  toggle(b.id)
-                }
-              }}
-            >
+          result.rows.map((b) => {
+            const checked = selected.includes(b.id)
+            return (
               <BookRow
+                key={b.id}
                 book={b}
-                selected={selected.includes(b.id)}
+                selected={checked}
+                onPress={selectionMode ? () => toggle(b.id) : undefined}
                 place={
                   b.libraryName
                     ? `${b.libraryName} · ${b.shelfName ?? 'Неразобранное'}`
                     : undefined
                 }
                 before={
-                  <label className="-m-2.5 grid cursor-pointer place-items-center p-2.5">
-                    <input
-                      type="checkbox"
-                      aria-label="Выбрать"
-                      className="size-5 accent-primary"
-                      checked={selected.includes(b.id)}
-                      onChange={() => toggle(b.id)}
-                    />
-                  </label>
+                  selectionMode ? (
+                    <span
+                      aria-hidden
+                      className={`grid size-6 place-items-center rounded-[7px] border-[1.5px] text-[13px] ${
+                        checked
+                          ? 'border-primary bg-primary text-white'
+                          : 'border-input bg-card text-transparent'
+                      }`}
+                    >
+                      ✓
+                    </span>
+                  ) : (
+                    <label className="-m-2.5 grid cursor-pointer place-items-center p-2.5">
+                      <input
+                        type="checkbox"
+                        aria-label="Выбрать"
+                        className="size-5 accent-primary"
+                        checked={checked}
+                        onChange={() => toggle(b.id)}
+                      />
+                    </label>
+                  )
                 }
               />
-            </div>
-          ))
+            )
+          })
         )}
       </div>
       {result.total >= 500 && (

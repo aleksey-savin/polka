@@ -144,35 +144,41 @@ function ShelfPage() {
             </select>
           </div>
           <div className="grid gap-2">
-            {sorted.map((b) => (
-              <div
-                key={b.id}
-                onClickCapture={(e) => {
-                  // режим выбора: вся карточка — одна большая цель
-                  if (selected.length > 0) {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    toggle(b.id)
-                  }
-                }}
-              >
+            {sorted.map((b) => {
+              const checked = selected.includes(b.id)
+              return (
                 <BookRow
+                  key={b.id}
                   book={b}
-                  selected={selected.includes(b.id)}
+                  selected={checked}
+                  onPress={selected.length > 0 ? () => toggle(b.id) : undefined}
                   before={
-                    <label className="-m-2.5 grid cursor-pointer place-items-center p-2.5">
-                      <input
-                        type="checkbox"
-                        aria-label="Выбрать"
-                        className="size-5 accent-primary"
-                        checked={selected.includes(b.id)}
-                        onChange={() => toggle(b.id)}
-                      />
-                    </label>
+                    selected.length > 0 ? (
+                      <span
+                        aria-hidden
+                        className={`grid size-6 place-items-center rounded-[7px] border-[1.5px] text-[13px] ${
+                          checked
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-input bg-card text-transparent'
+                        }`}
+                      >
+                        ✓
+                      </span>
+                    ) : (
+                      <label className="-m-2.5 grid cursor-pointer place-items-center p-2.5">
+                        <input
+                          type="checkbox"
+                          aria-label="Выбрать"
+                          className="size-5 accent-primary"
+                          checked={checked}
+                          onChange={() => toggle(b.id)}
+                        />
+                      </label>
+                    )
                   }
                 />
-              </div>
-            ))}
+              )
+            })}
           </div>
           <BatchBar
             selected={selected}

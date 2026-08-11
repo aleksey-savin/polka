@@ -20,6 +20,7 @@ export function BookRow({
   before,
   after,
   selected = false,
+  onPress,
 }: {
   book: {
     id: string
@@ -38,6 +39,8 @@ export function BookRow({
   after?: ReactNode
   /** Подсветка в режиме массового выбора. */
   selected?: boolean
+  /** Режим выбора: вся карточка — одна кнопка, ссылка на книгу выключена. */
+  onPress?: () => void
 }) {
   const look = spineFor(book.title, book.pages ?? null)
   const hasMeta = Boolean(
@@ -50,9 +53,22 @@ export function BookRow({
   )
   return (
     <div
+      role={onPress ? 'button' : undefined}
+      tabIndex={onPress ? 0 : undefined}
+      onClick={onPress}
+      onKeyDown={
+        onPress
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onPress()
+              }
+            }
+          : undefined
+      }
       className={`flex min-w-0 gap-3 rounded-lg border px-3.5 py-2.5 shadow-xs ${
         selected ? 'border-primary/45 bg-accent/50' : 'bg-card'
-      }`}
+      } ${onPress ? 'cursor-pointer select-none' : ''}`}
     >
       {before && <div className="self-center">{before}</div>}
       {book.coverPath ? (
@@ -74,13 +90,19 @@ export function BookRow({
         />
       )}
       <div className="min-w-0 flex-1">
-        <Link
-          to="/books/$bookId"
-          params={{ bookId: book.id }}
-          className="block text-base leading-snug font-semibold hover:underline"
-        >
-          {book.title}
-        </Link>
+        {onPress ? (
+          <span className="block text-base leading-snug font-semibold">
+            {book.title}
+          </span>
+        ) : (
+          <Link
+            to="/books/$bookId"
+            params={{ bookId: book.id }}
+            className="block text-base leading-snug font-semibold hover:underline"
+          >
+            {book.title}
+          </Link>
+        )}
         {book.authors && (
           <span className="block truncate text-[13px] text-muted-foreground">
             {book.authors}

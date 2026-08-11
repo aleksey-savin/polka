@@ -179,10 +179,7 @@ function LibrariesPage() {
             </div>
             <div className="mt-3.5 flex items-center gap-2.5">
               <Button asChild variant="outline">
-                <Link
-                  to="/books"
-                  search={{ library: overview.id, shelf: 'unsorted' }}
-                >
+                <Link to="/unsorted" search={{ lib: overview.id }}>
                   Разобрать стопку
                 </Link>
               </Button>
