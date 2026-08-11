@@ -25,15 +25,16 @@ export const uploadCoverFn = createServerFn({ method: 'POST' })
   .validator(parseUpload)
   .handler(async ({ context, data }) => {
     await requireBookAccess(context.user.id, data.bookId)
-    const coverPath = await saveCover(
-      data.bookId,
-      await data.file.arrayBuffer(),
-    )
+    const saved = await saveCover(data.bookId, await data.file.arrayBuffer())
     await db
       .update(book)
-      .set({ coverPath, updatedAt: new Date() })
+      .set({
+        coverPath: saved.path,
+        coverColor: saved.color,
+        updatedAt: new Date(),
+      })
       .where(eq(book.id, data.bookId))
-    return { coverPath }
+    return { coverPath: saved.path }
   })
 
 export const removeCoverFn = createServerFn({ method: 'POST' })
@@ -53,6 +54,6 @@ export const removeCoverFn = createServerFn({ method: 'POST' })
     if (row.coverPath) await deleteCover(row.coverPath)
     await db
       .update(book)
-      .set({ coverPath: null, updatedAt: new Date() })
+      .set({ coverPath: null, coverColor: null, updatedAt: new Date() })
       .where(eq(book.id, data.bookId))
   })

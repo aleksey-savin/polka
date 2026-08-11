@@ -113,6 +113,7 @@ function ShelfPage() {
           authors: b.authors,
           pages: b.pages,
           lentTo: b.lentTo,
+          coverColor: b.coverColor,
         }))}
         emptyHint="Пока пусто. «+ Добавить сюда» — и первая книга встанет на полку."
       />

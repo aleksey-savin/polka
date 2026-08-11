@@ -124,6 +124,7 @@ export const book = sqliteTable(
     language: text('language').notNull().default('ru'),
     annotation: text('annotation'),
     coverPath: text('cover_path'),
+    coverColor: text('cover_color'), // акцентный цвет обложки (hex), извлекается при сохранении
     status: text('status', {
       enum: ['in_library', 'wishlist', 'gifted', 'lost'],
     })

@@ -17,10 +17,12 @@ function tinyPng(): ArrayBuffer {
 }
 
 describe('covers', () => {
-  test('saveCover: png → webp на диске, относительный путь', async () => {
-    const rel = await saveCover('test-book-id', tinyPng())
-    expect(rel).toBe('covers/test-book-id.webp')
-    const abs = coverAbsolutePath(rel)
+  test('saveCover: png → webp на диске, путь + акцентный цвет', async () => {
+    const saved = await saveCover('test-book-id', tinyPng())
+    expect(saved.path).toBe('covers/test-book-id.webp')
+    // исходник — зелёный (47,107,79): акцент обязан остаться зелёным
+    expect(saved.color).toMatch(/^#[0-9A-F]{6}$/)
+    const abs = coverAbsolutePath(saved.path)
     expect(await Bun.file(abs).exists()).toBe(true)
     expect(Bun.file(abs).size).toBeGreaterThan(0)
   })

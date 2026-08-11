@@ -98,8 +98,11 @@ export async function createBook(
   if (input.tags) await setBookTags(userId, created.id, input.tags)
   if (input.coverUrl) {
     try {
-      const coverPath = await saveCoverFromUrl(created.id, input.coverUrl)
-      await db.update(book).set({ coverPath }).where(eq(book.id, created.id))
+      const saved = await saveCoverFromUrl(created.id, input.coverUrl)
+      await db
+        .update(book)
+        .set({ coverPath: saved.path, coverColor: saved.color })
+        .where(eq(book.id, created.id))
     } catch {
       // обложка — best-effort: карточка сохраняется и без неё
     }

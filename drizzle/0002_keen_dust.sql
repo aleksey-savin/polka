@@ -1,0 +1,1 @@
+ALTER TABLE `book` ADD `cover_color` text;

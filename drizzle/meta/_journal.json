@@ -15,6 +15,13 @@
       "when": 1786431511338,
       "tag": "0001_volatile_marvex",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786434491829,
+      "tag": "0002_keen_dust",
+      "breakpoints": true
     }
   ]
 }

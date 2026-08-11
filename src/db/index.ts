@@ -25,4 +25,8 @@ export const db = drizzle({ client: sqlite, schema })
 const migrationsFolder = join(process.cwd(), 'drizzle')
 if (existsSync(migrationsFolder)) {
   migrate(db, { migrationsFolder })
+  // фоновой бэкфилл акцентных цветов старых обложек (динамический импорт — от цикла)
+  void import('@/services/coverColors')
+    .then((m) => m.backfillCoverColors())
+    .catch(() => {})
 }

@@ -59,6 +59,7 @@ export interface ShelfOverview {
     authors: string
     pages: number | null
     lentTo: string | null
+    coverColor: string | null
   }>
 }
 
@@ -71,7 +72,12 @@ export interface LibraryOverview {
   shelves: Array<ShelfOverview>
   unsorted: {
     count: number
-    books: Array<{ id: string; title: string; authors: string }>
+    books: Array<{
+      id: string
+      title: string
+      authors: string
+      coverColor: string | null
+    }>
   }
 }
 
@@ -108,6 +114,7 @@ export async function getLibraryOverview(
       pages: book.pages,
       year: book.year,
       shelfId: book.shelfId,
+      coverColor: book.coverColor,
       createdAt: book.createdAt,
     })
     .from(book)
@@ -142,11 +149,12 @@ export async function getLibraryOverview(
         tint: shelfTint(books.map((b) => b.year)),
         books: books
           .slice(0, SPINES_PER_SHELF)
-          .map(({ id, title, authors, pages }) => ({
+          .map(({ id, title, authors, pages, coverColor }) => ({
             id,
             title,
             authors,
             pages,
+            coverColor,
             lentTo: lentMap.get(id)?.borrowerName ?? null,
           })),
       }
@@ -155,7 +163,12 @@ export async function getLibraryOverview(
       count: unsorted.length,
       books: unsorted
         .slice(0, UNSORTED_PREVIEW)
-        .map(({ id, title, authors }) => ({ id, title, authors })),
+        .map(({ id, title, authors, coverColor }) => ({
+          id,
+          title,
+          authors,
+          coverColor,
+        })),
     },
   }
 }

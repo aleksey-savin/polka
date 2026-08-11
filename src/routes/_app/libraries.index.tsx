@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { plural } from '@/lib/plural'
 import { getLibraryOverviewFn, listMyLibrariesFn } from '@/server/libraries'
-import { spineFor } from '@/services/spine'
+import { spineFor, textToneFor } from '@/services/spine'
 
 export const Route = createFileRoute('/_app/libraries/')({
   validateSearch: z.object({ lib: z.string().optional() }),
@@ -161,16 +161,20 @@ function LibrariesPage() {
             <div className="grid justify-items-start gap-[3px] pl-3.5">
               {overview.unsorted.books.map((b, i) => {
                 const look = spineFor(b.title, 260)
+                const bg = b.coverColor ?? look.color
+                const lightText = b.coverColor
+                  ? textToneFor(b.coverColor) === 'light'
+                  : look.dark
                 return (
                   <Link
                     key={b.id}
                     to="/books/$bookId"
                     params={{ bookId: b.id }}
-                    className="flex h-6 items-center overflow-hidden rounded-[3px] px-3 font-display text-xs whitespace-nowrap"
+                    className="flex h-6 max-w-full min-w-[65%] items-center overflow-hidden rounded-[3px] px-3 font-display text-xs whitespace-nowrap"
                     style={{
-                      background: look.color,
-                      color: look.dark
-                        ? 'rgba(255,255,255,.88)'
+                      background: bg,
+                      color: lightText
+                        ? 'rgba(255,255,255,.9)'
                         : 'rgba(35,43,56,.8)',
                       marginLeft: [0, 14, 6, 20, 10][i % 5],
                       boxShadow:

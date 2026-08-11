@@ -9,6 +9,7 @@ export interface ShelfSectionBook {
   authors: string
   pages: number | null
   lentTo?: string | null
+  coverColor?: string | null
 }
 
 /** Секция полки: заголовок с легендой, ряд корешков, доска. */
@@ -53,6 +54,7 @@ export function ShelfSection({
               authors={b.authors}
               pages={b.pages}
               lentTo={b.lentTo}
+              coverColor={b.coverColor}
             />
           ))
         )}

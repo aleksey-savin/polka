@@ -37,3 +37,12 @@ export function spineFor(
     height: heights[(hash >> 3) % heights.length] ?? 138,
   }
 }
+
+/** Тон текста поверх произвольного hex-фона. */
+export function textToneFor(hex: string): 'dark' | 'light' {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  return luminance > 0.62 ? 'dark' : 'light'
+}
