@@ -142,7 +142,16 @@ function AddPage() {
             ) : (
               <>
                 По этому ISBN ничего не нашлось — заполните карточку руками,
-                номер уже подставлен.
+                номер уже подставлен.{' '}
+                <a
+                  className="underline"
+                  href={`https://www.google.com/search?q=%22${lookup.isbn13}%22+книга`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Поискать в интернете
+                </a>{' '}
+                — оттуда удобно скопировать название.
               </>
             )}
           </p>
