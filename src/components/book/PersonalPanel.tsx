@@ -95,11 +95,11 @@ export function PersonalPanel({
                 onChange={(rating) => void quickSave({ bookId, rating })}
               />
             </div>
-            <div className="grid gap-1">
+            <div className="grid w-full gap-1 sm:w-auto">
               <span className="text-[13px] font-semibold text-muted-foreground">
                 Чтение
               </span>
-              <div className="flex rounded-full border bg-background p-0.5">
+              <div className="flex w-full rounded-full border bg-background p-0.5 sm:w-auto">
                 {(Object.keys(READING_LABEL) as Array<ReadingStatus>).map(
                   (s) => (
                     <button
@@ -107,8 +107,8 @@ export function PersonalPanel({
                       type="button"
                       className={
                         s === status
-                          ? 'rounded-full bg-foreground px-3 py-1 text-[12.5px] font-semibold text-white'
-                          : 'rounded-full px-3 py-1 text-[12.5px] font-medium text-muted-foreground'
+                          ? 'flex-1 rounded-full bg-foreground px-3 py-2 text-[13px] font-semibold text-white sm:flex-none sm:py-1'
+                          : 'flex-1 rounded-full px-3 py-2 text-[13px] font-medium text-muted-foreground sm:flex-none sm:py-1'
                       }
                       onClick={() =>
                         void quickSave({ bookId, readingStatus: s })

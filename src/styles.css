@@ -120,6 +120,9 @@
     )
     var(--color-card);
   background-origin: content-box;
+  /* линовка только в зоне строк: без clip паттерн повторяется и в паддингах,
+     из-за чего над первой строкой всплывала лишняя линия */
+  background-clip: content-box, border-box;
   padding: 14px 16px 15px;
 }
 

@@ -10,10 +10,10 @@ export function StarRating({
   readOnly?: boolean
   size?: 'sm' | 'md'
 }) {
-  const cls = size === 'md' ? 'text-[22px]' : 'text-[15px]'
+  const cls = size === 'md' ? 'gap-1 text-[30px]' : 'gap-0.5 text-[15px]'
   return (
     <span
-      className={`inline-flex gap-0.5 ${cls} leading-none`}
+      className={`inline-flex ${cls} leading-none`}
       role={readOnly ? 'img' : undefined}
       aria-label={value ? `Оценка ${value} из 5` : 'Без оценки'}
     >
@@ -30,7 +30,7 @@ export function StarRating({
             key={star}
             type="button"
             aria-label={`Оценка ${star}`}
-            className={`transition-transform hover:scale-110 ${
+            className={`p-1 transition-transform hover:scale-110 ${
               star <= (value ?? 0)
                 ? 'text-[#C9A23B]'
                 : 'text-border hover:text-[#C9A23B]/60'
