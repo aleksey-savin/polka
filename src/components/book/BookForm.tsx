@@ -27,6 +27,8 @@ export interface BookFormValue {
   wishlist: boolean
   /** Обложка из найденных метаданных — скачается при сохранении. */
   coverUrl: string
+  coverType: '' | 'soft' | 'hard' | 'gift'
+  heightMm: string
 }
 
 export const EMPTY_BOOK_FORM: BookFormValue = {
@@ -46,6 +48,8 @@ export const EMPTY_BOOK_FORM: BookFormValue = {
   shelfId: '',
   wishlist: false,
   coverUrl: '',
+  coverType: '',
+  heightMm: '',
 }
 
 /** Перевод значения формы в input серверной функции. */
@@ -67,6 +71,8 @@ export function toBookInput(v: BookFormValue) {
     shelfId: v.wishlist ? null : v.shelfId || null,
     wishlist: v.wishlist,
     coverUrl: v.coverUrl || undefined,
+    coverType: v.coverType || null,
+    heightMm: v.heightMm ? Number(v.heightMm) : null,
   }
 }
 
@@ -226,6 +232,37 @@ export function BookForm({
             value={value.isbn13}
             onChange={(e) => set('isbn13', e.target.value)}
             placeholder="978-5-…"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="bf-cover-type">Переплёт</Label>
+          <select
+            id="bf-cover-type"
+            className="h-10 rounded-lg border bg-card px-3 text-sm"
+            value={value.coverType}
+            onChange={(e) =>
+              set('coverType', e.target.value as BookFormValue['coverType'])
+            }
+          >
+            <option value="">Не знаю</option>
+            <option value="soft">Мягкая обложка</option>
+            <option value="hard">Твёрдый переплёт</option>
+            <option value="gift">Подарочное издание</option>
+          </select>
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="bf-height">Высота, мм</Label>
+          <Input
+            id="bf-height"
+            inputMode="numeric"
+            placeholder="215"
+            value={value.heightMm}
+            onChange={(e) =>
+              set('heightMm', e.target.value.replace(/\D/g, '').slice(0, 3))
+            }
           />
         </div>
       </div>

@@ -90,6 +90,9 @@ export interface ShelfView {
     seriesNumber: string | null
     coverPath: string | null
     coverColor: string | null
+    hidden: boolean
+    heightMm: number | null
+    coverType: 'soft' | 'hard' | 'gift' | null
     lentTo: string | null
   }>
 }
@@ -122,6 +125,8 @@ export async function getShelfView(
       coverPath: book.coverPath,
       coverColor: book.coverColor,
       hidden: book.hidden,
+      heightMm: book.heightMm,
+      coverType: book.coverType,
     })
     .from(book)
     .where(and(eq(book.shelfId, shelfId), eq(book.status, 'in_library')))

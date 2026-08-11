@@ -126,6 +126,65 @@
   padding: 14px 16px 15px;
 }
 
+/* Переплёты корешков (гайдлайн «Живые полки»): --sc — цвет корешка.
+   hard: кант — крышки выступают сверху/снизу; gift: кант + золото;
+   .flat-* — те же книги лёжа в стопке «Неразобранное» (канты по бокам). */
+.spine-hard::before,
+.spine-hard::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  height: 3.5px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--sc) 72%, #232b38);
+}
+.spine-hard::before {
+  top: 0;
+}
+.spine-hard::after {
+  bottom: 0;
+}
+.spine-gift::before,
+.spine-gift::after {
+  content: '';
+  position: absolute;
+  left: -1.5px;
+  right: -1.5px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--sc) 62%, #232b38);
+}
+.spine-gift::before {
+  top: 0;
+}
+.spine-gift::after {
+  bottom: 0;
+}
+.spine-soft {
+  background: linear-gradient(
+    to right,
+    color-mix(in oklab, var(--sc) 92%, #fff),
+    var(--sc) 55%
+  ) !important;
+}
+.flat-hard::before,
+.flat-hard::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 3.5px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--sc) 72%, #232b38);
+}
+.flat-hard::before {
+  left: 0;
+}
+.flat-hard::after {
+  right: 0;
+}
+
 /* ── Движение: деликатно и с уважением к reduced-motion ── */
 @media (prefers-reduced-motion: no-preference) {
   /* кроссфейд переходов между экранами (View Transitions API) */

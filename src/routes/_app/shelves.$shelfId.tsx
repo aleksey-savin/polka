@@ -114,6 +114,8 @@ function ShelfPage() {
           title: b.title,
           authors: b.authors,
           pages: b.pages,
+          heightMm: b.heightMm,
+          coverType: b.coverType,
           lentTo: b.lentTo,
           coverColor: b.coverColor,
         }))}

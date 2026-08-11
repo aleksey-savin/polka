@@ -62,10 +62,24 @@ export function parseFantlabEdition(json: unknown): {
     image?: string
     edition_work_id?: number | null
     content?: Array<string> | null
+    format_mm?: string
+    cover_type?: string
   } | null
   if (!e || typeof e !== 'object') return { extra: {}, workId: null }
   const extra: Partial<MetadataDraft> = {}
   if (typeof e.pages === 'number' && e.pages > 0) extra.pages = e.pages
+  // физика издания: «145x215» → высота 215 мм; тип переплёта
+  if (typeof e.format_mm === 'string') {
+    const h = Number(e.format_mm.split(/[xх×]/i)[1])
+    if (Number.isFinite(h) && h >= 60 && h <= 500)
+      extra.heightMm = Math.round(h)
+  }
+  if (typeof e.cover_type === 'string') {
+    const ct = e.cover_type.toLowerCase()
+    if (ct.includes('твёрд') || ct.includes('тверд')) extra.coverType = 'hard'
+    else if (ct.includes('мягк') || ct.includes('интеграл'))
+      extra.coverType = 'soft'
+  }
   if (typeof e.image === 'string' && e.image.startsWith('/')) {
     extra.coverUrl = `https://fantlab.ru${e.image}`
   }

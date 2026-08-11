@@ -9,6 +9,10 @@ export interface MetadataDraft {
   seriesName?: string
   language?: string
   coverUrl?: string
+  /** Из FantLab format_mm («145x215» → 215). */
+  heightMm?: number
+  /** Из FantLab cover_type («твёрдая»/«мягкая»). */
+  coverType?: 'soft' | 'hard' | 'gift'
 }
 
 export type MetadataSource = 'fantlab' | 'google' | 'openlibrary'

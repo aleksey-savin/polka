@@ -2,12 +2,15 @@ import type { ReactNode } from 'react'
 
 import { Spine } from './Spine'
 import { ShelfBoard } from './ShelfBoard'
+import type { CoverType } from '@/services/spine'
 
 export interface ShelfSectionBook {
   id: string
   title: string
   authors: string
   pages: number | null
+  heightMm?: number | null
+  coverType?: CoverType | null
   lentTo?: string | null
   coverColor?: string | null
 }
@@ -40,7 +43,7 @@ export function ShelfSection({
           )}
         </div>
       )}
-      <div className="shelf-books flex min-h-[150px] items-end gap-[3px] overflow-x-auto px-3.5">
+      <div className="shelf-books flex min-h-[170px] items-end gap-[3px] overflow-x-auto px-3.5 pt-7">
         {books.length === 0 ? (
           <p className="pb-4 text-sm text-muted-foreground">
             {emptyHint ?? 'На этой полке пока пусто.'}
@@ -53,6 +56,8 @@ export function ShelfSection({
               title={b.title}
               authors={b.authors}
               pages={b.pages}
+              heightMm={b.heightMm}
+              coverType={b.coverType}
               lentTo={b.lentTo}
               coverColor={b.coverColor}
             />

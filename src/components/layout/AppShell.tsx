@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useRouter, useRouterState } from '@tanstack/react-router'
-import { Bookmark, House, LogOut, Plus, Search, Users } from 'lucide-react'
+import { Bookmark, Library, LogOut, Plus, Search, Users } from 'lucide-react'
 
 import { LogoLink } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
@@ -122,7 +122,7 @@ export function AppShell({
         <TabLink
           to="/libraries"
           label="Библиотека"
-          icon={<House className="size-5" />}
+          icon={<Library className="size-5" />}
         />
         <TabLink
           to="/friends"

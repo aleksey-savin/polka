@@ -148,31 +148,43 @@ function LibrariesPage() {
           </Card>
         ) : (
           <>
-            <div className="grid justify-items-start gap-[3px] pl-3.5">
+            <div className="grid justify-items-start gap-[2px] pl-3.5">
               {overview.unsorted.books.map((b, i) => {
-                const look = spineFor(b.title, 260)
+                const look = spineFor(b.title, b.pages, {
+                  heightMm: b.heightMm,
+                  coverType: b.coverType,
+                })
                 const bg = b.coverColor ?? look.color
                 const lightText = b.coverColor
                   ? textToneFor(b.coverColor) === 'light'
                   : look.dark
+                const hardEdge =
+                  b.coverType === 'hard' || b.coverType === 'gift'
                 return (
                   <Link
                     key={b.id}
                     to="/books/$bookId"
                     params={{ bookId: b.id }}
-                    className="flex h-6 max-w-full min-w-[65%] items-center overflow-hidden rounded-[3px] px-3 font-display text-xs whitespace-nowrap"
+                    className={`relative flex items-center overflow-hidden rounded-[3px] px-2.5 font-display text-[11px] font-medium whitespace-nowrap ${hardEdge ? 'flat-hard' : ''}`}
                     style={{
+                      height: look.width,
+                      width: look.height,
                       background: bg,
+                      ['--sc' as string]: bg,
                       color: lightText
                         ? 'rgba(255,255,255,.9)'
                         : 'rgba(35,43,56,.8)',
                       marginLeft: [0, 14, 6, 20, 10][i % 5],
                       boxShadow:
-                        'inset -1px 0 0 rgba(35,43,56,.1), inset 1px 0 0 rgba(255,255,255,.35)',
+                        'inset 0 1.5px 0 rgba(255,255,255,.35), inset 0 -2px 0 rgba(35,43,56,.12), 0 2px 3px -2px rgba(35,43,56,.35)',
                     }}
                   >
-                    {b.authors ? `${b.authors.split(/[;,]/)[0] ?? ''} · ` : ''}
-                    {b.title}
+                    <span className="overflow-hidden text-ellipsis">
+                      {b.authors
+                        ? `${b.authors.split(/[;,]/)[0] ?? ''} · `
+                        : ''}
+                      {b.title}
+                    </span>
                   </Link>
                 )
               })}

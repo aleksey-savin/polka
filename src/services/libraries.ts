@@ -76,6 +76,9 @@ export interface LibraryOverview {
       id: string
       title: string
       authors: string
+      pages: number | null
+      heightMm: number | null
+      coverType: 'soft' | 'hard' | 'gift' | null
       coverColor: string | null
     }>
   }
@@ -115,6 +118,8 @@ export async function getLibraryOverview(
       year: book.year,
       shelfId: book.shelfId,
       coverColor: book.coverColor,
+      heightMm: book.heightMm,
+      coverType: book.coverType,
       createdAt: book.createdAt,
     })
     .from(book)
@@ -149,26 +154,43 @@ export async function getLibraryOverview(
         tint: shelfTint(books.map((b) => b.year)),
         books: books
           .slice(0, SPINES_PER_SHELF)
-          .map(({ id, title, authors, pages, coverColor }) => ({
-            id,
-            title,
-            authors,
-            pages,
-            coverColor,
-            lentTo: lentMap.get(id)?.borrowerName ?? null,
-          })),
+          .map(
+            ({
+              id,
+              title,
+              authors,
+              pages,
+              heightMm,
+              coverType,
+              coverColor,
+            }) => ({
+              id,
+              title,
+              authors,
+              pages,
+              heightMm,
+              coverType,
+              coverColor,
+              lentTo: lentMap.get(id)?.borrowerName ?? null,
+            }),
+          ),
       }
     }),
     unsorted: {
       count: unsorted.length,
       books: unsorted
         .slice(0, UNSORTED_PREVIEW)
-        .map(({ id, title, authors, coverColor }) => ({
-          id,
-          title,
-          authors,
-          coverColor,
-        })),
+        .map(
+          ({ id, title, authors, pages, heightMm, coverType, coverColor }) => ({
+            id,
+            title,
+            authors,
+            pages,
+            heightMm,
+            coverType,
+            coverColor,
+          }),
+        ),
     },
   }
 }

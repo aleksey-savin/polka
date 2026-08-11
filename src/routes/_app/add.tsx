@@ -86,6 +86,8 @@ function AddPage() {
           annotation: result.draft.annotation ?? '',
           seriesName: result.draft.seriesName ?? '',
           coverUrl: result.draft.coverUrl ?? '',
+          coverType: result.draft.coverType ?? '',
+          heightMm: result.draft.heightMm?.toString() ?? '',
           isbn13: result.isbn13,
           isbn10: result.isbn10 ?? '',
           libraryId: dest.libraryId,

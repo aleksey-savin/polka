@@ -23,6 +23,8 @@ const BIB_FIELDS = [
   'pages',
   'seriesName',
   'language',
+  'heightMm',
+  'coverType',
 ] as const
 
 export function mergeResults(

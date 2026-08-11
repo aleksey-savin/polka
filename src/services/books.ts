@@ -37,6 +37,8 @@ export interface BookInput {
   wishlist?: boolean
   /** URL обложки из метаданных — скачается на диск при сохранении (best-effort). */
   coverUrl?: string
+  coverType?: 'soft' | 'hard' | 'gift' | null
+  heightMm?: number | null
 }
 
 async function assertShelfInLibrary(
@@ -99,6 +101,8 @@ export async function createBook(
       annotation: input.annotation?.trim() || null,
       seriesId,
       seriesNumber: input.seriesNumber?.trim() || null,
+      coverType: input.coverType ?? null,
+      heightMm: input.heightMm ?? null,
       titleNorm: normalizeForSearch(input.title),
       authorsNorm: normalizeForSearch(input.authors ?? ''),
     })
@@ -161,6 +165,8 @@ export async function updateBook(
       annotation: input.annotation?.trim() || null,
       seriesId,
       seriesNumber: input.seriesNumber?.trim() || null,
+      coverType: input.coverType ?? null,
+      heightMm: input.heightMm ?? null,
       titleNorm: normalizeForSearch(input.title),
       authorsNorm: normalizeForSearch(input.authors ?? ''),
       updatedAt: new Date(),
@@ -226,6 +232,8 @@ export interface BookCard {
   addedBy: string
   createdAt: Date
   hidden: boolean
+  coverType: 'soft' | 'hard' | 'gift' | null
+  heightMm: number | null
 }
 
 export async function getBookCard(
@@ -277,6 +285,8 @@ export async function getBookCard(
     addedBy: row.addedBy,
     createdAt: row.createdAt,
     hidden: row.hidden,
+    coverType: row.coverType,
+    heightMm: row.heightMm,
   }
 }
 

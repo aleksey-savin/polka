@@ -127,6 +127,10 @@ export const book = sqliteTable(
     coverColor: text('cover_color'), // акцентный цвет обложки (hex), извлекается при сохранении
     /** Скрыта от гостей: не попадает на витрины, в поиск у друзей и заявки. */
     hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+    /** Переплёт: мягкая / твёрдый / подарочное — влияет на вид корешка. */
+    coverType: text('cover_type', { enum: ['soft', 'hard', 'gift'] }),
+    /** Высота книги в мм (из FantLab format_mm или руками) — высота корешка. */
+    heightMm: integer('height_mm'),
     status: text('status', {
       enum: ['in_library', 'wishlist', 'gifted', 'lost'],
     })
