@@ -7,6 +7,9 @@ import {
   Gift,
   Heart,
   House,
+  Image as ImageIcon,
+  ImageOff,
+  Trash2,
   TriangleAlert,
   UserRound,
 } from 'lucide-react'
@@ -18,6 +21,8 @@ import { SectionLabel } from '@/components/layout/SectionLabel'
 import { PersonalPanel } from '@/components/book/PersonalPanel'
 import { GiftDialog, LendDialog } from '@/components/book/status-dialogs'
 import { Badge } from '@/components/ui/badge'
+import { ActionMenu } from '@/components/ui/action-menu'
+import type { ActionMenuEntry } from '@/components/ui/action-menu'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,13 +31,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   deleteBookFn,
   getBookCardFn,
@@ -132,6 +130,70 @@ function BookCardPage() {
     await deleteBookFn({ data: { bookId: book.id } })
     await navigate({ to: '/books', search: {} })
   }
+
+  const menuEntries: Array<ActionMenuEntry> = [
+    ...(canCirculate
+      ? ([
+          {
+            key: 'gift',
+            label: 'Подарить',
+            icon: <Gift />,
+            onSelect: () => setGiftOpen(true),
+          },
+          {
+            key: 'lost',
+            label: 'Потерялась',
+            icon: <TriangleAlert />,
+            onSelect: () =>
+              void run('lost', () => markLostFn({ data: { bookId: book.id } })),
+          },
+          'separator',
+        ] satisfies Array<ActionMenuEntry>)
+      : []),
+    {
+      key: 'hidden',
+      label: book.hidden ? 'Не скрывать' : 'Скрыть',
+      sub: book.hidden ? undefined : 'видна только владельцам библиотеки',
+      icon: book.hidden ? <Eye /> : <EyeOff />,
+      onSelect: () =>
+        void run(
+          'hidden',
+          () =>
+            setBookHiddenFn({
+              data: { bookId: book.id, hidden: !book.hidden },
+            }),
+          book.hidden
+            ? 'Больше не скрыта'
+            : 'Скрыта — видна только владельцам библиотеки',
+        ),
+    },
+    'separator',
+    {
+      key: 'cover',
+      label: book.coverPath ? 'Заменить обложку' : 'Загрузить обложку',
+      icon: <ImageIcon />,
+      onSelect: () => fileRef.current?.click(),
+    },
+    ...(book.coverPath
+      ? ([
+          {
+            key: 'cover-off',
+            label: 'Убрать обложку',
+            icon: <ImageOff />,
+            onSelect: () =>
+              void removeCoverFn({ data: { bookId: book.id } }).then(refresh),
+          },
+        ] satisfies Array<ActionMenuEntry>)
+      : []),
+    'separator',
+    {
+      key: 'delete',
+      label: 'Удалить',
+      icon: <Trash2 />,
+      danger: true,
+      onSelect: () => setDeleteOpen(true),
+    },
+  ]
 
   const editionParts: Array<ReactNode> = []
   if (book.publisher) editionParts.push(book.publisher)
@@ -423,78 +485,15 @@ function BookCardPage() {
             Переместить
           </Button>
         )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <ActionMenu
+          caption={book.title}
+          trigger={
             <Button variant="ghost">
               Ещё <Ellipsis aria-hidden />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {canCirculate && (
-              <>
-                <DropdownMenuItem onSelect={() => setGiftOpen(true)}>
-                  Подарить
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() =>
-                    void run('lost', () =>
-                      markLostFn({ data: { bookId: book.id } }),
-                    )
-                  }
-                >
-                  Потерялась
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            <DropdownMenuItem
-              onSelect={() =>
-                void run(
-                  'hidden',
-                  () =>
-                    setBookHiddenFn({
-                      data: { bookId: book.id, hidden: !book.hidden },
-                    }),
-                  book.hidden
-                    ? 'Больше не скрыта'
-                    : 'Скрыта — видна только владельцам библиотеки',
-                )
-              }
-            >
-              {book.hidden ? (
-                <>
-                  <Eye /> Не скрывать
-                </>
-              ) : (
-                <>
-                  <EyeOff /> Скрыть
-                </>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => fileRef.current?.click()}>
-              {book.coverPath ? 'Заменить обложку' : 'Загрузить обложку'}
-            </DropdownMenuItem>
-            {book.coverPath && (
-              <DropdownMenuItem
-                onSelect={() =>
-                  void removeCoverFn({ data: { bookId: book.id } }).then(
-                    refresh,
-                  )
-                }
-              >
-                Убрать обложку
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive"
-              onSelect={() => setDeleteOpen(true)}
-            >
-              Удалить
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          }
+          entries={menuEntries}
+        />
       </div>
 
       {/* ── Аннотация и тэги ── */}

@@ -5,14 +5,7 @@ import { Bookmark, House, LogOut, Plus, Search, Users } from 'lucide-react'
 
 import { LogoLink } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { ActionMenu } from '@/components/ui/action-menu'
 import { authClient } from '@/lib/auth-client'
 import { countPendingRequestsFn } from '@/server/shares'
 
@@ -79,20 +72,22 @@ export function AppShell({
               <Plus /> Добавить книгу
             </Link>
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <ActionMenu
+            caption={userName}
+            trigger={
               <Button variant="outline" size="sm">
                 {userName}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{userName}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => void handleSignOut()}>
-                <LogOut /> Выйти
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            }
+            entries={[
+              {
+                key: 'signout',
+                label: 'Выйти',
+                icon: <LogOut />,
+                onSelect: () => void handleSignOut(),
+              },
+            ]}
+          />
         </div>
       </header>
 
