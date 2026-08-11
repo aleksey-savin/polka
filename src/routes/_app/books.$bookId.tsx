@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import type { ReactNode } from 'react'
 
 import { MoveDialog } from '@/components/book/MoveDialog'
+import { SectionLabel } from '@/components/layout/SectionLabel'
 import { PersonalPanel } from '@/components/book/PersonalPanel'
 import { GiftDialog, LendDialog } from '@/components/book/status-dialogs'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +30,7 @@ import {
   markLostFn,
   restoreToLibraryFn,
 } from '@/server/books'
+import { dateHuman, dateRu, dateShort } from '@/lib/dates'
 import { removeCoverFn, uploadCoverFn } from '@/server/covers'
 import { bookLoanHistoryFn, returnLoanFn } from '@/server/loans'
 import { listBookPersonalFn } from '@/server/personal'
@@ -46,37 +48,9 @@ export const Route = createFileRoute('/_app/books/$bookId')({
   component: BookCardPage,
 })
 
-const dateRu = (value: Date | string | null) =>
-  value ? new Date(value).toLocaleDateString('ru-RU') : ''
-
-/** «11 августа», с годом — только если он не текущий. */
-const dateHuman = (value: Date | string) => {
-  const d = new Date(value)
-  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' }
-  if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric'
-  return d.toLocaleDateString('ru-RU', opts)
-}
-
-/** «11.08.26» — для строк формуляра. */
-const dateShort = (value: Date | string) =>
-  new Date(value).toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: '2-digit',
-  })
-
 const LANG_LABEL: Record<string, string> = {
   ru: 'русский',
   en: 'английский',
-}
-
-function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <h2 className="mb-2.5 flex items-baseline gap-2.5 font-mono text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-      {children}
-      <span aria-hidden className="h-px flex-1 -translate-y-[3px] bg-border" />
-    </h2>
-  )
 }
 
 function BookCardPage() {

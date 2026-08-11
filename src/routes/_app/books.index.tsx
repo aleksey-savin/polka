@@ -35,7 +35,10 @@ const searchSchema = z.object({
   shelf: z.string().optional(),
   series: z.string().optional(),
   tag: z.string().optional(),
-  status: z.enum(['in_library', 'wishlist', 'gifted', 'lost']).optional(),
+  status: z
+    .enum(['in_library', 'wishlist', 'gifted', 'lost', 'lent'])
+    .optional(),
+  reading: z.enum(['unread', 'reading', 'read', 'abandoned']).optional(),
 })
 
 export const Route = createFileRoute('/_app/books/')({
@@ -55,6 +58,7 @@ export const Route = createFileRoute('/_app/books/')({
           seriesId: deps.series,
           tagId: deps.tag,
           status: deps.status,
+          reading: deps.reading,
         },
       }),
       listMyLibrariesFn(),
@@ -102,11 +106,6 @@ function CatalogPage() {
               : data.friends.rows.length}
           </b>
         </span>
-        <Button asChild className="ml-auto">
-          <Link to="/books/new" search={{}}>
-            + Добавить вручную
-          </Link>
-        </Button>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2.5">
@@ -246,19 +245,41 @@ function MineResults({
         >
           <option value="">Любой статус</option>
           <option value="in_library">В библиотеке</option>
+          <option value="lent">На руках</option>
           <option value="wishlist">Хочу</option>
           <option value="gifted">Подарены</option>
           <option value="lost">Потеряны</option>
+        </select>
+        <select
+          className={selectCls}
+          value={search.reading ?? ''}
+          onChange={(e) =>
+            setFilter({
+              reading: (e.target.value || undefined) as typeof search.reading,
+            })
+          }
+          aria-label="Чтение"
+        >
+          <option value="">Любое чтение</option>
+          <option value="reading">Читаю</option>
+          <option value="read">Прочитаны</option>
+          <option value="abandoned">Брошены</option>
+          <option value="unread">Не читал</option>
         </select>
       </div>
 
       <div className="mt-5 grid gap-2">
         {result.rows.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
+            <CardContent className="grid justify-items-center gap-3 py-12 text-center text-muted-foreground">
               {search.q
                 ? 'Ничего не нашлось. Ищем по названию, авторам и серии — без учёта регистра.'
                 : 'Каталог пока пуст. Добавьте первую книгу — сканером или вручную.'}
+              {!search.q && (
+                <Button asChild>
+                  <Link to="/add">Добавить книгу</Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (

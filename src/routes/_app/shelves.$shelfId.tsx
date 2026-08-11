@@ -84,14 +84,16 @@ function ShelfPage() {
           )}
         </span>
         <div className="ml-auto flex gap-2">
-          <Button asChild variant="outline">
-            <Link
-              to="/books/new"
-              search={{ library: shelf.libraryId, shelf: shelf.id }}
-            >
-              + Добавить сюда
-            </Link>
-          </Button>
+          {shelf.books.length === 0 && (
+            <Button asChild variant="outline">
+              <Link
+                to="/books/new"
+                search={{ library: shelf.libraryId, shelf: shelf.id }}
+              >
+                + Добавить сюда
+              </Link>
+            </Button>
+          )}
           <RenameShelfDialog
             shelfId={shelf.id}
             current={shelf.name}

@@ -1,0 +1,1 @@
+ALTER TABLE `book_personal` ADD `reading_started_at` integer;

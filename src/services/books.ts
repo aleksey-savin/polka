@@ -1,7 +1,16 @@
 import { and, asc, eq, inArray, like, or, sql } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { book, bookTag, library, series, shelf, tag } from '@/db/schema/catalog'
+import {
+  book,
+  bookPersonal,
+  bookTag,
+  library,
+  series,
+  shelf,
+  tag,
+} from '@/db/schema/catalog'
+import { loan } from '@/db/schema/circulation'
 import { deleteCover, saveCoverFromUrl } from './covers'
 import { AppError } from './errors'
 import { assertMember, memberLibraryIds } from './members'
@@ -275,7 +284,10 @@ export interface CatalogFilters {
   shelfId?: string | 'unsorted'
   seriesId?: string
   tagId?: string
-  status?: 'in_library' | 'wishlist' | 'gifted' | 'lost'
+  /** «lent» — не статус владения, а «есть активная выдача». */
+  status?: 'in_library' | 'wishlist' | 'gifted' | 'lost' | 'lent'
+  /** Фильтр по МОЕМУ статусу чтения (личный слой). */
+  reading?: 'unread' | 'reading' | 'read' | 'abandoned'
 }
 
 export interface CatalogRow {
@@ -311,7 +323,24 @@ export async function listBooks(
     conditions.push(eq(book.shelfId, filters.shelfId))
   }
   if (filters.seriesId) conditions.push(eq(book.seriesId, filters.seriesId))
-  if (filters.status) conditions.push(eq(book.status, filters.status))
+  if (filters.status === 'lent') {
+    conditions.push(
+      eq(book.status, 'in_library'),
+      sql`exists (select 1 from ${loan} where ${loan.bookId} = ${book.id} and ${loan.returnedAt} is null)`,
+    )
+  } else if (filters.status) {
+    conditions.push(eq(book.status, filters.status))
+  }
+  if (filters.reading === 'unread') {
+    // «не читал» = нет личной записи или она в unread
+    conditions.push(
+      sql`not exists (select 1 from ${bookPersonal} where ${bookPersonal.bookId} = ${book.id} and ${bookPersonal.userId} = ${userId} and ${bookPersonal.readingStatus} != 'unread')`,
+    )
+  } else if (filters.reading) {
+    conditions.push(
+      sql`exists (select 1 from ${bookPersonal} where ${bookPersonal.bookId} = ${book.id} and ${bookPersonal.userId} = ${userId} and ${bookPersonal.readingStatus} = ${filters.reading})`,
+    )
+  }
   if (filters.tagId) {
     conditions.push(
       sql`exists (select 1 from ${bookTag} where ${bookTag.bookId} = ${book.id} and ${bookTag.tagId} = ${filters.tagId})`,

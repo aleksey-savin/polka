@@ -162,6 +162,8 @@ export const bookPersonal = sqliteTable(
     })
       .notNull()
       .default('unread'),
+    /** Когда отметили «читаю» — для «Читаю сейчас» на странице «Чтение». */
+    readingStartedAt: integer('reading_started_at', { mode: 'timestamp' }),
     readAt: integer('read_at', { mode: 'timestamp' }),
     rating: integer('rating'),
     review: text('review'),

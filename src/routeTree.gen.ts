@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppAddRouteImport } from './routes/_app/add'
 import { Route as AppFriendsRouteImport } from './routes/_app/friends'
 import { Route as AppLoansRouteImport } from './routes/_app/loans'
+import { Route as AppReadingRouteImport } from './routes/_app/reading'
 import { Route as AppRequestsRouteImport } from './routes/_app/requests'
 import { Route as AppWishlistRouteImport } from './routes/_app/wishlist'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
@@ -59,6 +60,11 @@ const AppFriendsRoute = AppFriendsRouteImport.update({
 const AppLoansRoute = AppLoansRouteImport.update({
   id: '/loans',
   path: '/loans',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReadingRoute = AppReadingRouteImport.update({
+  id: '/reading',
+  path: '/reading',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRequestsRoute = AppRequestsRouteImport.update({
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/add': typeof AppAddRoute
   '/friends': typeof AppFriendsRoute
   '/loans': typeof AppLoansRoute
+  '/reading': typeof AppReadingRoute
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
   '/api/health': typeof ApiHealthRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/add': typeof AppAddRoute
   '/friends': typeof AppFriendsRoute
   '/loans': typeof AppLoansRoute
+  '/reading': typeof AppReadingRoute
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
   '/api/health': typeof ApiHealthRoute
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/_app/add': typeof AppAddRoute
   '/_app/friends': typeof AppFriendsRoute
   '/_app/loans': typeof AppLoansRoute
+  '/_app/reading': typeof AppReadingRoute
   '/_app/requests': typeof AppRequestsRoute
   '/_app/wishlist': typeof AppWishlistRoute
   '/api/health': typeof ApiHealthRoute
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/friends'
     | '/loans'
+    | '/reading'
     | '/requests'
     | '/wishlist'
     | '/api/health'
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/friends'
     | '/loans'
+    | '/reading'
     | '/requests'
     | '/wishlist'
     | '/api/health'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/_app/add'
     | '/_app/friends'
     | '/_app/loans'
+    | '/_app/reading'
     | '/_app/requests'
     | '/_app/wishlist'
     | '/api/health'
@@ -339,6 +351,13 @@ declare module '@tanstack/react-router' {
       path: '/loans'
       fullPath: '/loans'
       preLoaderRoute: typeof AppLoansRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reading': {
+      id: '/_app/reading'
+      path: '/reading'
+      fullPath: '/reading'
+      preLoaderRoute: typeof AppReadingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/requests': {
@@ -460,6 +479,7 @@ interface AppRouteChildren {
   AppAddRoute: typeof AppAddRoute
   AppFriendsRoute: typeof AppFriendsRoute
   AppLoansRoute: typeof AppLoansRoute
+  AppReadingRoute: typeof AppReadingRoute
   AppRequestsRoute: typeof AppRequestsRoute
   AppWishlistRoute: typeof AppWishlistRoute
   AppBooksBookIdRoute: typeof AppBooksBookIdRoute
@@ -477,6 +497,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAddRoute: AppAddRoute,
   AppFriendsRoute: AppFriendsRoute,
   AppLoansRoute: AppLoansRoute,
+  AppReadingRoute: AppReadingRoute,
   AppRequestsRoute: AppRequestsRoute,
   AppWishlistRoute: AppWishlistRoute,
   AppBooksBookIdRoute: AppBooksBookIdRoute,

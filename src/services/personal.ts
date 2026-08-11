@@ -31,6 +31,7 @@ export async function upsertPersonal(
     userId,
     bookId,
     readingStatus: patch.readingStatus ?? ('unread' as const),
+    readingStartedAt: patch.readingStatus === 'reading' ? new Date() : null,
     readAt: patch.readAt ?? null,
     rating: patch.rating ?? null,
     review: patch.review?.trim() || null,
@@ -38,7 +39,11 @@ export async function upsertPersonal(
     notes: patch.notes?.trim() || null,
   }
   const set: Record<string, unknown> = {}
-  if (patch.readingStatus !== undefined) set.readingStatus = patch.readingStatus
+  if (patch.readingStatus !== undefined) {
+    set.readingStatus = patch.readingStatus
+    // дата «читаю с …»; при уходе из «читаю» дату не трогаем
+    if (patch.readingStatus === 'reading') set.readingStartedAt = new Date()
+  }
   if (patch.readAt !== undefined) set.readAt = patch.readAt
   if (patch.rating !== undefined) set.rating = patch.rating
   if (patch.review !== undefined) {

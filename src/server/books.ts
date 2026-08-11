@@ -84,7 +84,10 @@ export const listBooksFn = createServerFn({ method: 'GET' })
       shelfId: z.union([z.string(), z.literal('unsorted')]).optional(),
       seriesId: z.string().optional(),
       tagId: z.string().optional(),
-      status: z.enum(['in_library', 'wishlist', 'gifted', 'lost']).optional(),
+      status: z
+        .enum(['in_library', 'wishlist', 'gifted', 'lost', 'lent'])
+        .optional(),
+      reading: z.enum(['unread', 'reading', 'read', 'abandoned']).optional(),
     }),
   )
   .handler(async ({ context, data }) => {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useRouter, useRouterState } from '@tanstack/react-router'
-import { BookOpen, Handshake, House, LogOut, Plus, Users } from 'lucide-react'
+import { BookOpen, Bookmark, House, LogOut, Plus, Users } from 'lucide-react'
 
 import { LogoLink } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
@@ -20,8 +20,7 @@ const sections = [
   { to: '/libraries', label: 'Библиотека' },
   { to: '/books', label: 'Каталог' },
   { to: '/series', label: 'Серии' },
-  { to: '/wishlist', label: 'Хочу' },
-  { to: '/loans', label: 'На руках' },
+  { to: '/reading', label: 'Чтение' },
   { to: '/friends', label: 'Друзья' },
   { to: '/requests', label: 'Заявки' },
 ] as const
@@ -49,7 +48,7 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-full pb-20 md:pb-0">
+    <div className="min-h-full pb-24 md:pb-0">
       {navigating && <div aria-hidden className="nav-progress" />}
       <header className="sticky top-0 z-10 border-b bg-card">
         <div className="flex items-center gap-4 px-4 py-3 md:px-7">
@@ -126,9 +125,9 @@ export function AppShell({
           </span>
         </Link>
         <TabLink
-          to="/loans"
-          label="На руках"
-          icon={<Handshake className="size-5" />}
+          to="/reading"
+          label="Чтение"
+          icon={<Bookmark className="size-5" />}
         />
         <TabLink
           to="/friends"
