@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { spineFor } from './spine'
+import { fitSpineText, spineFor } from './spine'
 
 describe('spineFor', () => {
   test('детерминирован по названию', () => {
@@ -30,5 +30,26 @@ describe('spineFor', () => {
   test('совсем без данных — детерминированная вариация', () => {
     const h = spineFor('Пикник на обочине', 384).height
     expect([124, 132, 138, 148]).toContain(h)
+  })
+})
+
+describe('fitSpineText', () => {
+  test('короткое — максимальный шрифт без изменений', () => {
+    expect(fitSpineText('Кокон', 120)).toEqual({ text: 'Кокон', fontSize: 12 })
+  })
+  test('длинное — шрифт ужимается, текст цел', () => {
+    const fit = fitSpineText('Хроники Заводной Птицы', 130)
+    expect(fit.text).toBe('Хроники Заводной Птицы')
+    expect(fit.fontSize).toBeLessThan(12)
+    expect(fit.fontSize).toBeGreaterThanOrEqual(9)
+  })
+  test('не влезает даже мелким — обрезка с многоточием', () => {
+    const fit = fitSpineText(
+      'Очень длинное название которое никуда не влезет',
+      80,
+    )
+    expect(fit.fontSize).toBe(9)
+    expect(fit.text.endsWith('…')).toBe(true)
+    expect(fit.text.length * 9 * 0.6).toBeLessThanOrEqual(80 + 9)
   })
 })

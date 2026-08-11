@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 
-import { spineFor, textToneFor } from '@/services/spine'
+import { fitSpineText, spineFor, textToneFor } from '@/services/spine'
 import type { CoverType } from '@/services/spine'
 
 const BINDING_CLASS: Record<CoverType, string> = {
@@ -40,6 +40,12 @@ export function Spine({
   const author = authors ? lastName(authors) : ''
   // на толстом корешке автор и название — двумя вертикальными строками
   const twoLines = Boolean(author) && look.width >= 30
+  const textSpace = look.height - 12
+  const titleFit = fitSpineText(
+    twoLines || !author ? title : `${author} · ${title}`,
+    textSpace,
+  )
+  const authorFit = twoLines ? fitSpineText(author, textSpace, 10, 8) : null
   const gift = coverType === 'gift'
   return (
     <Link
@@ -94,18 +100,27 @@ export function Spine({
               : 'rgba(35,43,56,.82)',
         }}
       >
-        {twoLines ? (
-          <span className="flex max-h-[94%] flex-col items-center gap-[2px] overflow-hidden">
-            <span className="block max-h-full overflow-hidden text-[10px] leading-[1.15] font-normal text-ellipsis opacity-75">
-              {author}
+        {twoLines && authorFit ? (
+          <span className="flex max-h-[96%] flex-col items-center gap-[2px] overflow-hidden">
+            <span
+              className="block leading-[1.15] font-normal opacity-75"
+              style={{ fontSize: authorFit.fontSize }}
+            >
+              {authorFit.text}
             </span>
-            <span className="block max-h-full overflow-hidden text-ellipsis">
-              {title}
+            <span
+              className="block leading-[1.15]"
+              style={{ fontSize: titleFit.fontSize }}
+            >
+              {titleFit.text}
             </span>
           </span>
         ) : (
-          <span className="block max-h-[94%] overflow-hidden text-ellipsis">
-            {author ? `${author} · ${title}` : title}
+          <span
+            className="block max-h-[96%] overflow-hidden leading-[1.15]"
+            style={{ fontSize: titleFit.fontSize }}
+          >
+            {titleFit.text}
           </span>
         )}
       </span>

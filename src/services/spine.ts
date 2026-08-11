@@ -64,3 +64,29 @@ export function textToneFor(hex: string): 'dark' | 'light' {
   const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
   return luminance > 0.62 ? 'dark' : 'light'
 }
+
+/** Средняя ширина кириллического глифа Piazzolla, в em. */
+const GLYPH_EM = 0.6
+
+/**
+ * Вписывает текст в отведённую длину корешка: сначала ужимает шрифт
+ * (maxFont → minFont), затем — честная обрезка с многоточием
+ * (CSS text-overflow в вертикальном письме Safari не рисует).
+ */
+export function fitSpineText(
+  text: string,
+  availablePx: number,
+  maxFont = 12,
+  minFont = 9,
+): { text: string; fontSize: number } {
+  for (let f = maxFont; f >= minFont; f--) {
+    if (text.length * f * GLYPH_EM <= availablePx) {
+      return { text, fontSize: f }
+    }
+  }
+  const maxChars = Math.max(
+    3,
+    Math.floor(availablePx / (minFont * GLYPH_EM)) - 1,
+  )
+  return { text: text.slice(0, maxChars).trimEnd() + '…', fontSize: minFont }
+}
