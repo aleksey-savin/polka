@@ -28,11 +28,11 @@ export function Logo({ large = false }: { large?: boolean }) {
           className={`block rounded-t-[2px] bg-stamp ${large ? 'h-5' : 'h-[11px]'}`}
         />
       </span>
-      {large && (
-        <span className={`${spineW} ${board} border-foreground`}>
-          <span className="block h-[22px] rounded-t-[2px] bg-patina-old" />
-        </span>
-      )}
+      <span className={`${spineW} ${board} border-foreground`}>
+        <span
+          className={`block rounded-t-[2px] bg-patina-old ${large ? 'h-[22px]' : 'h-[13px]'}`}
+        />
+      </span>
     </span>
   )
 }
