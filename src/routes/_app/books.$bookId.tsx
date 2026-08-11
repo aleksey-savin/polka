@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { Ellipsis } from 'lucide-react'
 import { toast } from 'sonner'
+import type { ReactNode } from 'react'
 
 import { MoveDialog } from '@/components/book/MoveDialog'
 import { PersonalPanel } from '@/components/book/PersonalPanel'
@@ -13,8 +15,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   deleteBookFn,
   getBookCardFn,
@@ -41,18 +49,70 @@ export const Route = createFileRoute('/_app/books/$bookId')({
 const dateRu = (value: Date | string | null) =>
   value ? new Date(value).toLocaleDateString('ru-RU') : ''
 
+/** «11 августа», с годом — только если он не текущий. */
+const dateHuman = (value: Date | string) => {
+  const d = new Date(value)
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' }
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric'
+  return d.toLocaleDateString('ru-RU', opts)
+}
+
+/** «11.08.26» — для строк формуляра. */
+const dateShort = (value: Date | string) =>
+  new Date(value).toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+  })
+
+const LANG_LABEL: Record<string, string> = {
+  ru: 'русский',
+  en: 'английский',
+}
+
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="mb-2.5 flex items-baseline gap-2.5 font-mono text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+      {children}
+      <span aria-hidden className="h-px flex-1 -translate-y-[3px] bg-border" />
+    </h2>
+  )
+}
+
 function BookCardPage() {
   const { book, personal, loans } = Route.useLoaderData()
   const router = useRouter()
   const navigate = Route.useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
+  const [coverOpen, setCoverOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
+  const [lendOpen, setLendOpen] = useState(false)
+  const [giftOpen, setGiftOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [annotationOpen, setAnnotationOpen] = useState(false)
   const [coverBusy, setCoverBusy] = useState(false)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const refresh = () => void router.invalidate()
 
   const look = spineFor(book.title, book.pages)
   const activeLoan = loans.find((l) => l.returnedAt === null) ?? null
+  const canCirculate = book.status === 'in_library' && !activeLoan
+
+  const stampLabel = activeLoan
+    ? 'На руках'
+    : book.status === 'gifted'
+      ? 'Подарена'
+      : book.status === 'lost'
+        ? 'Потеряна'
+        : book.status === 'wishlist'
+          ? 'Хочу'
+          : null
+  const stampTone =
+    book.status === 'lost'
+      ? 'border-destructive text-destructive'
+      : book.status === 'wishlist'
+        ? 'border-accent-foreground text-accent-foreground'
+        : 'border-stamp text-stamp'
 
   async function run(
     name: string,
@@ -89,9 +149,24 @@ function BookCardPage() {
     await navigate({ to: '/books', search: {} })
   }
 
+  const editionParts: Array<ReactNode> = []
+  if (book.publisher) editionParts.push(book.publisher)
+  if (book.year)
+    editionParts.push(
+      <span key="year" className="font-mono text-[12.5px]">
+        {book.year}
+      </span>,
+    )
+  if (book.pages)
+    editionParts.push(
+      <span key="pages">
+        <span className="font-mono text-[12.5px]">{book.pages}</span> с.
+      </span>,
+    )
+
   return (
-    <div>
-      <p className="mb-4 text-[13px] text-muted-foreground">
+    <div className="mx-auto max-w-[640px]">
+      <p className="mb-5 overflow-hidden text-[13px] whitespace-nowrap text-ellipsis text-muted-foreground">
         {book.libraryId ? (
           <>
             <Link
@@ -126,51 +201,472 @@ function BookCardPage() {
         {book.title}
       </p>
 
-      <div className="grid gap-8 md:grid-cols-[250px_1fr]">
-        <div className="grid content-start gap-3">
+      {/* ── Книга-объект ── */}
+      <header className="flex items-end gap-[18px]">
+        <div className="relative w-[106px] flex-none">
+          <button
+            type="button"
+            aria-label="Открыть обложку крупнее"
+            className="block w-full cursor-zoom-in"
+            onClick={() => setCoverOpen(true)}
+          >
+            {book.coverPath ? (
+              <img
+                src={`/api/covers/${book.id}?v=${book.coverPath}`}
+                alt={`Обложка: ${book.title}`}
+                className="aspect-[7/10] w-full rounded-[4px] object-cover shadow-[inset_3px_0_0_rgba(255,255,255,.22),0_8px_18px_-8px_rgba(35,43,56,.55)]"
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="grid aspect-[7/10] w-full content-end gap-1 overflow-hidden rounded-[4px] p-2.5 text-left"
+                style={{
+                  background: `linear-gradient(160deg, ${look.color}, color-mix(in oklab, ${look.color} 70%, #232B38))`,
+                  boxShadow:
+                    'inset 3px 0 0 rgba(255,255,255,.3), 0 8px 18px -8px rgba(35,43,56,.55)',
+                }}
+              >
+                <span
+                  className="text-[8.5px] leading-tight font-semibold"
+                  style={{ color: 'rgba(35,43,56,.72)' }}
+                >
+                  {book.authors}
+                </span>
+                <span
+                  className="font-display text-[12px] leading-tight font-bold"
+                  style={{ color: 'rgba(35,43,56,.92)' }}
+                >
+                  {book.title}
+                </span>
+              </span>
+            )}
+          </button>
+          {/* полочная линия под книгой */}
+          <span
+            aria-hidden
+            className="absolute -inset-x-2 -bottom-[7px] h-1 rounded-full"
+            style={{
+              background:
+                'linear-gradient(to right, var(--patina-old), var(--patina-fresh))',
+              boxShadow: '0 3px 6px -2px rgba(35,43,56,.25)',
+            }}
+          />
+          {stampLabel && (
+            <span
+              className={`absolute top-2.5 -right-3 rotate-[-7deg] rounded border-2 bg-background/85 px-1.5 py-0.5 font-mono text-[10px] font-medium tracking-[0.16em] uppercase shadow-sm ${stampTone}`}
+            >
+              {stampLabel}
+            </span>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1 pb-1">
+          {book.seriesName && book.seriesId && (
+            <p className="mb-2 flex items-center gap-1.5">
+              <Link
+                to="/series/$seriesId"
+                params={{ seriesId: book.seriesId }}
+                className="min-w-0"
+              >
+                <Badge
+                  variant="outline"
+                  className="max-w-full min-w-0 rounded-full border-stamp/30 text-stamp"
+                >
+                  <span className="truncate">{book.seriesName}</span>
+                </Badge>
+              </Link>
+              {book.seriesNumber && (
+                <span className="flex-none text-[12.5px] text-muted-foreground">
+                  том {book.seriesNumber}
+                </span>
+              )}
+            </p>
+          )}
+          <h1 className="text-[25px] leading-[1.16] font-semibold tracking-[-0.015em] md:text-[28px]">
+            {book.title}
+          </h1>
+          {book.authors && (
+            <p className="mt-1 text-[15px] text-muted-foreground">
+              {book.authors}
+            </p>
+          )}
+          {editionParts.length > 0 && (
+            <p className="mt-1.5 text-[13px] text-muted-foreground">
+              {editionParts.map((part, i) => (
+                <Fragment key={i}>
+                  {i > 0 && ' · '}
+                  {part}
+                </Fragment>
+              ))}
+            </p>
+          )}
+        </div>
+      </header>
+
+      {/* ── Лента обращения: где книга сейчас + главное действие ── */}
+      {activeLoan ? (
+        <div className="mt-6 flex items-center gap-3 rounded-xl border border-stamp/25 bg-stamp/5 p-3">
+          <span
+            aria-hidden
+            className="grid size-8 flex-none rotate-[-6deg] place-items-center rounded-full border-2 border-stamp bg-white/70 font-mono text-sm font-medium text-stamp"
+          >
+            ✳
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px]">
+              У <b className="font-semibold">«{activeLoan.borrowerName}»</b>
+            </p>
+            <p className="text-[12.5px] text-muted-foreground">
+              с{' '}
+              <span className="font-mono text-xs">
+                {dateHuman(activeLoan.lentAt)}
+              </span>
+              {activeLoan.dueAt && (
+                <>
+                  {' · вернуть к '}
+                  <span className="font-mono text-xs">
+                    {dateHuman(activeLoan.dueAt)}
+                  </span>
+                </>
+              )}
+            </p>
+          </div>
+          <Button
+            loading={busyAction === 'return'}
+            onClick={() =>
+              void run(
+                'return',
+                () => returnLoanFn({ data: { loanId: activeLoan.loanId } }),
+                'Вернули — книга снова дома',
+              )
+            }
+          >
+            Вернули
+          </Button>
+        </div>
+      ) : book.status === 'in_library' ? (
+        <div className="mt-6 flex items-center gap-3 rounded-xl border border-primary/25 bg-accent p-3">
+          <span
+            aria-hidden
+            className="grid size-8 flex-none place-items-center rounded-full border-2 border-primary bg-white/70 font-mono text-sm font-medium text-primary"
+          >
+            ✓
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px]">Дома</p>
+            <p className="truncate text-[12.5px] text-muted-foreground">
+              {book.libraryName} · {book.shelfName ?? 'Неразобранное'}
+            </p>
+          </div>
+          <Button onClick={() => setLendOpen(true)}>Дал почитать</Button>
+        </div>
+      ) : book.status === 'gifted' ? (
+        <div className="mt-6 flex items-center gap-3 rounded-xl border border-patina-old bg-patina-old/20 p-3">
+          <span
+            aria-hidden
+            className="grid size-8 flex-none rotate-[-6deg] place-items-center rounded-full border-2 border-[#A5824A] bg-white/70 font-mono text-sm font-medium text-[#A5824A]"
+          >
+            ✳
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px]">
+              Подарена
+              {book.giftedTo && (
+                <b className="font-semibold"> «{book.giftedTo}»</b>
+              )}
+            </p>
+            {book.giftedAt && (
+              <p className="text-[12.5px] text-muted-foreground">
+                <span className="font-mono text-xs">
+                  {dateHuman(book.giftedAt)}
+                </span>
+              </p>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            loading={busyAction === 'restore'}
+            onClick={() =>
+              void run(
+                'restore',
+                () => restoreToLibraryFn({ data: { bookId: book.id } }),
+                'Книга снова в библиотеке',
+              )
+            }
+          >
+            Снова в библиотеку
+          </Button>
+        </div>
+      ) : book.status === 'lost' ? (
+        <div className="mt-6 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+          <span
+            aria-hidden
+            className="grid size-8 flex-none rotate-[-6deg] place-items-center rounded-full border-2 border-destructive bg-white/70 font-mono text-sm font-medium text-destructive"
+          >
+            ✕
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px]">Потерялась</p>
+            <p className="text-[12.5px] text-muted-foreground">
+              карточка и формуляр сохранены
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            loading={busyAction === 'restore'}
+            onClick={() =>
+              void run(
+                'restore',
+                () => restoreToLibraryFn({ data: { bookId: book.id } }),
+                'Книга снова в библиотеке',
+              )
+            }
+          >
+            Нашлась
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-6 flex items-center gap-3 rounded-xl border border-primary/25 bg-accent p-3">
+          <span
+            aria-hidden
+            className="grid size-8 flex-none place-items-center rounded-full border-2 border-primary bg-white/70 font-mono text-sm font-medium text-primary"
+          >
+            ♡
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px]">В списке «Хочу»</p>
+            <p className="text-[12.5px] text-muted-foreground">
+              книги ещё нет дома
+            </p>
+          </div>
+          <Button onClick={() => setMoveOpen(true)}>Купил — на полку</Button>
+        </div>
+      )}
+
+      {/* ── Действия ── */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <Link to="/books/$bookId/edit" params={{ bookId: book.id }}>
+            Редактировать
+          </Link>
+        </Button>
+        {book.status !== 'wishlist' && (
+          <Button variant="outline" onClick={() => setMoveOpen(true)}>
+            Переместить
+          </Button>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost">
+              Ещё <Ellipsis aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {canCirculate && (
+              <>
+                <DropdownMenuItem onSelect={() => setGiftOpen(true)}>
+                  Подарить
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() =>
+                    void run('lost', () =>
+                      markLostFn({ data: { bookId: book.id } }),
+                    )
+                  }
+                >
+                  Потерялась
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem onSelect={() => fileRef.current?.click()}>
+              {book.coverPath ? 'Заменить обложку' : 'Загрузить обложку'}
+            </DropdownMenuItem>
+            {book.coverPath && (
+              <DropdownMenuItem
+                onSelect={() =>
+                  void removeCoverFn({ data: { bookId: book.id } }).then(
+                    refresh,
+                  )
+                }
+              >
+                Убрать обложку
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive"
+              onSelect={() => setDeleteOpen(true)}
+            >
+              Удалить
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* ── Аннотация и тэги ── */}
+      {(book.annotation || book.tags.length > 0) && (
+        <section className="mt-7">
+          <SectionLabel>{book.annotation ? 'Аннотация' : 'Тэги'}</SectionLabel>
+          {book.annotation && (
+            <>
+              <p
+                className={`max-w-[60ch] text-[15px] leading-[1.65] ${annotationOpen ? '' : 'line-clamp-4'}`}
+              >
+                {book.annotation}
+              </p>
+              {book.annotation.length > 280 && (
+                <button
+                  type="button"
+                  className="mt-1.5 text-[13.5px] font-medium text-accent-foreground"
+                  onClick={() => setAnnotationOpen((v) => !v)}
+                >
+                  {annotationOpen ? 'Свернуть' : 'Развернуть'}
+                </button>
+              )}
+            </>
+          )}
+          {book.tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {book.tags.map((t) => (
+                <Badge key={t} variant="secondary" className="rounded-full">
+                  {t}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Личное ── */}
+      <section className="mt-7">
+        <SectionLabel>Мой формуляр</SectionLabel>
+        <PersonalPanel
+          bookId={book.id}
+          personal={personal}
+          onChanged={refresh}
+        />
+      </section>
+
+      {/* ── Библиография ── */}
+      <section className="mt-7">
+        <SectionLabel>Каталожная карточка</SectionLabel>
+        <dl className="ruled-card">
+          {(book.isbn13 || book.isbn10) && (
+            <div className="flex h-8 items-baseline gap-3 overflow-hidden whitespace-nowrap">
+              <dt className="w-[108px] flex-none text-[12.5px] text-muted-foreground">
+                ISBN
+              </dt>
+              <dd className="m-0 min-w-0 truncate font-mono text-[13px]">
+                {book.isbn13 ?? book.isbn10}
+              </dd>
+            </div>
+          )}
+          {book.publisher && (
+            <div className="flex h-8 items-baseline gap-3 overflow-hidden whitespace-nowrap">
+              <dt className="w-[108px] flex-none text-[12.5px] text-muted-foreground">
+                Издательство
+              </dt>
+              <dd className="m-0 min-w-0 truncate text-sm">{book.publisher}</dd>
+            </div>
+          )}
+          <div className="flex h-8 items-baseline gap-3 overflow-hidden whitespace-nowrap">
+            <dt className="w-[108px] flex-none text-[12.5px] text-muted-foreground">
+              Язык
+            </dt>
+            <dd className="m-0 min-w-0 truncate text-sm">
+              {LANG_LABEL[book.language] ?? book.language}
+            </dd>
+          </div>
+          <div className="flex h-8 items-baseline gap-3 overflow-hidden whitespace-nowrap">
+            <dt className="w-[108px] flex-none text-[12.5px] text-muted-foreground">
+              В библиотеке
+            </dt>
+            <dd className="m-0 min-w-0 truncate text-sm">
+              с{' '}
+              <span className="font-mono text-[13px]">
+                {dateRu(book.createdAt)}
+              </span>
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      {/* ── История выдач ── */}
+      {loans.length > 0 && (
+        <section className="mt-7">
+          <SectionLabel>Формуляр выдач</SectionLabel>
+          <div className="ruled-card">
+            <div className="grid h-8 grid-cols-[minmax(0,1fr)_78px_78px] items-baseline gap-2.5 font-mono text-[10.5px] font-medium tracking-[0.1em] text-muted-foreground uppercase">
+              <span>Кому</span>
+              <span>Взял</span>
+              <span>Вернул</span>
+            </div>
+            {loans.map((l) => {
+              const current = l.returnedAt === null
+              return (
+                <div
+                  key={l.loanId}
+                  className={`grid h-8 grid-cols-[minmax(0,1fr)_78px_78px] items-baseline gap-2.5 ${current ? 'text-stamp' : ''}`}
+                >
+                  <span className="flex min-w-0 items-baseline">
+                    <span className="truncate text-sm font-medium">
+                      {l.borrowerName}
+                    </span>
+                    {current && (
+                      <span className="ml-2 inline-block flex-none rotate-[-3deg] rounded-[3px] border-[1.5px] border-stamp px-1 font-mono text-[10px] tracking-[0.1em] text-stamp uppercase">
+                        сейчас
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className={`font-mono text-[13px] tabular-nums ${current ? '' : 'text-muted-foreground'}`}
+                  >
+                    {dateShort(l.lentAt)}
+                  </span>
+                  <span
+                    className={`font-mono text-[13px] tabular-nums ${current ? '' : 'text-muted-foreground'}`}
+                  >
+                    {l.returnedAt ? dateShort(l.returnedAt) : '—'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── Диалоги ── */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) void uploadCover(f)
+          e.target.value = ''
+        }}
+      />
+      <Dialog open={coverOpen} onOpenChange={setCoverOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Обложка</DialogTitle>
+          </DialogHeader>
           {book.coverPath ? (
             <img
               src={`/api/covers/${book.id}?v=${book.coverPath}`}
               alt={`Обложка: ${book.title}`}
-              className="aspect-[7/10] w-full max-w-[250px] rounded-md object-cover shadow-md"
+              className="mx-auto max-h-[60vh] w-auto rounded-md shadow-md"
             />
           ) : (
-            <div
-              className="grid aspect-[7/10] w-full max-w-[250px] content-end gap-1.5 rounded-md p-5 shadow-md"
-              style={{
-                background: `linear-gradient(160deg, ${look.color}, color-mix(in oklab, ${look.color} 70%, #232B38))`,
-                boxShadow: 'inset 3px 0 0 rgba(255,255,255,.35)',
-              }}
-            >
-              <span
-                className="text-[13px] font-semibold"
-                style={{ color: 'rgba(35,43,56,.72)' }}
-              >
-                {book.authors}
-              </span>
-              <span
-                className="font-display text-2xl leading-tight font-bold"
-                style={{ color: 'rgba(35,43,56,.92)' }}
-              >
-                {book.title}
-              </span>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              У книги пока нет обложки — загрузите фото или скан.
+            </p>
           )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) void uploadCover(f)
-              e.target.value = ''
-            }}
-          />
-          <div className="flex max-w-[250px] gap-2">
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
-              className="flex-1"
               loading={coverBusy}
               onClick={() => fileRef.current?.click()}
             >
@@ -189,238 +685,29 @@ function BookCardPage() {
                 Убрать
               </Button>
             )}
-          </div>
-        </div>
-
-        <div>
-          <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-            <h1 className="text-[32px] leading-tight font-semibold">
-              {book.title}
-            </h1>
-            {activeLoan && (
-              <span className="mt-2 inline-block -rotate-2 rounded border-2 border-stamp px-2 py-0.5 font-mono text-[11.5px] font-medium tracking-widest text-stamp uppercase">
-                На руках
-              </span>
-            )}
-            {book.status === 'gifted' && (
-              <span className="mt-2 inline-block -rotate-2 rounded border-2 border-stamp px-2 py-0.5 font-mono text-[11.5px] font-medium tracking-widest text-stamp uppercase">
-                Подарена
-              </span>
-            )}
-            {book.status === 'lost' && (
-              <span className="mt-2 inline-block -rotate-2 rounded border-2 border-destructive px-2 py-0.5 font-mono text-[11.5px] font-medium tracking-widest text-destructive uppercase">
-                Потеряна
-              </span>
-            )}
-            {book.status === 'wishlist' && (
-              <span className="mt-2 inline-block -rotate-2 rounded border-2 border-accent-foreground px-2 py-0.5 font-mono text-[11.5px] font-medium tracking-widest text-accent-foreground uppercase">
-                Хочу
-              </span>
-            )}
-          </div>
-          {book.authors && (
-            <p className="mt-1 text-base text-muted-foreground">
-              {book.authors}
-            </p>
-          )}
-          {activeLoan && (
-            <p className="mt-1.5 text-sm text-stamp">
-              у «{activeLoan.borrowerName}» с {dateRu(activeLoan.lentAt)}
-              {activeLoan.dueAt && `, вернуть к ${dateRu(activeLoan.dueAt)}`}
-            </p>
-          )}
-          {book.status === 'gifted' && (
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              подарена{book.giftedTo && ` — ${book.giftedTo}`}
-              {book.giftedAt && `, ${dateRu(book.giftedAt)}`}
-            </p>
-          )}
-
-          <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
-            {book.seriesName && book.seriesId && (
-              <>
-                <dt className="text-muted-foreground">Серия</dt>
-                <dd>
-                  <Link
-                    to="/series/$seriesId"
-                    params={{ seriesId: book.seriesId }}
-                  >
-                    <Badge
-                      variant="outline"
-                      className="border-stamp/30 text-stamp"
-                    >
-                      {book.seriesName}
-                    </Badge>
-                  </Link>
-                  {book.seriesNumber && (
-                    <span className="ml-1.5">· том {book.seriesNumber}</span>
-                  )}
-                </dd>
-              </>
-            )}
-            {book.publisher && (
-              <>
-                <dt className="text-muted-foreground">Издательство</dt>
-                <dd>{book.publisher}</dd>
-              </>
-            )}
-            {book.year && (
-              <>
-                <dt className="text-muted-foreground">Год</dt>
-                <dd>{book.year}</dd>
-              </>
-            )}
-            {book.pages && (
-              <>
-                <dt className="text-muted-foreground">Страниц</dt>
-                <dd>{book.pages}</dd>
-              </>
-            )}
-            {book.isbn13 && (
-              <>
-                <dt className="text-muted-foreground">ISBN</dt>
-                <dd className="font-mono text-[13px]">{book.isbn13}</dd>
-              </>
-            )}
-            {book.tags.length > 0 && (
-              <>
-                <dt className="text-muted-foreground">Тэги</dt>
-                <dd className="flex flex-wrap gap-1.5">
-                  {book.tags.map((t) => (
-                    <Badge key={t} variant="secondary">
-                      {t}
-                    </Badge>
-                  ))}
-                </dd>
-              </>
-            )}
-          </dl>
-
-          {book.annotation && (
-            <p className="mt-4 max-w-prose text-[15px] leading-relaxed">
-              {book.annotation}
-            </p>
-          )}
-
-          <div className="mt-6 flex flex-wrap gap-2.5">
-            {activeLoan ? (
-              <Button
-                loading={busyAction === 'return'}
-                onClick={() =>
-                  void run(
-                    'return',
-                    () => returnLoanFn({ data: { loanId: activeLoan.loanId } }),
-                    'Вернули — книга снова дома',
-                  )
-                }
-              >
-                Вернули
-              </Button>
-            ) : book.status === 'in_library' ? (
-              <>
-                <LendDialog
-                  bookId={book.id}
-                  bookTitle={book.title}
-                  onDone={refresh}
-                />
-                <GiftDialog
-                  bookId={book.id}
-                  bookTitle={book.title}
-                  onDone={refresh}
-                />
-                <Button
-                  variant="ghost"
-                  loading={busyAction === 'lost'}
-                  onClick={() =>
-                    void run('lost', () =>
-                      markLostFn({ data: { bookId: book.id } }),
-                    )
-                  }
-                >
-                  Потерялась
-                </Button>
-              </>
-            ) : book.status === 'wishlist' ? (
-              <Button onClick={() => setMoveOpen(true)}>
-                Купил — на полку
-              </Button>
-            ) : (
-              <Button
-                loading={busyAction === 'restore'}
-                onClick={() =>
-                  void run(
-                    'restore',
-                    () => restoreToLibraryFn({ data: { bookId: book.id } }),
-                    'Книга снова в библиотеке',
-                  )
-                }
-              >
-                Вернуть в библиотеку
-              </Button>
-            )}
-            <Button asChild variant="outline">
-              <Link to="/books/$bookId/edit" params={{ bookId: book.id }}>
-                Редактировать
-              </Link>
-            </Button>
-            <Button variant="outline" onClick={() => setMoveOpen(true)}>
-              Переместить
-            </Button>
-            <DeleteBookDialog
-              title={book.title}
-              onConfirm={() => void removeBook()}
-            />
-          </div>
-
-          <div className="mt-7">
-            <PersonalPanel
-              bookId={book.id}
-              personal={personal}
-              onChanged={refresh}
-            />
-          </div>
-
-          {loans.length > 0 && (
-            <section className="mt-7 rounded-lg border bg-card p-5 shadow-xs">
-              <h3 className="mb-3 text-base font-semibold">Выдачи</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="text-left font-mono text-[11px] tracking-wider text-muted-foreground uppercase">
-                      <th className="px-2.5 py-1.5">Кому</th>
-                      <th className="px-2.5 py-1.5">Взял</th>
-                      <th className="px-2.5 py-1.5">Срок</th>
-                      <th className="px-2.5 py-1.5">Вернул</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loans.map((l) => (
-                      <tr
-                        key={l.loanId}
-                        className={l.returnedAt === null ? 'bg-accent' : ''}
-                      >
-                        <td className="border-t px-2.5 py-2 font-medium">
-                          {l.borrowerName}
-                        </td>
-                        <td className="border-t px-2.5 py-2">
-                          {dateRu(l.lentAt)}
-                        </td>
-                        <td className="border-t px-2.5 py-2">
-                          {l.dueAt ? dateRu(l.dueAt) : '—'}
-                        </td>
-                        <td className="border-t px-2.5 py-2">
-                          {l.returnedAt ? dateRu(l.returnedAt) : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-        </div>
-      </div>
-
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <LendDialog
+        bookId={book.id}
+        bookTitle={book.title}
+        open={lendOpen}
+        onOpenChange={setLendOpen}
+        onDone={refresh}
+      />
+      <GiftDialog
+        bookId={book.id}
+        bookTitle={book.title}
+        open={giftOpen}
+        onOpenChange={setGiftOpen}
+        onDone={refresh}
+      />
+      <DeleteBookDialog
+        title={book.title}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={() => void removeBook()}
+      />
       <MoveDialog
         open={moveOpen}
         onOpenChange={setMoveOpen}
@@ -433,18 +720,17 @@ function BookCardPage() {
 
 function DeleteBookDialog({
   title,
+  open,
+  onOpenChange,
   onConfirm,
 }: {
   title: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }) {
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="ghost" className="text-destructive">
-          Удалить
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Удалить «{title}»?</DialogTitle>

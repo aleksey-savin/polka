@@ -215,6 +215,7 @@ export interface BookCard {
   shelfName: string | null
   tags: Array<string>
   addedBy: string
+  createdAt: Date
 }
 
 export async function getBookCard(
@@ -264,6 +265,7 @@ export async function getBookCard(
     shelfName: joined.shelfName,
     tags: tags.map((t) => t.name),
     addedBy: row.addedBy,
+    createdAt: row.createdAt,
   }
 }
 

@@ -8,23 +8,27 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { giftBookFn } from '@/server/books'
 import { lendBookFn } from '@/server/loans'
 
+/* Диалоги управляемые: открываются из ленты обращения и меню «Ещё». */
+
 export function LendDialog({
   bookId,
   bookTitle,
+  open,
+  onOpenChange,
   onDone,
 }: {
   bookId: string
   bookTitle: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onDone: () => void
 }) {
-  const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [dueAt, setDueAt] = useState('')
   const [busy, setBusy] = useState(false)
@@ -38,7 +42,7 @@ export function LendDialog({
       await lendBookFn({
         data: { bookId, borrowerName: name.trim(), dueAt: dueAt || null },
       })
-      setOpen(false)
+      onOpenChange(false)
       setName('')
       setDueAt('')
       onDone()
@@ -50,10 +54,7 @@ export function LendDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>Дать почитать</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>«{bookTitle}» — кому даёте?</DialogTitle>
@@ -106,13 +107,16 @@ export function LendDialog({
 export function GiftDialog({
   bookId,
   bookTitle,
+  open,
+  onOpenChange,
   onDone,
 }: {
   bookId: string
   bookTitle: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onDone: () => void
 }) {
-  const [open, setOpen] = useState(false)
   const [to, setTo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -123,7 +127,7 @@ export function GiftDialog({
     setError(null)
     try {
       await giftBookFn({ data: { bookId, giftedTo: to.trim() } })
-      setOpen(false)
+      onOpenChange(false)
       onDone()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не получилось')
@@ -133,17 +137,14 @@ export function GiftDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline">Подарить</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>«{bookTitle}» уезжает насовсем?</DialogTitle>
           <DialogDescription>
             Книга уйдёт с полки, но останется в каталоге со штампом «ПОДАРЕНА» —
-            найдётся фильтром. Если передумаете, на карточке будет кнопка
-            «Вернуть в библиотеку».
+            найдётся фильтром. Если передумаете, на карточке будет кнопка «Снова
+            в библиотеку».
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-1.5">

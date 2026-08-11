@@ -108,6 +108,21 @@
   animation: scanline 2.2s ease-in-out infinite alternate;
 }
 
+/* Линованные библиотечные карточки: каталожная карточка и формуляр выдач.
+   Строки внутри должны быть ровно h-8 (32px), чтобы попадать на линовку. */
+.ruled-card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: repeating-linear-gradient(
+      to bottom,
+      transparent 0 31px,
+      var(--color-border) 31px 32px
+    )
+    var(--color-card);
+  background-origin: content-box;
+  padding: 14px 16px 15px;
+}
+
 /* ── Движение: деликатно и с уважением к reduced-motion ── */
 @media (prefers-reduced-motion: no-preference) {
   /* кроссфейд переходов между экранами (View Transitions API) */

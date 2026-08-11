@@ -39,11 +39,11 @@ export function BookRow({
   const look = spineFor(book.title, book.pages ?? null)
   const hasMeta = Boolean(
     place ||
-      book.seriesName ||
-      book.year ||
-      after ||
-      book.lentTo ||
-      (book.status && STATUS_LABEL[book.status]),
+    book.seriesName ||
+    book.year ||
+    after ||
+    book.lentTo ||
+    (book.status && STATUS_LABEL[book.status]),
   )
   return (
     <div className="flex min-w-0 gap-3 rounded-lg border bg-card px-3.5 py-2.5 shadow-xs">
