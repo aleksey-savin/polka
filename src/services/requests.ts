@@ -50,12 +50,14 @@ export async function createBorrowRequest(input: {
       libraryId: book.libraryId,
       shelfId: book.shelfId,
       status: book.status,
+      hidden: book.hidden,
     })
     .from(book)
     .where(eq(book.id, input.bookId))
   const inScope =
     bookRow &&
     bookRow.status === 'in_library' &&
+    !bookRow.hidden &&
     ((shareRow.libraryId !== null &&
       bookRow.libraryId === shareRow.libraryId) ||
       (shareRow.shelfId !== null && bookRow.shelfId === shareRow.shelfId))

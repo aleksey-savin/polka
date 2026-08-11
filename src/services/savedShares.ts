@@ -105,6 +105,7 @@ export async function listSavedShares(
             ? eq(book.shelfId, r.shelfId)
             : eq(book.libraryId, libId),
           eq(book.status, 'in_library'),
+          eq(book.hidden, false),
         ),
       )
     result.push({
@@ -183,6 +184,7 @@ export async function searchFriendsBooks(
       and(
         or(...conditions),
         eq(book.status, 'in_library'),
+        eq(book.hidden, false),
         q
           ? or(
               like(book.titleNorm, `%${q}%`),

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
+import { EyeOff } from 'lucide-react'
+
 import { SectionLabel } from '@/components/layout/SectionLabel'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -102,6 +104,12 @@ function ReadingPage() {
                     </span>
                   )}
                   <p className="mt-2 line-clamp-2 text-[13.5px] leading-tight font-semibold">
+                    {b.hidden && (
+                      <EyeOff
+                        aria-label="Скрыта от гостей"
+                        className="mr-1 inline size-3.5 text-muted-foreground"
+                      />
+                    )}
                     {b.title}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">

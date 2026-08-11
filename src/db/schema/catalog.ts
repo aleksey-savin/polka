@@ -125,6 +125,8 @@ export const book = sqliteTable(
     annotation: text('annotation'),
     coverPath: text('cover_path'),
     coverColor: text('cover_color'), // акцентный цвет обложки (hex), извлекается при сохранении
+    /** Скрыта от гостей: не попадает на витрины, в поиск у друзей и заявки. */
+    hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
     status: text('status', {
       enum: ['in_library', 'wishlist', 'gifted', 'lost'],
     })

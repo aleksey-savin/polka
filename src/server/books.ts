@@ -11,6 +11,7 @@ import {
   moveBooks,
   restoreToLibrary,
   updateBook,
+  setBookHidden,
 } from '@/services/books'
 import { listMyLibraries } from '@/services/libraries'
 import { activeLoansFor } from '@/services/loans'
@@ -85,7 +86,7 @@ export const listBooksFn = createServerFn({ method: 'GET' })
       seriesId: z.string().optional(),
       tagId: z.string().optional(),
       status: z
-        .enum(['in_library', 'wishlist', 'gifted', 'lost', 'lent'])
+        .enum(['in_library', 'wishlist', 'gifted', 'lost', 'lent', 'hidden'])
         .optional(),
       reading: z.enum(['unread', 'reading', 'read', 'abandoned']).optional(),
     }),
@@ -136,3 +137,10 @@ export const getBookFormMetaFn = createServerFn({ method: 'GET' })
     ])
     return { libraries, tags: tags.map((t) => t.name) }
   })
+
+export const setBookHiddenFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ bookId: z.string(), hidden: z.boolean() }))
+  .handler(({ context, data }) =>
+    setBookHidden(context.user.id, data.bookId, data.hidden),
+  )

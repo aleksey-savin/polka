@@ -2,6 +2,8 @@ import { Fragment, useRef, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import {
   Ellipsis,
+  Eye,
+  EyeOff,
   Gift,
   Heart,
   House,
@@ -36,6 +38,7 @@ import {
   getBookCardFn,
   markLostFn,
   restoreToLibraryFn,
+  setBookHiddenFn,
 } from '@/server/books'
 import { dateHuman, dateRu, dateShort } from '@/lib/dates'
 import { removeCoverFn, uploadCoverFn } from '@/server/covers'
@@ -281,6 +284,12 @@ function BookCardPage() {
               ))}
             </p>
           )}
+          {book.hidden && (
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-dashed border-muted-foreground/45 bg-card/60 px-2.5 py-0.5 text-[12.5px] font-medium text-muted-foreground">
+              <EyeOff className="size-3.5" aria-hidden />
+              Скрыта от гостей
+            </span>
+          )}
         </div>
       </header>
 
@@ -438,6 +447,31 @@ function BookCardPage() {
                 <DropdownMenuSeparator />
               </>
             )}
+            <DropdownMenuItem
+              onSelect={() =>
+                void run(
+                  'hidden',
+                  () =>
+                    setBookHiddenFn({
+                      data: { bookId: book.id, hidden: !book.hidden },
+                    }),
+                  book.hidden
+                    ? 'Книга снова видна гостям'
+                    : 'Скрыта: на витринах и в поиске у друзей её больше нет',
+                )
+              }
+            >
+              {book.hidden ? (
+                <>
+                  <Eye /> Показать гостям
+                </>
+              ) : (
+                <>
+                  <EyeOff /> Скрыть от гостей
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => fileRef.current?.click()}>
               {book.coverPath ? 'Заменить обложку' : 'Загрузить обложку'}
             </DropdownMenuItem>

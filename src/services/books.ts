@@ -225,6 +225,7 @@ export interface BookCard {
   tags: Array<string>
   addedBy: string
   createdAt: Date
+  hidden: boolean
 }
 
 export async function getBookCard(
@@ -275,6 +276,7 @@ export async function getBookCard(
     tags: tags.map((t) => t.name),
     addedBy: row.addedBy,
     createdAt: row.createdAt,
+    hidden: row.hidden,
   }
 }
 
@@ -284,8 +286,8 @@ export interface CatalogFilters {
   shelfId?: string | 'unsorted'
   seriesId?: string
   tagId?: string
-  /** «lent» — не статус владения, а «есть активная выдача». */
-  status?: 'in_library' | 'wishlist' | 'gifted' | 'lost' | 'lent'
+  /** «lent» и «hidden» — не статусы владения: активная выдача и скрытость. */
+  status?: 'in_library' | 'wishlist' | 'gifted' | 'lost' | 'lent' | 'hidden'
   /** Фильтр по МОЕМУ статусу чтения (личный слой). */
   reading?: 'unread' | 'reading' | 'read' | 'abandoned'
 }
@@ -303,6 +305,7 @@ export interface CatalogRow {
   libraryName: string | null
   shelfId: string | null
   shelfName: string | null
+  hidden: boolean
 }
 
 const CATALOG_LIMIT = 500
@@ -330,6 +333,8 @@ export async function listBooks(
       eq(book.status, 'in_library'),
       sql`exists (select 1 from ${loan} where ${loan.bookId} = ${book.id} and ${loan.returnedAt} is null)`,
     )
+  } else if (filters.status === 'hidden') {
+    conditions.push(eq(book.hidden, true))
   } else if (filters.status) {
     conditions.push(eq(book.status, filters.status))
   }
@@ -373,6 +378,7 @@ export async function listBooks(
       libraryName: library.name,
       shelfId: book.shelfId,
       shelfName: shelf.name,
+      hidden: book.hidden,
     })
     .from(book)
     .leftJoin(series, eq(series.id, book.seriesId))
@@ -443,5 +449,18 @@ export async function restoreToLibrary(
       giftedAt: null,
       updatedAt: new Date(),
     })
+    .where(eq(book.id, bookId))
+}
+
+/** Скрыть/показать книгу гостям: витрины, поиск у друзей, заявки, обложки. */
+export async function setBookHidden(
+  userId: string,
+  bookId: string,
+  hidden: boolean,
+): Promise<void> {
+  await requireBookAccess(userId, bookId)
+  await db
+    .update(book)
+    .set({ hidden, updatedAt: new Date() })
     .where(eq(book.id, bookId))
 }

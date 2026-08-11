@@ -121,6 +121,7 @@ export async function getShelfView(
       seriesNumber: book.seriesNumber,
       coverPath: book.coverPath,
       coverColor: book.coverColor,
+      hidden: book.hidden,
     })
     .from(book)
     .where(and(eq(book.shelfId, shelfId), eq(book.status, 'in_library')))

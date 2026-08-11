@@ -234,6 +234,7 @@ export async function getShareView(token: string): Promise<ShareView> {
           ? eq(book.shelfId, row.shelfId)
           : eq(book.libraryId, libraryId),
         eq(book.status, 'in_library'),
+        eq(book.hidden, false), // скрытые — только для своих
       ),
     )
     .orderBy(asc(book.titleNorm))
@@ -300,10 +301,12 @@ export async function isBookPubliclyShared(bookId: string): Promise<boolean> {
       libraryId: book.libraryId,
       shelfId: book.shelfId,
       status: book.status,
+      hidden: book.hidden,
     })
     .from(book)
     .where(eq(book.id, bookId))
-  if (!row || row.status !== 'in_library' || !row.libraryId) return false
+  if (!row || row.status !== 'in_library' || !row.libraryId || row.hidden)
+    return false
   const shares = await db
     .select({ libraryId: share.libraryId, shelfId: share.shelfId })
     .from(share)

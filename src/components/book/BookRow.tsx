@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
+import { EyeOff } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { spineFor } from '@/services/spine'
@@ -33,6 +34,7 @@ export function BookRow({
     coverPath?: string | null
     lentTo?: string | null
     coverColor?: string | null
+    hidden?: boolean
   }
   place?: string | null
   before?: ReactNode
@@ -49,6 +51,7 @@ export function BookRow({
     book.year ||
     after ||
     book.lentTo ||
+    book.hidden ||
     (book.status && STATUS_LABEL[book.status]),
   )
   return (
@@ -120,6 +123,15 @@ export function BookRow({
             )}
             {book.status && STATUS_LABEL[book.status] && (
               <Badge variant="secondary">{STATUS_LABEL[book.status]}</Badge>
+            )}
+            {book.hidden && (
+              <span
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                title="Скрыта от гостей"
+              >
+                <EyeOff className="size-3.5" aria-hidden />
+                скрыта
+              </span>
             )}
             {book.seriesName && (
               <Badge

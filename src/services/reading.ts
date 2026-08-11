@@ -13,6 +13,7 @@ export interface ReadingNowBook {
   pages: number | null
   coverPath: string | null
   coverColor: string | null
+  hidden: boolean
   since: Date | null
 }
 
@@ -44,6 +45,7 @@ export async function getReadingHub(userId: string): Promise<ReadingHub> {
       pages: book.pages,
       coverPath: book.coverPath,
       coverColor: book.coverColor,
+      hidden: book.hidden,
       since: bookPersonal.readingStartedAt,
     })
     .from(bookPersonal)

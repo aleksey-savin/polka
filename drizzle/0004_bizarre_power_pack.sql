@@ -1,0 +1,1 @@
+ALTER TABLE `book` ADD `hidden` integer DEFAULT false NOT NULL;

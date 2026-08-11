@@ -36,7 +36,7 @@ const searchSchema = z.object({
   series: z.string().optional(),
   tag: z.string().optional(),
   status: z
-    .enum(['in_library', 'wishlist', 'gifted', 'lost', 'lent'])
+    .enum(['in_library', 'wishlist', 'gifted', 'lost', 'lent', 'hidden'])
     .optional(),
   reading: z.enum(['unread', 'reading', 'read', 'abandoned']).optional(),
 })
