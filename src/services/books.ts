@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, like, or, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, like, lte, or, sql } from 'drizzle-orm'
 
 import { db } from '@/db'
 import {
@@ -290,6 +290,10 @@ export interface CatalogFilters {
   status?: 'in_library' | 'wishlist' | 'gifted' | 'lost' | 'lent' | 'hidden'
   /** Фильтр по МОЕМУ статусу чтения (личный слой). */
   reading?: 'unread' | 'reading' | 'read' | 'abandoned'
+  /** Подстрока по авторам (нормализованная кириллица). */
+  author?: string
+  yearFrom?: number
+  yearTo?: number
 }
 
 export interface CatalogRow {
@@ -353,6 +357,16 @@ export async function listBooks(
       sql`exists (select 1 from ${bookTag} where ${bookTag.bookId} = ${book.id} and ${bookTag.tagId} = ${filters.tagId})`,
     )
   }
+  if (filters.author?.trim()) {
+    conditions.push(
+      like(
+        book.authorsNorm,
+        `%${sanitizeLike(normalizeForSearch(filters.author))}%`,
+      ),
+    )
+  }
+  if (filters.yearFrom) conditions.push(gte(book.year, filters.yearFrom))
+  if (filters.yearTo) conditions.push(lte(book.year, filters.yearTo))
   if (filters.query?.trim()) {
     const q = `%${sanitizeLike(normalizeForSearch(filters.query))}%`
     conditions.push(
@@ -463,4 +477,36 @@ export async function setBookHidden(
     .update(book)
     .set({ hidden, updatedAt: new Date() })
     .where(eq(book.id, bookId))
+}
+
+export interface AuthorFacet {
+  name: string
+  count: number
+}
+
+/** Авторы моих книг со счётчиками — для фильтра каталога (частые + саджест). */
+export async function listAuthors(userId: string): Promise<Array<AuthorFacet>> {
+  const libIds = await memberLibraryIds(userId)
+  const accessible = or(
+    libIds.length > 0 ? inArray(book.libraryId, libIds) : undefined,
+    and(eq(book.addedBy, userId), eq(book.status, 'wishlist')),
+  )
+  const rows = await db
+    .select({ authors: book.authors })
+    .from(book)
+    .where(accessible)
+  const counts = new Map<string, AuthorFacet>()
+  for (const r of rows) {
+    for (const raw of r.authors.split(';')) {
+      const name = raw.trim()
+      if (!name) continue
+      const key = normalizeForSearch(name)
+      const cur = counts.get(key)
+      if (cur) cur.count += 1
+      else counts.set(key, { name, count: 1 })
+    }
+  }
+  return [...counts.values()].sort(
+    (a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ru'),
+  )
 }

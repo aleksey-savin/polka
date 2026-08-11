@@ -6,6 +6,7 @@ import {
   deleteBook,
   getBookCard,
   giftBook,
+  listAuthors,
   listBooks,
   markLost,
   moveBooks,
@@ -89,6 +90,9 @@ export const listBooksFn = createServerFn({ method: 'GET' })
         .enum(['in_library', 'wishlist', 'gifted', 'lost', 'lent', 'hidden'])
         .optional(),
       reading: z.enum(['unread', 'reading', 'read', 'abandoned']).optional(),
+      author: z.string().optional(),
+      yearFrom: z.number().int().optional(),
+      yearTo: z.number().int().optional(),
     }),
   )
   .handler(async ({ context, data }) => {
@@ -144,3 +148,7 @@ export const setBookHiddenFn = createServerFn({ method: 'POST' })
   .handler(({ context, data }) =>
     setBookHidden(context.user.id, data.bookId, data.hidden),
   )
+
+export const listAuthorsFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => listAuthors(context.user.id))

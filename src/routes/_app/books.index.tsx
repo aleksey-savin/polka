@@ -2,17 +2,24 @@ import { useEffect, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 
+import { SlidersHorizontal } from 'lucide-react'
+
 import { BatchBar } from '@/components/book/BatchBar'
 import { BookRow } from '@/components/book/BookRow'
+import {
+  CatalogFiltersSheet,
+  READING_FILTER_LABEL,
+  WHERE_LABEL,
+} from '@/components/book/CatalogFiltersSheet'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { listBooksFn } from '@/server/books'
+import { listAuthorsFn, listBooksFn } from '@/server/books'
 import { listMyLibrariesFn } from '@/server/libraries'
 import { listSeriesFn } from '@/server/series'
 import { createBorrowRequestFn, searchFriendsBooksFn } from '@/server/shares'
 import { listMyTagsFn } from '@/server/tags'
-import type { CatalogRow } from '@/services/books'
+import type { AuthorFacet, CatalogRow } from '@/services/books'
 import type { LibrarySummary } from '@/services/libraries'
 import type { FriendBookRow, SavedShareRow } from '@/services/savedShares'
 import type { SeriesListItem } from '@/services/series'
@@ -22,6 +29,7 @@ interface MineData {
   libraries: Array<LibrarySummary>
   series: Array<SeriesListItem>
   tags: Array<{ id: string; name: string; bookCount: number }>
+  authors: Array<AuthorFacet>
 }
 interface FriendsData {
   rows: Array<FriendBookRow>
@@ -39,6 +47,9 @@ const searchSchema = z.object({
     .enum(['in_library', 'wishlist', 'gifted', 'lost', 'lent', 'hidden'])
     .optional(),
   reading: z.enum(['unread', 'reading', 'read', 'abandoned']).optional(),
+  author: z.string().optional(),
+  yearFrom: z.coerce.number().int().optional(),
+  yearTo: z.coerce.number().int().optional(),
 })
 
 export const Route = createFileRoute('/_app/books/')({
@@ -49,7 +60,7 @@ export const Route = createFileRoute('/_app/books/')({
       const friends = await searchFriendsBooksFn({ data: { query: deps.q } })
       return { kind: 'friends' as const, friends }
     }
-    const [result, libraries, series, tags] = await Promise.all([
+    const [result, libraries, series, tags, authors] = await Promise.all([
       listBooksFn({
         data: {
           query: deps.q,
@@ -59,13 +70,17 @@ export const Route = createFileRoute('/_app/books/')({
           tagId: deps.tag,
           status: deps.status,
           reading: deps.reading,
+          author: deps.author,
+          yearFrom: deps.yearFrom,
+          yearTo: deps.yearTo,
         },
       }),
       listMyLibrariesFn(),
       listSeriesFn(),
       listMyTagsFn(),
+      listAuthorsFn(),
     ])
-    return { kind: 'mine' as const, result, libraries, series, tags }
+    return { kind: 'mine' as const, result, libraries, series, tags, authors }
   },
   component: CatalogPage,
 })
@@ -184,6 +199,68 @@ function MineResults({
     )
 
   const selectionMode = selected.length > 0
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  // Чипы применённых фильтров — снимаются без открытия шторки
+  const activeChips: Array<{
+    key: string
+    label: string
+    clear: Partial<z.infer<typeof searchSchema>>
+  }> = []
+  if (search.status)
+    activeChips.push({
+      key: 'status',
+      label: WHERE_LABEL[search.status],
+      clear: { status: undefined },
+    })
+  if (search.library)
+    activeChips.push({
+      key: 'library',
+      label:
+        libraries.find((l) => l.id === search.library)?.name ?? 'Библиотека',
+      clear: { library: undefined, shelf: undefined },
+    })
+  if (search.shelf)
+    activeChips.push({
+      key: 'shelf',
+      label: search.shelf === 'unsorted' ? 'Неразобранное' : 'Полка',
+      clear: { shelf: undefined },
+    })
+  if (search.reading)
+    activeChips.push({
+      key: 'reading',
+      label: READING_FILTER_LABEL[search.reading],
+      clear: { reading: undefined },
+    })
+  if (search.author)
+    activeChips.push({
+      key: 'author',
+      label: search.author,
+      clear: { author: undefined },
+    })
+  if (search.yearFrom !== undefined || search.yearTo !== undefined)
+    activeChips.push({
+      key: 'years',
+      label:
+        search.yearFrom !== undefined && search.yearTo !== undefined
+          ? `${search.yearFrom}–${search.yearTo}`
+          : search.yearFrom !== undefined
+            ? `после ${search.yearFrom}`
+            : `до ${search.yearTo}`,
+      clear: { yearFrom: undefined, yearTo: undefined },
+    })
+  if (search.series)
+    activeChips.push({
+      key: 'series',
+      label: series.find((s) => s.id === search.series)?.name ?? 'Серия',
+      clear: { series: undefined },
+    })
+  if (search.tag)
+    activeChips.push({
+      key: 'tag',
+      label: `# ${tags.find((x) => x.id === search.tag)?.name ?? 'тэг'}`,
+      clear: { tag: undefined },
+    })
 
   // Дефолты для шторки перемещения — из выбранных книг, а не «первая по списку»
   const selectedRows = result.rows.filter((r) => selected.includes(r.id))
@@ -205,98 +282,194 @@ function MineResults({
   return (
     <>
       {!selectionMode && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <select
-            className={selectCls}
-            value={search.library ?? ''}
-            onChange={(e) =>
-              setFilter({
-                library: e.target.value || undefined,
-                shelf: undefined,
-              })
-            }
-            aria-label="Библиотека"
-          >
-            <option value="">Все библиотеки</option>
-            {libraries.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
+        <>
+          {/* Мобильный вид: кнопка «Фильтры» + чипы применённых */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 sm:hidden">
+            <button
+              type="button"
+              className="inline-flex h-10 items-center gap-2 rounded-full border bg-card px-3.5 text-[13.5px] font-semibold"
+              onClick={() => setFiltersOpen(true)}
+            >
+              <SlidersHorizontal className="size-4" aria-hidden />
+              Фильтры
+              {activeChips.length > 0 && (
+                <span className="grid min-w-5 place-items-center rounded-full bg-primary px-1 font-mono text-[11px] text-primary-foreground">
+                  {activeChips.length}
+                </span>
+              )}
+            </button>
+            {activeChips.map((c) => (
+              <span
+                key={c.key}
+                className="inline-flex h-10 items-center gap-1.5 rounded-full border border-primary/35 bg-accent pr-1.5 pl-3 text-[13px] font-medium text-accent-foreground"
+              >
+                {c.label}
+                <button
+                  type="button"
+                  aria-label={`Убрать фильтр ${c.label}`}
+                  className="grid size-7 place-items-center rounded-full bg-primary/10 text-xs"
+                  onClick={() => setFilter(c.clear)}
+                >
+                  ✕
+                </button>
+              </span>
             ))}
-          </select>
-          {search.library && (
+          </div>
+
+          {/* Десктоп: компактная строка с теми же фильтрами */}
+          <div className="mt-3 hidden flex-wrap gap-2 sm:flex">
             <select
               className={selectCls}
-              value={search.shelf ?? ''}
+              value={search.status ?? ''}
               onChange={(e) =>
-                setFilter({ shelf: e.target.value || undefined })
+                setFilter({
+                  status: (e.target.value || undefined) as typeof search.status,
+                })
               }
-              aria-label="Полка"
+              aria-label="Где книга"
             >
-              <option value="">Все полки</option>
-              <option value="unsorted">Неразобранное</option>
+              <option value="">Где книга</option>
+              {(
+                Object.keys(WHERE_LABEL) as Array<
+                  NonNullable<typeof search.status>
+                >
+              ).map((s) => (
+                <option key={s} value={s}>
+                  {WHERE_LABEL[s]}
+                </option>
+              ))}
             </select>
-          )}
-          <select
-            className={selectCls}
-            value={search.series ?? ''}
-            onChange={(e) => setFilter({ series: e.target.value || undefined })}
-            aria-label="Серия"
-          >
-            <option value="">Все серии</option>
-            {series.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className={selectCls}
-            value={search.tag ?? ''}
-            onChange={(e) => setFilter({ tag: e.target.value || undefined })}
-            aria-label="Тэг"
-          >
-            <option value="">Все тэги</option>
-            {tags.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className={selectCls}
-            value={search.status ?? ''}
-            onChange={(e) =>
+            <select
+              className={selectCls}
+              value={search.library ?? ''}
+              onChange={(e) =>
+                setFilter({
+                  library: e.target.value || undefined,
+                  shelf: undefined,
+                })
+              }
+              aria-label="Библиотека"
+            >
+              <option value="">Все библиотеки</option>
+              {libraries.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+            {search.library && (
+              <select
+                className={selectCls}
+                value={search.shelf ?? ''}
+                onChange={(e) =>
+                  setFilter({ shelf: e.target.value || undefined })
+                }
+                aria-label="Полка"
+              >
+                <option value="">Все полки</option>
+                <option value="unsorted">Неразобранное</option>
+              </select>
+            )}
+            <select
+              className={selectCls}
+              value={search.reading ?? ''}
+              onChange={(e) =>
+                setFilter({
+                  reading: (e.target.value ||
+                    undefined) as typeof search.reading,
+                })
+              }
+              aria-label="Статус чтения"
+            >
+              <option value="">Статус чтения</option>
+              {(
+                Object.keys(READING_FILTER_LABEL) as Array<
+                  NonNullable<typeof search.reading>
+                >
+              ).map((s) => (
+                <option key={s} value={s}>
+                  {READING_FILTER_LABEL[s]}
+                </option>
+              ))}
+            </select>
+            <Input
+              className="h-10 w-36 rounded-lg text-[13px]"
+              placeholder="Автор…"
+              defaultValue={search.author ?? ''}
+              onBlur={(e) =>
+                setFilter({ author: e.target.value.trim() || undefined })
+              }
+              onKeyDown={(e) => {
+                if (e.key === 'Enter')
+                  setFilter({
+                    author: e.currentTarget.value.trim() || undefined,
+                  })
+              }}
+            />
+            <select
+              className={selectCls}
+              value={search.series ?? ''}
+              onChange={(e) =>
+                setFilter({ series: e.target.value || undefined })
+              }
+              aria-label="Серия"
+            >
+              <option value="">Все серии</option>
+              {series.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className={selectCls}
+              value={search.tag ?? ''}
+              onChange={(e) => setFilter({ tag: e.target.value || undefined })}
+              aria-label="Тэг"
+            >
+              <option value="">Все тэги</option>
+              {tags.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <CatalogFiltersSheet
+            open={filtersOpen}
+            onOpenChange={setFiltersOpen}
+            query={search.q}
+            value={{
+              library: search.library,
+              shelf: search.shelf,
+              series: search.series,
+              tag: search.tag,
+              status: search.status,
+              reading: search.reading,
+              author: search.author,
+              yearFrom: search.yearFrom,
+              yearTo: search.yearTo,
+            }}
+            libraries={libraries}
+            series={series}
+            tags={tags}
+            authors={data.authors}
+            onApply={(v) =>
               setFilter({
-                status: (e.target.value || undefined) as typeof search.status,
+                library: v.library,
+                shelf: v.shelf,
+                series: v.series,
+                tag: v.tag,
+                status: v.status,
+                reading: v.reading,
+                author: v.author,
+                yearFrom: v.yearFrom,
+                yearTo: v.yearTo,
               })
             }
-            aria-label="Владение"
-          >
-            <option value="">Любой статус</option>
-            <option value="in_library">В библиотеке</option>
-            <option value="lent">На руках</option>
-            <option value="wishlist">Хочу</option>
-            <option value="gifted">Подарены</option>
-            <option value="lost">Потеряны</option>
-          </select>
-          <select
-            className={selectCls}
-            value={search.reading ?? ''}
-            onChange={(e) =>
-              setFilter({
-                reading: (e.target.value || undefined) as typeof search.reading,
-              })
-            }
-            aria-label="Чтение"
-          >
-            <option value="">Любое чтение</option>
-            <option value="reading">Читаю</option>
-            <option value="read">Прочитаны</option>
-            <option value="abandoned">Брошены</option>
-            <option value="unread">Не читал</option>
-          </select>
-        </div>
+          />
+        </>
       )}
 
       <div className="mt-5 grid gap-2">
