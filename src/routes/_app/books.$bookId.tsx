@@ -3,10 +3,10 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import {
   Ellipsis,
   Gift,
-  Handshake,
   Heart,
   House,
   TriangleAlert,
+  UserRound,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ReactNode } from 'react'
@@ -287,7 +287,7 @@ function BookCardPage() {
       {/* ── Лента обращения: где книга сейчас + главное действие ── */}
       {activeLoan ? (
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-stamp/25 bg-stamp/5 p-3">
-          <Handshake aria-hidden className="size-6 flex-none text-stamp" />
+          <UserRound aria-hidden className="size-6 flex-none text-stamp" />
           <div className="min-w-0 flex-1">
             <p className="text-[14.5px]">
               У <b className="font-semibold">«{activeLoan.borrowerName}»</b>
