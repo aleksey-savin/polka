@@ -37,7 +37,14 @@ export function BookRow({
   after?: ReactNode
 }) {
   const look = spineFor(book.title, book.pages ?? null)
-  const hasMeta = Boolean(place || book.seriesName || book.year || after)
+  const hasMeta = Boolean(
+    place ||
+      book.seriesName ||
+      book.year ||
+      after ||
+      book.lentTo ||
+      (book.status && STATUS_LABEL[book.status]),
+  )
   return (
     <div className="flex min-w-0 gap-3 rounded-lg border bg-card px-3.5 py-2.5 shadow-xs">
       {before && <div className="self-center">{before}</div>}
@@ -60,26 +67,13 @@ export function BookRow({
         />
       )}
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <Link
-            to="/books/$bookId"
-            params={{ bookId: book.id }}
-            className="min-w-0 text-base font-semibold hover:underline"
-          >
-            {book.title}
-          </Link>
-          {book.lentTo && (
-            <span
-              title={`У «${book.lentTo}»`}
-              className="inline-block -rotate-2 rounded border-2 border-stamp px-1.5 font-mono text-[10px] font-medium tracking-widest whitespace-nowrap text-stamp uppercase"
-            >
-              На руках
-            </span>
-          )}
-          {book.status && STATUS_LABEL[book.status] && (
-            <Badge variant="secondary">{STATUS_LABEL[book.status]}</Badge>
-          )}
-        </div>
+        <Link
+          to="/books/$bookId"
+          params={{ bookId: book.id }}
+          className="block text-base leading-snug font-semibold hover:underline"
+        >
+          {book.title}
+        </Link>
         {book.authors && (
           <span className="block truncate text-[13px] text-muted-foreground">
             {book.authors}
@@ -87,6 +81,17 @@ export function BookRow({
         )}
         {hasMeta && (
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+            {book.lentTo && (
+              <span
+                title={`У «${book.lentTo}»`}
+                className="inline-block -rotate-2 rounded border-2 border-stamp px-1.5 font-mono text-[10px] font-medium tracking-widest whitespace-nowrap text-stamp uppercase"
+              >
+                На руках
+              </span>
+            )}
+            {book.status && STATUS_LABEL[book.status] && (
+              <Badge variant="secondary">{STATUS_LABEL[book.status]}</Badge>
+            )}
             {book.seriesName && (
               <Badge
                 variant="outline"
