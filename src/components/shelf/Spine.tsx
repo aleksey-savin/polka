@@ -92,7 +92,9 @@ export function Spine({
               : 'rgba(35,43,56,.82)',
         }}
       >
-        <span className="max-h-[92%] overflow-hidden">{label}</span>
+        <span className="block max-h-[94%] overflow-hidden text-ellipsis">
+          {label}
+        </span>
       </span>
     </Link>
   )
