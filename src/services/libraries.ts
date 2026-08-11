@@ -10,6 +10,7 @@ import {
   shelf,
 } from '@/db/schema/catalog'
 import { AppError } from './errors'
+import { activeLoansFor } from './loans'
 import { assertMember, assertOwner, memberLibraryIds } from './members'
 import { randomToken } from './random'
 import { shelfTint } from './shelfTint'
@@ -57,6 +58,7 @@ export interface ShelfOverview {
     title: string
     authors: string
     pages: number | null
+    lentTo: string | null
   }>
 }
 
@@ -122,6 +124,7 @@ export async function getLibraryOverview(
       byShelf.set(b.shelfId, list)
     }
   }
+  const lentMap = await activeLoansFor(shelvedBooks.map((b) => b.id))
 
   return {
     id: lib.id,
@@ -144,6 +147,7 @@ export async function getLibraryOverview(
             title,
             authors,
             pages,
+            lentTo: lentMap.get(id)?.borrowerName ?? null,
           })),
       }
     }),

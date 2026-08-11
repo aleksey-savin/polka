@@ -112,6 +112,7 @@ function ShelfPage() {
           title: b.title,
           authors: b.authors,
           pages: b.pages,
+          lentTo: b.lentTo,
         }))}
         emptyHint="Пока пусто. «+ Добавить сюда» — и первая книга встанет на полку."
       />

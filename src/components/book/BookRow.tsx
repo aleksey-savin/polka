@@ -26,6 +26,7 @@ export function BookRow({
     status?: string
     seriesName?: string | null
     coverPath?: string | null
+    lentTo?: string | null
   }
   place?: string | null
   before?: ReactNode
@@ -70,6 +71,14 @@ export function BookRow({
         </span>
       )}
       <div className="flex flex-wrap items-center justify-end gap-2.5">
+        {book.lentTo && (
+          <span
+            title={`У «${book.lentTo}»`}
+            className="inline-block -rotate-2 rounded border-2 border-stamp px-1.5 font-mono text-[10px] font-medium tracking-widest text-stamp uppercase"
+          >
+            На руках
+          </span>
+        )}
         {book.seriesName && (
           <Badge variant="outline" className="border-stamp/30 text-stamp">
             {book.seriesName}

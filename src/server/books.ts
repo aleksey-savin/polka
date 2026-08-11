@@ -5,10 +5,14 @@ import {
   createBook,
   deleteBook,
   getBookCard,
+  giftBook,
   listBooks,
+  markLost,
   moveBooks,
+  restoreToLibrary,
   updateBook,
 } from '@/services/books'
+import { activeLoansFor } from '@/services/loans'
 import { authMiddleware } from './middleware'
 
 const bookInput = z.object({
@@ -81,4 +85,38 @@ export const listBooksFn = createServerFn({ method: 'GET' })
       status: z.enum(['in_library', 'wishlist', 'gifted', 'lost']).optional(),
     }),
   )
-  .handler(({ context, data }) => listBooks(context.user.id, data))
+  .handler(async ({ context, data }) => {
+    const result = await listBooks(context.user.id, data)
+    const lent = await activeLoansFor(result.rows.map((r) => r.id))
+    return {
+      total: result.total,
+      rows: result.rows.map((r) => ({
+        ...r,
+        lentTo: lent.get(r.id)?.borrowerName ?? null,
+      })),
+    }
+  })
+
+export const giftBookFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(
+    z.object({
+      bookId: z.string(),
+      giftedTo: z.string().trim().min(1, 'Кому подарили?'),
+    }),
+  )
+  .handler(({ context, data }) =>
+    giftBook(context.user.id, data.bookId, data.giftedTo),
+  )
+
+export const markLostFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ bookId: z.string() }))
+  .handler(({ context, data }) => markLost(context.user.id, data.bookId))
+
+export const restoreToLibraryFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ bookId: z.string() }))
+  .handler(({ context, data }) =>
+    restoreToLibrary(context.user.id, data.bookId),
+  )

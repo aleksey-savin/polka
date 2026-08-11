@@ -3,6 +3,7 @@ import { and, asc, eq, max } from 'drizzle-orm'
 import { db } from '@/db'
 import { book, library, shelf } from '@/db/schema/catalog'
 import { AppError } from './errors'
+import { activeLoansFor } from './loans'
 import { assertMember } from './members'
 import { shelfTint } from './shelfTint'
 import type { ShelfTint } from './shelfTint'
@@ -88,6 +89,7 @@ export interface ShelfView {
     seriesId: string | null
     seriesNumber: string | null
     coverPath: string | null
+    lentTo: string | null
   }>
 }
 
@@ -121,6 +123,7 @@ export async function getShelfView(
     .from(book)
     .where(and(eq(book.shelfId, shelfId), eq(book.status, 'in_library')))
     .orderBy(asc(book.createdAt))
+  const lentMap = await activeLoansFor(books.map((b) => b.id))
   return {
     id: meta.id,
     name: meta.name,
@@ -128,6 +131,9 @@ export async function getShelfView(
     libraryId: found.libraryId,
     libraryName: meta.libraryName,
     tint: shelfTint(books.map((b) => b.year)),
-    books,
+    books: books.map((b) => ({
+      ...b,
+      lentTo: lentMap.get(b.id)?.borrowerName ?? null,
+    })),
   }
 }

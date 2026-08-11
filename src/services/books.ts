@@ -201,6 +201,8 @@ export interface BookCard {
   annotation: string | null
   coverPath: string | null
   status: string
+  giftedTo: string | null
+  giftedAt: Date | null
   seriesId: string | null
   seriesName: string | null
   seriesNumber: string | null
@@ -248,6 +250,8 @@ export async function getBookCard(
     annotation: row.annotation,
     coverPath: row.coverPath,
     status: row.status,
+    giftedTo: row.giftedTo,
+    giftedAt: row.giftedAt,
     seriesId: row.seriesId,
     seriesName: joined.seriesName,
     seriesNumber: row.seriesNumber,
@@ -340,4 +344,66 @@ export async function listBooks(
     .orderBy(asc(book.titleNorm))
     .limit(CATALOG_LIMIT)
   return { rows, total: rows.length }
+}
+
+// ── Переходы владения ──────────────────────────────────────────────────
+
+async function assertNotLent(bookId: string): Promise<void> {
+  const { activeLoansFor } = await import('./loans')
+  const active = await activeLoansFor([bookId])
+  const info = active.get(bookId)
+  if (info) {
+    throw new AppError(
+      `Книга на руках у «${info.borrowerName}» — сначала отметьте возврат`,
+    )
+  }
+}
+
+/** Подарена: уходит с полок (виды полок показывают только in_library), остаётся в каталоге фильтром. */
+export async function giftBook(
+  userId: string,
+  bookId: string,
+  giftedTo: string,
+): Promise<void> {
+  await requireBookAccess(userId, bookId)
+  await assertNotLent(bookId)
+  await db
+    .update(book)
+    .set({
+      status: 'gifted',
+      giftedTo: giftedTo.trim() || null,
+      giftedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(book.id, bookId))
+}
+
+export async function markLost(userId: string, bookId: string): Promise<void> {
+  await requireBookAccess(userId, bookId)
+  await assertNotLent(bookId)
+  await db
+    .update(book)
+    .set({ status: 'lost', updatedAt: new Date() })
+    .where(eq(book.id, bookId))
+}
+
+/** «Нашлась»/«вернули подарок»: обратно в библиотеку, на прежнюю полку. */
+export async function restoreToLibrary(
+  userId: string,
+  bookId: string,
+): Promise<void> {
+  const row = await requireBookAccess(userId, bookId)
+  if (!row.libraryId)
+    throw new AppError(
+      'У книги нет библиотеки — назначьте её через «Переместить»',
+    )
+  await db
+    .update(book)
+    .set({
+      status: 'in_library',
+      giftedTo: null,
+      giftedAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(book.id, bookId))
 }

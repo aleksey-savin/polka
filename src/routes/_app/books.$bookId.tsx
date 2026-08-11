@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 
 import { MoveDialog } from '@/components/book/MoveDialog'
+import { PersonalPanel } from '@/components/book/PersonalPanel'
+import { GiftDialog, LendDialog } from '@/components/book/status-dialogs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,31 +14,54 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { deleteBookFn, getBookCardFn } from '@/server/books'
+import {
+  deleteBookFn,
+  getBookCardFn,
+  markLostFn,
+  restoreToLibraryFn,
+} from '@/server/books'
 import { removeCoverFn, uploadCoverFn } from '@/server/covers'
+import { bookLoanHistoryFn, returnLoanFn } from '@/server/loans'
+import { listBookPersonalFn } from '@/server/personal'
 import { spineFor } from '@/services/spine'
 
 export const Route = createFileRoute('/_app/books/$bookId')({
-  loader: ({ params }) => getBookCardFn({ data: { bookId: params.bookId } }),
+  loader: async ({ params }) => {
+    const [book, personal, loans] = await Promise.all([
+      getBookCardFn({ data: { bookId: params.bookId } }),
+      listBookPersonalFn({ data: { bookId: params.bookId } }),
+      bookLoanHistoryFn({ data: { bookId: params.bookId } }),
+    ])
+    return { book, personal, loans }
+  },
   component: BookCardPage,
 })
 
-const STATUS_STAMP: Record<string, string> = {
-  wishlist: 'Хочу',
-  gifted: 'Подарена',
-  lost: 'Потеряна',
-}
+const dateRu = (value: Date | string | null) =>
+  value ? new Date(value).toLocaleDateString('ru-RU') : ''
 
 function BookCardPage() {
-  const book = Route.useLoaderData()
+  const { book, personal, loans } = Route.useLoaderData()
   const router = useRouter()
   const navigate = Route.useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
   const [moveOpen, setMoveOpen] = useState(false)
   const [coverBusy, setCoverBusy] = useState(false)
+  const [busy, setBusy] = useState(false)
   const refresh = () => void router.invalidate()
 
   const look = spineFor(book.title, book.pages)
+  const activeLoan = loans.find((l) => l.returnedAt === null) ?? null
+
+  async function run(action: () => Promise<unknown>) {
+    setBusy(true)
+    try {
+      await action()
+      refresh()
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function uploadCover(file: File) {
     setCoverBusy(true)
@@ -97,7 +122,7 @@ function BookCardPage() {
         <div className="grid content-start gap-3">
           {book.coverPath ? (
             <img
-              src={`/api/covers/${book.id}?v=${Date.now()}`}
+              src={`/api/covers/${book.id}?v=${book.coverPath}`}
               alt={`Обложка: ${book.title}`}
               className="aspect-[7/10] w-full max-w-[250px] rounded-md object-cover shadow-md"
             />
@@ -160,23 +185,50 @@ function BookCardPage() {
         </div>
 
         <div>
-          <div className="flex flex-wrap items-start gap-4">
-            <h1 className="text-[34px] leading-tight font-semibold">
+          <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+            <h1 className="text-[32px] leading-tight font-semibold">
               {book.title}
             </h1>
-            {STATUS_STAMP[book.status] && (
+            {activeLoan && (
               <span className="mt-2 inline-block -rotate-2 rounded border-2 border-stamp px-2 py-0.5 font-mono text-[11.5px] font-medium tracking-widest text-stamp uppercase">
-                {STATUS_STAMP[book.status]}
+                На руках
+              </span>
+            )}
+            {book.status === 'gifted' && (
+              <span className="mt-2 inline-block -rotate-2 rounded border-2 border-stamp px-2 py-0.5 font-mono text-[11.5px] font-medium tracking-widest text-stamp uppercase">
+                Подарена
+              </span>
+            )}
+            {book.status === 'lost' && (
+              <span className="mt-2 inline-block -rotate-2 rounded border-2 border-destructive px-2 py-0.5 font-mono text-[11.5px] font-medium tracking-widest text-destructive uppercase">
+                Потеряна
+              </span>
+            )}
+            {book.status === 'wishlist' && (
+              <span className="mt-2 inline-block -rotate-2 rounded border-2 border-accent-foreground px-2 py-0.5 font-mono text-[11.5px] font-medium tracking-widest text-accent-foreground uppercase">
+                Хочу
               </span>
             )}
           </div>
           {book.authors && (
-            <p className="mt-1 mb-4 text-base text-muted-foreground">
+            <p className="mt-1 text-base text-muted-foreground">
               {book.authors}
             </p>
           )}
+          {activeLoan && (
+            <p className="mt-1.5 text-sm text-stamp">
+              у «{activeLoan.borrowerName}» с {dateRu(activeLoan.lentAt)}
+              {activeLoan.dueAt && `, вернуть к ${dateRu(activeLoan.dueAt)}`}
+            </p>
+          )}
+          {book.status === 'gifted' && (
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              подарена{book.giftedTo && ` — ${book.giftedTo}`}
+              {book.giftedAt && `, ${dateRu(book.giftedAt)}`}
+            </p>
+          )}
 
-          <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
+          <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
             {book.seriesName && book.seriesId && (
               <>
                 <dt className="text-muted-foreground">Серия</dt>
@@ -243,7 +295,56 @@ function BookCardPage() {
           )}
 
           <div className="mt-6 flex flex-wrap gap-2.5">
-            <Button asChild>
+            {activeLoan ? (
+              <Button
+                disabled={busy}
+                onClick={() =>
+                  void run(() =>
+                    returnLoanFn({ data: { loanId: activeLoan.loanId } }),
+                  )
+                }
+              >
+                Вернули
+              </Button>
+            ) : book.status === 'in_library' ? (
+              <>
+                <LendDialog
+                  bookId={book.id}
+                  bookTitle={book.title}
+                  onDone={refresh}
+                />
+                <GiftDialog
+                  bookId={book.id}
+                  bookTitle={book.title}
+                  onDone={refresh}
+                />
+                <Button
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(() => markLostFn({ data: { bookId: book.id } }))
+                  }
+                >
+                  Потерялась
+                </Button>
+              </>
+            ) : book.status === 'wishlist' ? (
+              <Button onClick={() => setMoveOpen(true)}>
+                Купил — на полку
+              </Button>
+            ) : (
+              <Button
+                disabled={busy}
+                onClick={() =>
+                  void run(() =>
+                    restoreToLibraryFn({ data: { bookId: book.id } }),
+                  )
+                }
+              >
+                Вернуть в библиотеку
+              </Button>
+            )}
+            <Button asChild variant="outline">
               <Link to="/books/$bookId/edit" params={{ bookId: book.id }}>
                 Редактировать
               </Link>
@@ -257,10 +358,52 @@ function BookCardPage() {
             />
           </div>
 
-          <p className="mt-8 text-[13px] text-muted-foreground">
-            Статусы чтения, оценки, рецензии и «дал почитать» появятся на этапе
-            M5.
-          </p>
+          <div className="mt-7">
+            <PersonalPanel
+              bookId={book.id}
+              personal={personal}
+              onChanged={refresh}
+            />
+          </div>
+
+          {loans.length > 0 && (
+            <section className="mt-7 rounded-lg border bg-card p-5 shadow-xs">
+              <h3 className="mb-3 text-base font-semibold">Выдачи</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="text-left font-mono text-[11px] tracking-wider text-muted-foreground uppercase">
+                      <th className="px-2.5 py-1.5">Кому</th>
+                      <th className="px-2.5 py-1.5">Взял</th>
+                      <th className="px-2.5 py-1.5">Срок</th>
+                      <th className="px-2.5 py-1.5">Вернул</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loans.map((l) => (
+                      <tr
+                        key={l.loanId}
+                        className={l.returnedAt === null ? 'bg-accent' : ''}
+                      >
+                        <td className="border-t px-2.5 py-2 font-medium">
+                          {l.borrowerName}
+                        </td>
+                        <td className="border-t px-2.5 py-2">
+                          {dateRu(l.lentAt)}
+                        </td>
+                        <td className="border-t px-2.5 py-2">
+                          {l.dueAt ? dateRu(l.dueAt) : '—'}
+                        </td>
+                        <td className="border-t px-2.5 py-2">
+                          {l.returnedAt ? dateRu(l.returnedAt) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </div>
       </div>
 
@@ -293,7 +436,8 @@ function DeleteBookDialog({
           <DialogTitle>Удалить «{title}»?</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Карточка, тэги и обложка будут удалены навсегда. Отменить нельзя.
+          Карточка, тэги, история выдач и обложка будут удалены навсегда.
+          Отменить нельзя.
         </p>
         <DialogFooter>
           <Button variant="destructive" onClick={onConfirm}>
