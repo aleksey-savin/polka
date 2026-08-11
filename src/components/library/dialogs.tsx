@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -17,8 +18,10 @@ import { createShelfFn } from '@/server/shelves'
 
 export function NewLibraryDialog({
   onCreated,
+  trigger,
 }: {
   onCreated: (id: string) => void
+  trigger?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -40,9 +43,11 @@ export function NewLibraryDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" className="text-accent-foreground">
-          + библиотека
-        </Button>
+        {trigger ?? (
+          <Button variant="ghost" className="text-accent-foreground">
+            + библиотека
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -78,9 +83,11 @@ export function NewLibraryDialog({
 export function NewShelfDialog({
   libraryId,
   onCreated,
+  trigger,
 }: {
   libraryId: string
   onCreated: () => void
+  trigger?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -106,7 +113,7 @@ export function NewShelfDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">+ Полка</Button>
+        {trigger ?? <Button variant="outline">+ Полка</Button>}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -140,9 +147,11 @@ export function NewShelfDialog({
 export function InviteDialog({
   libraryId,
   libraryName,
+  trigger,
 }: {
   libraryId: string
   libraryName: string
+  trigger?: ReactNode
 }) {
   const [link, setLink] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -168,12 +177,14 @@ export function InviteDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="text-sm font-semibold text-accent-foreground"
-        >
-          + пригласить
-        </button>
+        {trigger ?? (
+          <button
+            type="button"
+            className="text-sm font-semibold text-accent-foreground"
+          >
+            + пригласить
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

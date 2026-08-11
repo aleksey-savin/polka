@@ -49,6 +49,7 @@ function LibrariesPage() {
 
   return (
     <div>
+      {/* Библиотеки — чипы-пилюли, как сегмент скоупов в каталоге */}
       <div className="flex flex-wrap items-center gap-2">
         {libraries.map((l) => (
           <Link
@@ -57,8 +58,8 @@ function LibrariesPage() {
             search={{ lib: l.id }}
             className={
               l.id === overview.id
-                ? 'border-b-[3px] border-foreground px-1 text-[24px] font-semibold tracking-tight'
-                : 'px-1 text-[24px] font-semibold tracking-tight text-muted-foreground hover:text-foreground'
+                ? 'min-h-10 rounded-full border border-foreground bg-foreground px-4 py-2 text-[14.5px] font-semibold text-white'
+                : 'min-h-10 rounded-full border bg-card px-4 py-2 text-[14.5px] font-semibold text-muted-foreground hover:text-foreground'
             }
           >
             {l.name}
@@ -66,25 +67,58 @@ function LibrariesPage() {
         ))}
         <NewLibraryDialog
           onCreated={(id) => void navigate({ search: { lib: id } })}
+          trigger={
+            <button
+              type="button"
+              aria-label="Новая библиотека"
+              className="grid size-10 place-items-center rounded-full border-[1.5px] border-dashed border-primary/50 text-[17px] text-accent-foreground"
+            >
+              +
+            </button>
+          }
         />
       </div>
 
-      <p className="mt-1 text-[13.5px] text-muted-foreground">
-        {overview.shelves.length}{' '}
-        {plural(overview.shelves.length, 'полка', 'полки', 'полок')} ·{' '}
-        {totalBooks} {plural(totalBooks, 'книга', 'книги', 'книг')} ·{' '}
-        {overview.members.length === 1 ? (
-          'только вы'
-        ) : (
-          <>
-            ведёте вместе:{' '}
-            <b>{overview.members.map((m) => m.name).join(' и ')}</b>
-          </>
-        )}{' '}
-        {overview.role === 'owner' && (
-          <InviteDialog libraryId={overview.id} libraryName={overview.name} />
-        )}
-      </p>
+      <div className="mt-3 flex items-center gap-2.5">
+        <span className="text-[13.5px] text-muted-foreground">
+          <span className="font-mono text-[12.5px] font-medium text-foreground">
+            {overview.shelves.length}
+          </span>{' '}
+          {plural(overview.shelves.length, 'полка', 'полки', 'полок')} ·{' '}
+          <span className="font-mono text-[12.5px] font-medium text-foreground">
+            {totalBooks}
+          </span>{' '}
+          {plural(totalBooks, 'книга', 'книги', 'книг')}
+        </span>
+        <span className="ml-auto flex items-center" aria-label="Участники">
+          {overview.members.map((m, i) => (
+            <span
+              key={m.id}
+              title={m.name}
+              className={`grid size-[30px] place-items-center rounded-full border-2 border-background text-xs font-semibold text-white ${
+                i % 2 ? 'bg-stamp' : 'bg-primary'
+              } ${i > 0 ? '-ml-1.5' : ''}`}
+            >
+              {m.name.trim().charAt(0).toUpperCase()}
+            </span>
+          ))}
+          {overview.role === 'owner' && (
+            <InviteDialog
+              libraryId={overview.id}
+              libraryName={overview.name}
+              trigger={
+                <button
+                  type="button"
+                  aria-label="Пригласить совладельца"
+                  className="-ml-1.5 grid size-[30px] place-items-center rounded-full border-[1.5px] border-dashed border-muted-foreground/55 bg-background text-sm text-muted-foreground"
+                >
+                  +
+                </button>
+              }
+            />
+          )}
+        </span>
+      </div>
 
       {overview.shelves.map((s) => (
         <ShelfSection
@@ -103,26 +137,37 @@ function LibrariesPage() {
           boardColor={s.accentColor ?? s.tint.color}
           books={s.books}
           emptyHint="Полка пустая — добавьте книгу или перенесите из «Неразобранного»."
-          actions={
-            <>
-              <span />
-              <Button
-                asChild
-                variant="ghost"
-                className="text-accent-foreground"
-              >
-                <Link to="/shelves/$shelfId" params={{ shelfId: s.id }}>
-                  Открыть полку →
-                </Link>
-              </Button>
-            </>
+          headerAction={
+            <Link
+              to="/shelves/$shelfId"
+              params={{ shelfId: s.id }}
+              className="text-[12.5px] font-medium text-accent-foreground"
+            >
+              Открыть полку →
+            </Link>
           }
         />
       ))}
 
-      <div className="mt-6">
-        <NewShelfDialog libraryId={overview.id} onCreated={refresh} />
-      </div>
+      {/* Призрачная полка — приглашение создать следующую */}
+      <NewShelfDialog
+        libraryId={overview.id}
+        onCreated={refresh}
+        trigger={
+          <button
+            type="button"
+            className="mt-7 flex min-h-14 w-full items-center justify-center gap-2.5 rounded-[10px] border-[1.5px] border-dashed border-primary/45 text-[14.5px] font-semibold text-accent-foreground"
+          >
+            <span
+              aria-hidden
+              className="grid size-[22px] place-items-center rounded-full border-[1.5px] border-dashed border-primary text-sm leading-none"
+            >
+              +
+            </span>
+            Новая полка
+          </button>
+        }
+      />
 
       <section className="mt-10">
         <div className="mb-2 flex items-baseline gap-3.5">
@@ -190,7 +235,7 @@ function LibrariesPage() {
               })}
             </div>
             <div className="mt-3.5 flex items-center gap-2.5">
-              <Button asChild variant="outline">
+              <Button asChild>
                 <Link to="/unsorted" search={{ lib: overview.id }}>
                   Разобрать стопку
                 </Link>

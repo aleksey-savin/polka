@@ -22,6 +22,7 @@ export function ShelfSection({
   boardColor,
   books,
   actions,
+  headerAction,
   emptyHint,
 }: {
   name?: string
@@ -29,11 +30,13 @@ export function ShelfSection({
   boardColor: string
   books: Array<ShelfSectionBook>
   actions?: ReactNode
+  /** Ссылка/действие в строке заголовка (прижато вправо). */
+  headerAction?: ReactNode
   emptyHint?: string
 }) {
   return (
     <section className="mt-8 first:mt-2">
-      {(name || meta) && (
+      {(name || meta || headerAction) && (
         <div className="mb-2.5 flex flex-wrap items-baseline gap-x-3.5 gap-y-1">
           {name && <h2 className="text-[21px] font-semibold">{name}</h2>}
           {meta && (
@@ -41,6 +44,7 @@ export function ShelfSection({
               {meta}
             </span>
           )}
+          {headerAction && <span className="ml-auto">{headerAction}</span>}
         </div>
       )}
       <div className="shelf-books flex min-h-[170px] items-end gap-[3px] overflow-x-auto px-3.5 pt-7">
