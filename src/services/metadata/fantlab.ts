@@ -48,24 +48,55 @@ export function parseFantlabSearch(
   }
 }
 
-/** Разбор ответа /edition/{id}: страницы, аннотация, обложка. */
-export function parseFantlabEdition(json: unknown): Partial<MetadataDraft> {
+/**
+ * Разбор ответа /edition/{id}/extended: страницы, обложка и id произведения.
+ * ВАЖНО: поле `description` издания — примечания («Внецикловый роман»,
+ * иллюстратор…), НЕ аннотация; настоящая аннотация — у произведения (/work).
+ */
+export function parseFantlabEdition(json: unknown): {
+  extra: Partial<MetadataDraft>
+  workId: number | null
+} {
   const e = json as {
     pages?: number
-    description?: string
     image?: string
-    edition_name?: string
+    edition_work_id?: number | null
+    content?: Array<string> | null
   } | null
-  if (!e || typeof e !== 'object') return {}
+  if (!e || typeof e !== 'object') return { extra: {}, workId: null }
   const extra: Partial<MetadataDraft> = {}
   if (typeof e.pages === 'number' && e.pages > 0) extra.pages = e.pages
-  if (typeof e.description === 'string' && e.description.trim()) {
-    extra.annotation = stripHtml(e.description)
-  }
   if (typeof e.image === 'string' && e.image.startsWith('/')) {
     extra.coverUrl = `https://fantlab.ru${e.image}`
   }
-  return extra
+
+  let workId: number | null =
+    typeof e.edition_work_id === 'number' ? e.edition_work_id : null
+  if (workId === null && Array.isArray(e.content)) {
+    // В content ссылки вида <a href="/work569">; аннотацию берём только
+    // если произведение в издании ровно одно (иначе это сборник).
+    const ids = new Set<string>()
+    for (const line of e.content) {
+      if (typeof line !== 'string') continue
+      for (const match of line.matchAll(/\/work(\d+)/g)) {
+        if (match[1]) ids.add(match[1])
+      }
+    }
+    if (ids.size === 1) workId = Number([...ids][0])
+  }
+  return { extra, workId }
+}
+
+/** Разбор ответа /work/{id}: настоящая аннотация произведения. */
+export function parseFantlabWork(json: unknown): Partial<MetadataDraft> {
+  const w = json as { work_description?: string } | null
+  if (
+    !w ||
+    typeof w.work_description !== 'string' ||
+    !w.work_description.trim()
+  )
+    return {}
+  return { annotation: stripHtml(w.work_description) }
 }
 
 export async function fetchFantlab(
@@ -82,10 +113,26 @@ export async function fetchFantlab(
     let extra: Partial<MetadataDraft> = {}
     if (parsed.editionId !== null) {
       try {
-        const editionRes = await fetch(`${BASE}/edition/${parsed.editionId}`, {
-          signal: AbortSignal.timeout(TIMEOUT),
-        })
-        if (editionRes.ok) extra = parseFantlabEdition(await editionRes.json())
+        const editionRes = await fetch(
+          `${BASE}/edition/${parsed.editionId}/extended`,
+          { signal: AbortSignal.timeout(TIMEOUT) },
+        )
+        if (editionRes.ok) {
+          const edition = parseFantlabEdition(await editionRes.json())
+          extra = edition.extra
+          if (edition.workId !== null) {
+            try {
+              const workRes = await fetch(`${BASE}/work/${edition.workId}`, {
+                signal: AbortSignal.timeout(TIMEOUT),
+              })
+              if (workRes.ok) {
+                extra = { ...extra, ...parseFantlabWork(await workRes.json()) }
+              }
+            } catch {
+              // аннотация — best-effort
+            }
+          }
+        }
       } catch {
         // деталка — best-effort
       }

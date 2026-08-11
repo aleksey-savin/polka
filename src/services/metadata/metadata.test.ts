@@ -1,10 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 
-import flEdition from './__fixtures__/fantlab-edition-118084.json'
+import flEditionExtended from './__fixtures__/fantlab-edition-extended-118084.json'
 import flSearch from './__fixtures__/fantlab-9785170829835.json'
+import flWork from './__fixtures__/fantlab-work-569.json'
 import gbFixture from './__fixtures__/googlebooks-9785170829835.json'
 import olBook from './__fixtures__/openlibrary-9785237014150.json'
-import { parseFantlabEdition, parseFantlabSearch, stripBb } from './fantlab'
+import {
+  parseFantlabEdition,
+  parseFantlabSearch,
+  parseFantlabWork,
+  stripBb,
+} from './fantlab'
 import { parseGoogleBooks } from './googleBooks'
 import { mergeResults } from './merge'
 import { parseOpenLibraryBook } from './openLibrary'
@@ -34,14 +40,20 @@ describe('fantlab', () => {
     expect(parseFantlabSearch(null, 'x')).toBeNull()
   })
 
-  test('деталка издания: страницы, обложка, аннотация без HTML', () => {
-    const extra = parseFantlabEdition(flEdition)
+  test('деталка издания: страницы, обложка, id произведения; примечания НЕ аннотация', () => {
+    const { extra, workId } = parseFantlabEdition(flEditionExtended)
     expect(extra.pages).toBe(192)
     expect(extra.coverUrl).toStartWith(
       'https://fantlab.ru/images/editions/big/118084',
     )
-    expect(extra.annotation).toContain('Внецикловый роман')
-    expect(extra.annotation).not.toContain('<a')
+    expect(extra.annotation).toBeUndefined() // «Внецикловый роман» — примечание издания
+    expect(workId).toBe(569) // из ссылки /work569 в content
+  })
+
+  test('произведение: настоящая аннотация', () => {
+    const work = parseFantlabWork(flWork)
+    expect(work.annotation).toContain('Зоны')
+    expect(work.annotation).not.toContain('Внецикловый')
   })
 })
 

@@ -1,0 +1,118 @@
+{
+  "content": [
+    " Аркадий и Борис Стругацкие. <a href=\"\/work569\">Пикник на обочине<\/a> (повесть), стр. 5-190"
+  ],
+  "copies": 12000,
+  "correct_level": 1.0,
+  "cover_type": "твёрдая",
+  "creators": {
+    "authors": [
+      {
+        "id": "52",
+        "is_opened": 1,
+        "name": "Аркадий и Борис Стругацкие",
+        "sex": 1,
+        "type": "autor"
+      }
+    ],
+    "compilers": null,
+    "publishers": [{ "id": "33", "name": "АСТ", "type": "publisher" }]
+  },
+  "description": "Внецикловый роман.\r\nИллюстрация на обложке <a href=\"\/art6\">В. Ненова<\/a> (в издании не указан). ",
+  "edition_id": 118084,
+  "edition_name": "Пикник на обочине",
+  "edition_type": "авторская книга",
+  "edition_type_plus": [],
+  "edition_work_id": null,
+  "format": "84x108\/32",
+  "format_mm": "130x200",
+  "image": "\/images\/editions\/big\/118084?r=1575969434",
+  "image_preview": "\/images\/editions\/small\/118084?r=1575969434",
+  "images_plus": {
+    "cover": [
+      {
+        "image": "\/images\/editions\/big\/118084?r=1575969434",
+        "image_orig": "\/images\/editions\/orig\/118084?r=1492536709",
+        "image_preview": "\/images\/editions\/small\/118084?r=1575969434",
+        "image_spine": "\/images\/editions\/spine\/118084?r=1528129784",
+        "pic_copyright": null,
+        "pic_text": ""
+      }
+    ],
+    "plus": [
+      {
+        "image": "\/images\/editions\/plus\/big\/118084_1?r=1528129784",
+        "image_preview": "\/images\/editions\/plus\/small\/118084_1?r=1528129785",
+        "pic_copyright": null,
+        "pic_text": "Доп.т. 2016"
+      },
+      {
+        "image": "\/images\/editions\/plus\/big\/118084_2?r=1528129785",
+        "image_preview": "\/images\/editions\/plus\/small\/118084_2?r=1528129785",
+        "pic_copyright": null,
+        "pic_text": "Доп.т. 2016"
+      },
+      {
+        "image": "\/images\/editions\/plus\/big\/118084_3?r=1528129785",
+        "image_preview": "\/images\/editions\/plus\/small\/118084_3?r=1528129785",
+        "pic_copyright": null,
+        "pic_text": ""
+      },
+      {
+        "image": "\/images\/editions\/plus\/big\/118084_4?r=1575969047",
+        "image_preview": "\/images\/editions\/plus\/small\/118084_4?r=1575969047",
+        "pic_copyright": null,
+        "pic_text": "доп.т. 2014"
+      },
+      {
+        "image": "\/images\/editions\/plus\/big\/118084_5?r=1575969047",
+        "image_preview": "\/images\/editions\/plus\/small\/118084_5?r=1575969047",
+        "pic_copyright": null,
+        "pic_text": "доп.т. 2014"
+      },
+      {
+        "image": "\/images\/editions\/plus\/big\/118084_6?r=1575969434",
+        "image_preview": "\/images\/editions\/plus\/small\/118084_6?r=1575969434",
+        "pic_copyright": null,
+        "pic_text": "Доп.т. 2017"
+      },
+      {
+        "image": "\/images\/editions\/plus\/big\/118084_7?r=1575969434",
+        "image_preview": "\/images\/editions\/plus\/small\/118084_7?r=1575969434",
+        "pic_copyright": null,
+        "pic_text": "Доп.т. 2017"
+      },
+      {
+        "image": "\/images\/editions\/plus\/big\/118084_8?r=1575969434",
+        "image_preview": "\/images\/editions\/plus\/small\/118084_8?r=1575969434",
+        "pic_copyright": null,
+        "pic_text": "Доп.т. 2016"
+      },
+      {
+        "image": "\/images\/editions\/plus\/big\/118084_9?r=1575969434",
+        "image_preview": "\/images\/editions\/plus\/small\/118084_9?r=1575969434",
+        "pic_copyright": null,
+        "pic_text": "Доп.т. 2016"
+      }
+    ]
+  },
+  "isbns": ["978-5-17-082983-5"],
+  "lang": "русский",
+  "lang_code": "ru",
+  "last_modified": "2019-12-10 12:17:14",
+  "notes": "Компьютерный дизайн А. Смирнова. \r\n2014 г. - доп. тираж 3000 экз. (подписано в печать 01.04.2014).\r\n2016 г. - доп. тираж 1500 экз. (подписано в печать 04.02.2016).\r\n2016 г. - доп. тираж 1500 экз. (подписано в печать 04.08.2016).\r\n2017 г. - доп. тираж 2000 экз. (подписано в печать 26.01.2017).",
+  "pages": 192,
+  "plan_date": "",
+  "plan_description": "",
+  "preread": 0,
+  "series": [
+    {
+      "id": "3635",
+      "is_opened": 0,
+      "name": "Пикник на обочине",
+      "type": "series"
+    }
+  ],
+  "type": 10,
+  "year": 2014
+}

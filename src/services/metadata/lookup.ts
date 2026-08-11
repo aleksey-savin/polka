@@ -13,6 +13,8 @@ import { fetchOpenLibrary } from './openLibrary'
 import type { MergedLookup } from './merge'
 
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 дней
+// v2: аннотация FantLab берётся из произведения, а не из примечаний издания
+const CACHE_VERSION = 2
 
 export interface LookupResult extends MergedLookup {
   isbn13: string
@@ -30,14 +32,16 @@ async function readCache(isbn13: string): Promise<MergedLookup | null> {
   if (!row) return null
   if (Date.now() - row.fetchedAt.getTime() > CACHE_TTL_MS) return null
   try {
-    return JSON.parse(row.rawJson) as MergedLookup
+    const parsed = JSON.parse(row.rawJson) as MergedLookup & { v?: number }
+    if (parsed.v !== CACHE_VERSION) return null
+    return parsed
   } catch {
     return null
   }
 }
 
 async function writeCache(isbn13: string, merged: MergedLookup): Promise<void> {
-  const rawJson = JSON.stringify(merged)
+  const rawJson = JSON.stringify({ ...merged, v: CACHE_VERSION })
   await db
     .insert(lookupCache)
     .values({
