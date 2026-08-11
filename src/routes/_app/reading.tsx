@@ -106,7 +106,7 @@ function ReadingPage() {
                   <p className="mt-2 line-clamp-2 text-[13.5px] leading-tight font-semibold">
                     {b.hidden && (
                       <EyeOff
-                        aria-label="Скрыта от гостей"
+                        aria-label="Скрыта"
                         className="mr-1 inline size-3.5 text-muted-foreground"
                       />
                     )}

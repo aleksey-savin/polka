@@ -127,7 +127,7 @@ export function BookRow({
             {book.hidden && (
               <span
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                title="Скрыта от гостей"
+                title="Видна только владельцам библиотеки"
               >
                 <EyeOff className="size-3.5" aria-hidden />
                 скрыта
