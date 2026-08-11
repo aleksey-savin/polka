@@ -339,6 +339,53 @@
     font-size: 12px;
     color: var(--ink-soft);
   }
+  .new-shelf {
+    color: var(--lamp-deep);
+    border-style: dashed;
+  }
+  .new-shelf .plus {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px dashed var(--lamp);
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    line-height: 1;
+    color: var(--lamp);
+  }
+  .new-shelf-form {
+    display: flex;
+    gap: 8px;
+  }
+  .new-shelf-form[hidden] {
+    display: none;
+  }
+  .new-shelf-input {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in oklab, var(--lamp) 45%, var(--line));
+    padding: 0 13px;
+    font-size: 16px;
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--card);
+  }
+  .new-shelf-create {
+    flex: none;
+    height: 48px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--lamp);
+    color: #f6faf8;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
   .shelf-current {
     font-size: 11px;
     font-weight: 400;
@@ -444,6 +491,10 @@
       Все диалоги приложения на мобильном станут такими шторками.
     </p>
     <p class="mock-note">
+      · «+ Новая полка» — имя вводится прямо в шторке, полка создаётся и сразу
+      выбирается целью. Возвращаться в другие меню не нужно.
+    </p>
+    <p class="mock-note">
       · После «Переместить»: остались книги в списке — остаёмся разбирать;
       список опустел — переходим на целевую полку.
     </p>
@@ -485,6 +536,14 @@
             <span class="radio"></span>
             Нон-фикшн <span class="shelf-count">5</span>
           </button>
+          <button class="shelf-option new-shelf" type="button" id="newShelfBtn">
+            <span class="plus" aria-hidden="true">+</span>
+            Новая полка
+          </button>
+          <div class="new-shelf-form" id="newShelfForm" hidden>
+            <input class="new-shelf-input" id="newShelfInput" placeholder="Название полки" />
+            <button class="new-shelf-create" type="button" id="newShelfCreate">Создать</button>
+          </div>
         </div>
       </div>
     </div>
@@ -516,8 +575,29 @@
   document
     .getElementById('closeSheet')
     .addEventListener('click', () => wrap.classList.remove('open'))
+  // новая полка на лету
+  document.getElementById('newShelfBtn').addEventListener('click', () => {
+    document.getElementById('newShelfBtn').hidden = true
+    document.getElementById('newShelfForm').hidden = false
+    document.getElementById('newShelfInput').focus()
+  })
+  document.getElementById('newShelfCreate').addEventListener('click', () => {
+    const name = document.getElementById('newShelfInput').value.trim() || 'Новая полка'
+    const list = document.getElementById('shelfList')
+    const btn = document.createElement('button')
+    btn.className = 'shelf-option checked'
+    btn.type = 'button'
+    btn.innerHTML = '<span class="radio"></span>' + name + ' <span class="shelf-count">0</span>'
+    list.insertBefore(btn, document.getElementById('newShelfBtn'))
+    document.querySelectorAll('.shelf-option').forEach((o) => { if (o !== btn) o.classList.remove('checked') })
+    document.getElementById('newShelfForm').hidden = true
+    document.getElementById('newShelfBtn').hidden = false
+    document.getElementById('closeSheet').textContent = 'Переместить на «' + name + '»'
+    hookShelf(btn)
+  })
   // выбор полки
-  document.querySelectorAll('.shelf-option').forEach((opt) => {
+  function hookShelf(opt) {
+    if (opt.id === 'newShelfBtn') return
     opt.addEventListener('click', () => {
       document
         .querySelectorAll('.shelf-option')
@@ -525,9 +605,10 @@
       opt.classList.add('checked')
       const name = opt.childNodes[2].textContent.trim()
       document.getElementById('closeSheet').textContent =
-        'Переместить на «' + (name === 'Неразобранное' ? name : name) + '»'
+        'Переместить на «' + name + '»'
     })
-  })
+  }
+  document.querySelectorAll('.shelf-option').forEach(hookShelf)
 </script>
 
 </body>

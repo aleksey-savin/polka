@@ -19,6 +19,7 @@ export function BookRow({
   place,
   before,
   after,
+  selected = false,
 }: {
   book: {
     id: string
@@ -35,6 +36,8 @@ export function BookRow({
   place?: string | null
   before?: ReactNode
   after?: ReactNode
+  /** Подсветка в режиме массового выбора. */
+  selected?: boolean
 }) {
   const look = spineFor(book.title, book.pages ?? null)
   const hasMeta = Boolean(
@@ -46,7 +49,11 @@ export function BookRow({
     (book.status && STATUS_LABEL[book.status]),
   )
   return (
-    <div className="flex min-w-0 gap-3 rounded-lg border bg-card px-3.5 py-2.5 shadow-xs">
+    <div
+      className={`flex min-w-0 gap-3 rounded-lg border px-3.5 py-2.5 shadow-xs ${
+        selected ? 'border-primary/45 bg-accent/50' : 'bg-card'
+      }`}
+    >
       {before && <div className="self-center">{before}</div>}
       {book.coverPath ? (
         <img

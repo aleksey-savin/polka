@@ -173,8 +173,31 @@ function MineResults({
   onDone: () => void
 }) {
   const selectCls =
-    'h-9 max-w-44 rounded-lg border bg-card px-2.5 text-[13px] text-muted-foreground'
+    'h-10 max-w-44 rounded-lg border bg-card px-2.5 text-[13px] text-muted-foreground'
   const { result, libraries, series, tags } = data
+  const navigate = Route.useNavigate()
+  const toggle = (id: string) =>
+    setSelected((cur) =>
+      cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
+    )
+
+  // Дефолты для шторки перемещения — из выбранных книг, а не «первая по списку»
+  const selectedRows = result.rows.filter((r) => selected.includes(r.id))
+  const libIds = new Set(selectedRows.map((r) => r.libraryId))
+  const onlyLibraryId =
+    libIds.size === 1 ? ([...libIds][0] ?? undefined) : undefined
+  const shelfIds = new Set(selectedRows.map((r) => r.shelfId))
+  const onlyShelfId =
+    onlyLibraryId && shelfIds.size === 1
+      ? ([...shelfIds][0] ?? null)
+      : undefined
+  const contextLabel = onlyLibraryId
+    ? `Из «${selectedRows[0]?.libraryName}${
+        onlyShelfId !== undefined
+          ? ` · ${selectedRows[0]?.shelfName ?? 'Неразобранное'}`
+          : ''
+      }»`
+    : undefined
   return (
     <>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -269,6 +292,11 @@ function MineResults({
       </div>
 
       <div className="mt-5 grid gap-2">
+        {selected.length > 0 && (
+          <p className="text-[12.5px] text-muted-foreground">
+            Режим выбора: тапайте по карточкам, чтобы отметить книги.
+          </p>
+        )}
         {result.rows.length === 0 ? (
           <Card>
             <CardContent className="grid justify-items-center gap-3 py-12 text-center text-muted-foreground">
@@ -284,30 +312,38 @@ function MineResults({
           </Card>
         ) : (
           result.rows.map((b) => (
-            <BookRow
+            <div
               key={b.id}
-              book={b}
-              place={
-                b.libraryName
-                  ? `${b.libraryName} · ${b.shelfName ?? 'Неразобранное'}`
-                  : undefined
-              }
-              before={
-                <input
-                  type="checkbox"
-                  aria-label="Выбрать"
-                  className="size-[17px] accent-primary"
-                  checked={selected.includes(b.id)}
-                  onChange={() =>
-                    setSelected((cur) =>
-                      cur.includes(b.id)
-                        ? cur.filter((x) => x !== b.id)
-                        : [...cur, b.id],
-                    )
-                  }
-                />
-              }
-            />
+              onClickCapture={(e) => {
+                // режим выбора: вся карточка — одна большая цель
+                if (selected.length > 0) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  toggle(b.id)
+                }
+              }}
+            >
+              <BookRow
+                book={b}
+                selected={selected.includes(b.id)}
+                place={
+                  b.libraryName
+                    ? `${b.libraryName} · ${b.shelfName ?? 'Неразобранное'}`
+                    : undefined
+                }
+                before={
+                  <label className="-m-2.5 grid cursor-pointer place-items-center p-2.5">
+                    <input
+                      type="checkbox"
+                      aria-label="Выбрать"
+                      className="size-5 accent-primary"
+                      checked={selected.includes(b.id)}
+                      onChange={() => toggle(b.id)}
+                    />
+                  </label>
+                }
+              />
+            </div>
           ))
         )}
       </div>
@@ -319,7 +355,27 @@ function MineResults({
       <BatchBar
         selected={selected}
         onClear={() => setSelected([])}
-        onDone={onDone}
+        defaultLibraryId={onlyLibraryId}
+        defaultShelfId={onlyShelfId}
+        contextLabel={contextLabel}
+        onMoved={(target) => {
+          const remaining = result.rows.length - selected.length
+          setSelected([])
+          if (remaining > 0) {
+            // остались книги в текущем списке — продолжаем разбор
+            onDone()
+          } else if (target.shelfId) {
+            void navigate({
+              to: '/shelves/$shelfId',
+              params: { shelfId: target.shelfId },
+            })
+          } else {
+            void navigate({
+              to: '/libraries',
+              search: { lib: target.libraryId },
+            })
+          }
+        }}
       />
     </>
   )

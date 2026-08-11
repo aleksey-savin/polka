@@ -145,25 +145,58 @@ function ShelfPage() {
           </div>
           <div className="grid gap-2">
             {sorted.map((b) => (
-              <BookRow
+              <div
                 key={b.id}
-                book={b}
-                before={
-                  <input
-                    type="checkbox"
-                    aria-label="Выбрать"
-                    className="size-[17px] accent-primary"
-                    checked={selected.includes(b.id)}
-                    onChange={() => toggle(b.id)}
-                  />
-                }
-              />
+                onClickCapture={(e) => {
+                  // режим выбора: вся карточка — одна большая цель
+                  if (selected.length > 0) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    toggle(b.id)
+                  }
+                }}
+              >
+                <BookRow
+                  book={b}
+                  selected={selected.includes(b.id)}
+                  before={
+                    <label className="-m-2.5 grid cursor-pointer place-items-center p-2.5">
+                      <input
+                        type="checkbox"
+                        aria-label="Выбрать"
+                        className="size-5 accent-primary"
+                        checked={selected.includes(b.id)}
+                        onChange={() => toggle(b.id)}
+                      />
+                    </label>
+                  }
+                />
+              </div>
             ))}
           </div>
           <BatchBar
             selected={selected}
             onClear={() => setSelected([])}
-            onDone={refresh}
+            defaultLibraryId={shelf.libraryId}
+            defaultShelfId={shelf.id}
+            contextLabel={`С полки «${shelf.name}»`}
+            onMoved={(target) => {
+              const remaining = shelf.books.length - selected.length
+              setSelected([])
+              if (remaining > 0 || target.shelfId === shelf.id) {
+                refresh()
+              } else if (target.shelfId) {
+                void navigate({
+                  to: '/shelves/$shelfId',
+                  params: { shelfId: target.shelfId },
+                })
+              } else {
+                void navigate({
+                  to: '/libraries',
+                  search: { lib: target.libraryId },
+                })
+              }
+            }}
           />
         </section>
       )}

@@ -686,6 +686,13 @@ function BookCardPage() {
         open={moveOpen}
         onOpenChange={setMoveOpen}
         bookIds={[book.id]}
+        defaultLibraryId={book.libraryId ?? undefined}
+        defaultShelfId={book.libraryId ? book.shelfId : undefined}
+        contextLabel={
+          book.libraryName
+            ? `Сейчас: «${book.libraryName} · ${book.shelfName ?? 'Неразобранное'}»`
+            : undefined
+        }
         onMoved={refresh}
       />
     </div>

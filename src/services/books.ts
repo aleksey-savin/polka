@@ -299,7 +299,9 @@ export interface CatalogRow {
   status: string
   coverPath: string | null
   seriesName: string | null
+  libraryId: string | null
   libraryName: string | null
+  shelfId: string | null
   shelfName: string | null
 }
 
@@ -367,7 +369,9 @@ export async function listBooks(
       status: book.status,
       coverPath: book.coverPath,
       seriesName: series.name,
+      libraryId: book.libraryId,
       libraryName: library.name,
+      shelfId: book.shelfId,
       shelfName: shelf.name,
     })
     .from(book)
