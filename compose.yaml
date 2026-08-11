@@ -12,7 +12,6 @@ services:
     environment:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?задайте в .env}
       APP_URL: ${APP_URL:?задайте в .env, например https://polka.example.ru}
-      REGISTRATION_OPEN: ${REGISTRATION_OPEN:-true}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
     volumes:
       - polka-data:/data

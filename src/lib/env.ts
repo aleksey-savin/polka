@@ -6,10 +6,6 @@ const envSchema = z.object({
   DATA_DIR: z.string().default('./data'),
   APP_URL: z.url().default('http://localhost:3000'),
   BETTER_AUTH_SECRET: z.string().min(16).default(DEV_SECRET),
-  REGISTRATION_OPEN: z
-    .string()
-    .default('true')
-    .transform((v) => v !== 'false' && v !== '0'),
   GOOGLE_BOOKS_API_KEY: z.string().optional(),
 })
 

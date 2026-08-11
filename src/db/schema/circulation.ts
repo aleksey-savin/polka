@@ -123,3 +123,20 @@ export const lookupCache = sqliteTable('lookup_cache', {
     .notNull()
     .$defaultFn(() => new Date()),
 })
+
+/** Одноразовое приглашение зарегистрироваться (при закрытой общей регистрации). */
+export const signupInvite = sqliteTable('signup_invite', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  token: text('token').notNull().unique(),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  usedAt: integer('used_at', { mode: 'timestamp' }),
+  usedBy: text('used_by').references(() => user.id, { onDelete: 'set null' }),
+})

@@ -110,6 +110,7 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 - Сессия в серверных функциях: общий middleware `auth.api.getSession({ headers: getRequestHeaders() })`; id пользователя **никогда** не принимается с клиента.
 - Гард UI: layout `_app.tsx`, `beforeLoad` → `redirect({ to: '/login' })`. Публичные роуты (`s.$token`, `login`, api) — вне `_app`.
 - Email-верификация выключена (закрытый круг, без SMTP).
+- **Регистрация по приглашению**: `hooks.before` на `/sign-up/email` — пустая система пропускает свободно, иначе требуется валидный одноразовый токен в заголовке `x-signup-invite` (таблица `signup_invite`, TTL 7 дней); `hooks.after` гасит токен после успешной регистрации.
 
 ## Метаданные по ISBN
 

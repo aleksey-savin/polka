@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import { BookOpen, Handshake, House, LogOut, Plus, Users } from 'lucide-react'
@@ -13,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { authClient } from '@/lib/auth-client'
+import { countPendingRequestsFn } from '@/server/shares'
 
 const sections = [
   { to: '/libraries', label: 'Библиотека' },
@@ -32,6 +34,13 @@ export function AppShell({
   children: ReactNode
 }) {
   const router = useRouter()
+  const [pendingRequests, setPendingRequests] = useState(0)
+
+  useEffect(() => {
+    void countPendingRequestsFn()
+      .then(setPendingRequests)
+      .catch(() => {})
+  }, [])
 
   async function handleSignOut() {
     await authClient.signOut()
@@ -55,6 +64,11 @@ export function AppShell({
                 }}
               >
                 {s.label}
+                {s.to === '/requests' && pendingRequests > 0 && (
+                  <span className="ml-1 inline-block min-w-[18px] rounded-full bg-stamp px-1.5 text-center text-[11px] font-semibold text-white">
+                    {pendingRequests}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>

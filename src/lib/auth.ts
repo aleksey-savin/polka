@@ -1,10 +1,18 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 
 import { db } from '@/db'
 import * as schema from '@/db/schema/auth'
 import { env } from '@/lib/env'
+import {
+  consumeSignupInvite,
+  hasAnyUser,
+  isSignupInviteValid,
+} from '@/services/signupInvites'
+
+const SIGNUP_INVITE_HEADER = 'x-signup-invite'
 
 export const auth = betterAuth({
   baseURL: env.APP_URL,
@@ -12,7 +20,25 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: 'sqlite', schema }),
   emailAndPassword: {
     enabled: true,
-    disableSignUp: !env.REGISTRATION_OPEN,
+  },
+  hooks: {
+    // Регистрация: первый пользователь — свободно; дальше — только по инвайту.
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== '/sign-up/email') return
+      if (!(await hasAnyUser())) return
+      const token = ctx.headers?.get(SIGNUP_INVITE_HEADER) ?? ''
+      if (!token || !(await isSignupInviteValid(token))) {
+        throw new APIError('FORBIDDEN', {
+          message: 'Регистрация — только по ссылке-приглашению',
+        })
+      }
+    }),
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== '/sign-up/email') return
+      const token = ctx.headers?.get(SIGNUP_INVITE_HEADER)
+      const newUserId = ctx.context.newSession?.user.id
+      if (token && newUserId) await consumeSignupInvite(token, newUserId)
+    }),
   },
   advanced: {
     // Приложение живёт за Nginx Proxy Manager — клиентский IP приходит в заголовке.

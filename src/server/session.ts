@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 
 import { auth } from '@/lib/auth'
-import { env } from '@/lib/env'
+import { hasAnyUser } from '@/services/signupInvites'
 
 export const getSession = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -13,6 +13,7 @@ export const getSession = createServerFn({ method: 'GET' }).handler(
 
 export const getPublicConfig = createServerFn({ method: 'GET' }).handler(
   async () => {
-    return { registrationOpen: env.REGISTRATION_OPEN }
+    // Пустая система: первый пользователь регистрируется свободно.
+    return { selfSignupOpen: !(await hasAnyUser()) }
   },
 )

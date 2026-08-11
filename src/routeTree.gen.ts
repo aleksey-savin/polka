@@ -17,6 +17,8 @@ import { Route as AppFriendsRouteImport } from './routes/_app/friends'
 import { Route as AppLoansRouteImport } from './routes/_app/loans'
 import { Route as AppRequestsRouteImport } from './routes/_app/requests'
 import { Route as AppWishlistRouteImport } from './routes/_app/wishlist'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
+import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as AppBooksIndexRouteImport } from './routes/_app/books.index'
 import { Route as AppBooksBookIdRouteImport } from './routes/_app/books.$bookId'
 import { Route as AppBooksNewRouteImport } from './routes/_app/books.new'
@@ -67,6 +69,16 @@ const AppWishlistRoute = AppWishlistRouteImport.update({
   id: '/wishlist',
   path: '/wishlist',
   getParentRoute: () => AppRoute,
+} as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const STokenRoute = STokenRouteImport.update({
+  id: '/s/$token',
+  path: '/s/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppBooksIndexRoute = AppBooksIndexRouteImport.update({
   id: '/books/',
@@ -132,6 +144,8 @@ export interface FileRoutesByFullPath {
   '/loans': typeof AppLoansRoute
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
+  '/join/$token': typeof JoinTokenRoute
+  '/s/$token': typeof STokenRoute
   '/books/$bookId': typeof AppBooksBookIdRoute
   '/books/new': typeof AppBooksNewRoute
   '/invite/$token': typeof AppInviteTokenRoute
@@ -152,6 +166,8 @@ export interface FileRoutesByTo {
   '/loans': typeof AppLoansRoute
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
+  '/join/$token': typeof JoinTokenRoute
+  '/s/$token': typeof STokenRoute
   '/books/$bookId': typeof AppBooksBookIdRoute
   '/books/new': typeof AppBooksNewRoute
   '/invite/$token': typeof AppInviteTokenRoute
@@ -174,6 +190,8 @@ export interface FileRoutesById {
   '/_app/loans': typeof AppLoansRoute
   '/_app/requests': typeof AppRequestsRoute
   '/_app/wishlist': typeof AppWishlistRoute
+  '/join/$token': typeof JoinTokenRoute
+  '/s/$token': typeof STokenRoute
   '/_app/books/$bookId': typeof AppBooksBookIdRoute
   '/_app/books/new': typeof AppBooksNewRoute
   '/_app/invite/$token': typeof AppInviteTokenRoute
@@ -196,6 +214,8 @@ export interface FileRouteTypes {
     | '/loans'
     | '/requests'
     | '/wishlist'
+    | '/join/$token'
+    | '/s/$token'
     | '/books/$bookId'
     | '/books/new'
     | '/invite/$token'
@@ -216,6 +236,8 @@ export interface FileRouteTypes {
     | '/loans'
     | '/requests'
     | '/wishlist'
+    | '/join/$token'
+    | '/s/$token'
     | '/books/$bookId'
     | '/books/new'
     | '/invite/$token'
@@ -237,6 +259,8 @@ export interface FileRouteTypes {
     | '/_app/loans'
     | '/_app/requests'
     | '/_app/wishlist'
+    | '/join/$token'
+    | '/s/$token'
     | '/_app/books/$bookId'
     | '/_app/books/new'
     | '/_app/invite/$token'
@@ -254,6 +278,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  JoinTokenRoute: typeof JoinTokenRoute
+  STokenRoute: typeof STokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCoversBookIdRoute: typeof ApiCoversBookIdRoute
 }
@@ -315,6 +341,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/wishlist'
       preLoaderRoute: typeof AppWishlistRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s/$token': {
+      id: '/s/$token'
+      path: '/s/$token'
+      fullPath: '/s/$token'
+      preLoaderRoute: typeof STokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/books/': {
       id: '/_app/books/'
@@ -436,6 +476,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  JoinTokenRoute: JoinTokenRoute,
+  STokenRoute: STokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCoversBookIdRoute: ApiCoversBookIdRoute,
 }

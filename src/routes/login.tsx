@@ -23,7 +23,7 @@ export const Route = createFileRoute('/login')({
 })
 
 function LoginPage() {
-  const { registrationOpen } = Route.useLoaderData()
+  const { selfSignupOpen } = Route.useLoaderData()
   const { redirect: redirectTo } = Route.useSearch()
   const router = useRouter()
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn')
@@ -122,11 +122,11 @@ function LoginPage() {
           </CardContent>
         </Card>
 
-        {registrationOpen && (
+        {selfSignupOpen ? (
           <p className="text-center text-sm text-muted-foreground">
             {mode === 'signIn' ? (
               <>
-                Первый раз здесь?{' '}
+                Система пуста — создайте первый аккаунт.{' '}
                 <button
                   type="button"
                   className="font-semibold text-accent-foreground"
@@ -147,6 +147,10 @@ function LoginPage() {
                 </button>
               </>
             )}
+          </p>
+        ) : (
+          <p className="text-center text-[13px] text-muted-foreground">
+            Регистрация — по ссылке-приглашению от того, кто уже в Полке.
           </p>
         )}
       </div>
