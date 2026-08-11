@@ -32,9 +32,12 @@ function UnsortedPage() {
 
   // Дефолт для шторки — библиотека выбранных книг
   const selectedRows = rows.filter((r) => selected.includes(r.id))
-  const libIds = new Set(selectedRows.map((r) => r.libraryId))
-  const onlyLibraryId =
-    libIds.size === 1 ? ([...libIds][0] ?? undefined) : undefined
+  const libIds = new Set(
+    selectedRows
+      .map((r) => r.libraryId)
+      .filter((x): x is string => typeof x === 'string'),
+  )
+  const onlyLibraryId = libIds.size === 1 ? [...libIds][0] : undefined
   const contextLabel = onlyLibraryId
     ? `Из «${selectedRows[0]?.libraryName} · Неразобранное»`
     : undefined
