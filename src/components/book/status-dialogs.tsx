@@ -90,7 +90,11 @@ export function LendDialog({
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
-          <Button onClick={() => void submit()} disabled={busy || !name.trim()}>
+          <Button
+            onClick={() => void submit()}
+            loading={busy}
+            disabled={!name.trim()}
+          >
             Дать почитать
           </Button>
         </DialogFooter>
@@ -154,7 +158,11 @@ export function GiftDialog({
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
-          <Button onClick={() => void submit()} disabled={busy || !to.trim()}>
+          <Button
+            onClick={() => void submit()}
+            loading={busy}
+            disabled={!to.trim()}
+          >
             Подарить
           </Button>
         </DialogFooter>

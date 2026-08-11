@@ -15,6 +15,22 @@ import { authMiddleware } from './middleware'
 
 const byLibrary = z.object({ libraryId: z.string() })
 
+/** Главная одним запросом: список библиотек + обзор выбранной. */
+export const getLibrariesHomeFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(z.object({ lib: z.string().optional() }))
+  .handler(async ({ context, data }) => {
+    const libraries = await listMyLibraries(context.user.id)
+    const selectedId =
+      data.lib && libraries.some((l) => l.id === data.lib)
+        ? data.lib
+        : libraries[0]?.id
+    const overview = selectedId
+      ? await getLibraryOverview(context.user.id, selectedId)
+      : null
+    return { libraries, overview }
+  })
+
 export const listMyLibrariesFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(({ context }) => listMyLibraries(context.user.id))

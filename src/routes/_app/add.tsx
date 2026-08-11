@@ -331,7 +331,7 @@ function AddPage() {
               inputMode="numeric"
               autoComplete="off"
             />
-            <Button type="submit" disabled={busy || !isbnInput.trim()}>
+            <Button type="submit" loading={busy} disabled={!isbnInput.trim()}>
               {busy ? 'Ищем…' : 'Найти'}
             </Button>
           </form>

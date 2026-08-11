@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 
+import { toast } from 'sonner'
+
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { plural } from '@/lib/plural'
@@ -28,6 +30,7 @@ function LoansPage() {
     setBusyId(loanId)
     try {
       await returnLoanFn({ data: { loanId } })
+      toast.success('Вернули — книга снова дома')
       await router.invalidate()
     } finally {
       setBusyId(null)
@@ -133,7 +136,7 @@ function LoansPage() {
                   {tab === 'active' && (
                     <Button
                       variant="outline"
-                      disabled={busyId === l.loanId}
+                      loading={busyId === l.loanId}
                       onClick={() => void markReturned(l.loanId)}
                     >
                       Вернули

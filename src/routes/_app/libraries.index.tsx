@@ -10,23 +10,13 @@ import { ShelfSection } from '@/components/shelf/ShelfSection'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { plural } from '@/lib/plural'
-import { getLibraryOverviewFn, listMyLibrariesFn } from '@/server/libraries'
+import { getLibrariesHomeFn } from '@/server/libraries'
 import { spineFor, textToneFor } from '@/services/spine'
 
 export const Route = createFileRoute('/_app/libraries/')({
   validateSearch: z.object({ lib: z.string().optional() }),
   loaderDeps: ({ search }) => ({ lib: search.lib }),
-  loader: async ({ deps }) => {
-    const libraries = await listMyLibrariesFn()
-    const selectedId =
-      deps.lib && libraries.some((l) => l.id === deps.lib)
-        ? deps.lib
-        : libraries[0]?.id
-    const overview = selectedId
-      ? await getLibraryOverviewFn({ data: { libraryId: selectedId } })
-      : null
-    return { libraries, overview }
-  },
+  loader: ({ deps }) => getLibrariesHomeFn({ data: { lib: deps.lib } }),
   component: LibrariesPage,
 })
 

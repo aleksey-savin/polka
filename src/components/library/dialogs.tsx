@@ -62,7 +62,11 @@ export function NewLibraryDialog({
           />
         </div>
         <DialogFooter>
-          <Button onClick={() => void submit()} disabled={busy || !name.trim()}>
+          <Button
+            onClick={() => void submit()}
+            loading={busy}
+            disabled={!name.trim()}
+          >
             Создать библиотеку
           </Button>
         </DialogFooter>
@@ -120,7 +124,11 @@ export function NewShelfDialog({
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
-          <Button onClick={() => void submit()} disabled={busy || !name.trim()}>
+          <Button
+            onClick={() => void submit()}
+            loading={busy}
+            disabled={!name.trim()}
+          >
             Создать полку
           </Button>
         </DialogFooter>
@@ -190,7 +198,7 @@ export function InviteDialog({
           </div>
         ) : (
           <DialogFooter>
-            <Button onClick={() => void generate()} disabled={busy}>
+            <Button onClick={() => void generate()} loading={busy}>
               Создать ссылку-приглашение
             </Button>
           </DialogFooter>

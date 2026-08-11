@@ -40,7 +40,7 @@ export function ShelfSection({
           )}
         </div>
       )}
-      <div className="flex min-h-[150px] items-end gap-[3px] overflow-x-auto px-3.5">
+      <div className="shelf-books flex min-h-[150px] items-end gap-[3px] overflow-x-auto px-3.5">
         {books.length === 0 ? (
           <p className="pb-4 text-sm text-muted-foreground">
             {emptyHint ?? 'На этой полке пока пусто.'}

@@ -12,7 +12,9 @@ import {
   restoreToLibrary,
   updateBook,
 } from '@/services/books'
+import { listMyLibraries } from '@/services/libraries'
 import { activeLoansFor } from '@/services/loans'
+import { listMyTags } from '@/services/tags'
 import { authMiddleware } from './middleware'
 
 const bookInput = z.object({
@@ -120,3 +122,14 @@ export const restoreToLibraryFn = createServerFn({ method: 'POST' })
   .handler(({ context, data }) =>
     restoreToLibrary(context.user.id, data.bookId),
   )
+
+/** Справочники для формы книги одним запросом. */
+export const getBookFormMetaFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const [libraries, tags] = await Promise.all([
+      listMyLibraries(context.user.id),
+      listMyTags(context.user.id),
+    ])
+    return { libraries, tags: tags.map((t) => t.name) }
+  })

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 
+import { toast } from 'sonner'
+
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { plural } from '@/lib/plural'
@@ -25,8 +27,13 @@ function RequestsPage() {
     setBusyId(requestId)
     setError(null)
     try {
-      if (action === 'approve') await approveRequestFn({ data: { requestId } })
-      else await declineRequestFn({ data: { requestId } })
+      if (action === 'approve') {
+        await approveRequestFn({ data: { requestId } })
+        toast.success('Заявка одобрена — книга выдана')
+      } else {
+        await declineRequestFn({ data: { requestId } })
+        toast('Заявка отклонена')
+      }
       await router.invalidate()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не получилось')
@@ -87,7 +94,8 @@ function RequestsPage() {
                   </span>
                 </div>
                 <Button
-                  disabled={busyId === r.id || r.bookOnLoan}
+                  loading={busyId === r.id}
+                  disabled={r.bookOnLoan}
                   title={
                     r.bookOnLoan
                       ? 'Книга на руках — сначала возврат'

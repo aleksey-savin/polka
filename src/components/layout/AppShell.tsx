@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link, useRouter } from '@tanstack/react-router'
+import { Link, useRouter, useRouterState } from '@tanstack/react-router'
 import { BookOpen, Handshake, House, LogOut, Plus, Users } from 'lucide-react'
 
 import { LogoLink } from '@/components/layout/Logo'
@@ -34,6 +34,7 @@ export function AppShell({
   children: ReactNode
 }) {
   const router = useRouter()
+  const navigating = useRouterState({ select: (s) => s.isLoading })
   const [pendingRequests, setPendingRequests] = useState(0)
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export function AppShell({
 
   return (
     <div className="min-h-full pb-20 md:pb-0">
+      {navigating && <div aria-hidden className="nav-progress" />}
       <header className="sticky top-0 z-10 border-b bg-card">
         <div className="flex items-center gap-4 px-4 py-3 md:px-7">
           <LogoLink />

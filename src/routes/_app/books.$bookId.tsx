@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { toast } from 'sonner'
 
 import { MoveDialog } from '@/components/book/MoveDialog'
 import { PersonalPanel } from '@/components/book/PersonalPanel'
@@ -47,19 +48,26 @@ function BookCardPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [moveOpen, setMoveOpen] = useState(false)
   const [coverBusy, setCoverBusy] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [busyAction, setBusyAction] = useState<string | null>(null)
   const refresh = () => void router.invalidate()
 
   const look = spineFor(book.title, book.pages)
   const activeLoan = loans.find((l) => l.returnedAt === null) ?? null
 
-  async function run(action: () => Promise<unknown>) {
-    setBusy(true)
+  async function run(
+    name: string,
+    action: () => Promise<unknown>,
+    done?: string,
+  ) {
+    setBusyAction(name)
     try {
       await action()
+      if (done) toast.success(done)
       refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
     } finally {
-      setBusy(false)
+      setBusyAction(null)
     }
   }
 
@@ -163,7 +171,7 @@ function BookCardPage() {
             <Button
               variant="outline"
               className="flex-1"
-              disabled={coverBusy}
+              loading={coverBusy}
               onClick={() => fileRef.current?.click()}
             >
               {book.coverPath ? 'Заменить обложку' : 'Загрузить обложку'}
@@ -297,10 +305,12 @@ function BookCardPage() {
           <div className="mt-6 flex flex-wrap gap-2.5">
             {activeLoan ? (
               <Button
-                disabled={busy}
+                loading={busyAction === 'return'}
                 onClick={() =>
-                  void run(() =>
-                    returnLoanFn({ data: { loanId: activeLoan.loanId } }),
+                  void run(
+                    'return',
+                    () => returnLoanFn({ data: { loanId: activeLoan.loanId } }),
+                    'Вернули — книга снова дома',
                   )
                 }
               >
@@ -320,9 +330,11 @@ function BookCardPage() {
                 />
                 <Button
                   variant="ghost"
-                  disabled={busy}
+                  loading={busyAction === 'lost'}
                   onClick={() =>
-                    void run(() => markLostFn({ data: { bookId: book.id } }))
+                    void run('lost', () =>
+                      markLostFn({ data: { bookId: book.id } }),
+                    )
                   }
                 >
                   Потерялась
@@ -334,10 +346,12 @@ function BookCardPage() {
               </Button>
             ) : (
               <Button
-                disabled={busy}
+                loading={busyAction === 'restore'}
                 onClick={() =>
-                  void run(() =>
-                    restoreToLibraryFn({ data: { bookId: book.id } }),
+                  void run(
+                    'restore',
+                    () => restoreToLibraryFn({ data: { bookId: book.id } }),
+                    'Книга снова в библиотеке',
                   )
                 }
               >

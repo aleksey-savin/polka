@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { cva } from 'class-variance-authority'
 import type { VariantProps } from 'class-variance-authority'
+import { LoaderCircle } from 'lucide-react'
 import { Slot } from 'radix-ui'
 
 import { cn } from '@/lib/utils'
@@ -47,10 +48,15 @@ function Button({
   variant = 'default',
   size = 'default',
   asChild = false,
+  loading = false,
+  disabled,
+  children,
   ...props
 }: React.ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    /** Идёт запрос: спиннер + блокировка. */
+    loading?: boolean
   }) {
   const Comp = asChild ? Slot.Root : 'button'
 
@@ -59,9 +65,19 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      disabled={asChild ? undefined : (disabled ?? false) || loading}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {loading && <LoaderCircle aria-hidden className="animate-spin" />}
+          {children}
+        </>
+      )}
+    </Comp>
   )
 }
 

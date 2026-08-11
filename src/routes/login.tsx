@@ -115,7 +115,7 @@ function LoginPage() {
                 />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" size="lg" disabled={busy}>
+              <Button type="submit" size="lg" loading={busy}>
                 {mode === 'signIn' ? 'Войти' : 'Создать аккаунт'}
               </Button>
             </form>

@@ -110,7 +110,11 @@ export function MoveDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => void submit()} disabled={busy || !libraryId}>
+          <Button
+            onClick={() => void submit()}
+            loading={busy}
+            disabled={!libraryId}
+          >
             Переместить
           </Button>
         </DialogFooter>

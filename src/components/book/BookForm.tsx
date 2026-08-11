@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { getLibraryOverviewFn, listMyLibrariesFn } from '@/server/libraries'
-import { listMyTagsFn } from '@/server/tags'
+import { getBookFormMetaFn } from '@/server/books'
+import { getLibraryOverviewFn } from '@/server/libraries'
 
 export interface BookFormValue {
   title: string
@@ -101,14 +101,12 @@ export function BookForm({
   ) => onChange({ ...value, [key]: val })
 
   useEffect(() => {
-    void listMyLibrariesFn().then((libs) => {
-      setLibraries(libs)
-      if (!value.libraryId && libs.length > 0)
-        set('libraryId', libs[0]?.id ?? '')
+    void getBookFormMetaFn().then((meta) => {
+      setLibraries(meta.libraries)
+      setTagSuggestions(meta.tags)
+      if (!value.libraryId && meta.libraries.length > 0)
+        set('libraryId', meta.libraries[0]?.id ?? '')
     })
-    void listMyTagsFn().then((tags) =>
-      setTagSuggestions(tags.map((t) => t.name)),
-    )
   }, [])
 
   useEffect(() => {
@@ -299,7 +297,12 @@ export function BookForm({
 
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex flex-wrap gap-2.5">
-        <Button type="submit" size="lg" disabled={busy || !value.title.trim()}>
+        <Button
+          type="submit"
+          size="lg"
+          loading={busy}
+          disabled={!value.title.trim()}
+        >
           {submitLabel}
         </Button>
         {extraActions}

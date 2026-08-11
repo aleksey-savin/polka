@@ -107,3 +107,58 @@
 .scanline {
   animation: scanline 2.2s ease-in-out infinite alternate;
 }
+
+/* ── Движение: деликатно и с уважением к reduced-motion ── */
+@media (prefers-reduced-motion: no-preference) {
+  /* кроссфейд переходов между экранами (View Transitions API) */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 180ms;
+  }
+
+  /* корешки «встают» на полку */
+  .shelf-books > a {
+    animation: settle 0.35s ease backwards;
+  }
+  .shelf-books > a:nth-child(2n) {
+    animation-delay: 0.04s;
+  }
+  .shelf-books > a:nth-child(3n) {
+    animation-delay: 0.08s;
+  }
+  @keyframes settle {
+    from {
+      translate: 0 -12px;
+      opacity: 0;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* тонкий прогрессбар навигации */
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 50;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-stamp));
+  transform-origin: left;
+  animation: nav-progress 1.2s ease-out forwards;
+}
+@keyframes nav-progress {
+  from {
+    transform: scaleX(0);
+  }
+  60% {
+    transform: scaleX(0.7);
+  }
+  to {
+    transform: scaleX(0.92);
+  }
+}
