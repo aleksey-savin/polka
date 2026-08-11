@@ -1,6 +1,13 @@
 import { Fragment, useRef, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
-import { Ellipsis } from 'lucide-react'
+import {
+  Ellipsis,
+  Gift,
+  Handshake,
+  Heart,
+  House,
+  TriangleAlert,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import type { ReactNode } from 'react'
 
@@ -280,12 +287,7 @@ function BookCardPage() {
       {/* ── Лента обращения: где книга сейчас + главное действие ── */}
       {activeLoan ? (
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-stamp/25 bg-stamp/5 p-3">
-          <span
-            aria-hidden
-            className="grid size-8 flex-none rotate-[-6deg] place-items-center rounded-full border-2 border-stamp bg-white/70 font-mono text-sm font-medium text-stamp"
-          >
-            ✳
-          </span>
+          <Handshake aria-hidden className="size-6 flex-none text-stamp" />
           <div className="min-w-0 flex-1">
             <p className="text-[14.5px]">
               У <b className="font-semibold">«{activeLoan.borrowerName}»</b>
@@ -320,12 +322,7 @@ function BookCardPage() {
         </div>
       ) : book.status === 'in_library' ? (
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-primary/25 bg-accent p-3">
-          <span
-            aria-hidden
-            className="grid size-8 flex-none place-items-center rounded-full border-2 border-primary bg-white/70 font-mono text-sm font-medium text-primary"
-          >
-            ✓
-          </span>
+          <House aria-hidden className="size-6 flex-none text-primary" />
           <div className="min-w-0 flex-1">
             <p className="text-[14.5px]">Дома</p>
             <p className="truncate text-[12.5px] text-muted-foreground">
@@ -336,12 +333,7 @@ function BookCardPage() {
         </div>
       ) : book.status === 'gifted' ? (
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-patina-old bg-patina-old/20 p-3">
-          <span
-            aria-hidden
-            className="grid size-8 flex-none rotate-[-6deg] place-items-center rounded-full border-2 border-[#A5824A] bg-white/70 font-mono text-sm font-medium text-[#A5824A]"
-          >
-            ✳
-          </span>
+          <Gift aria-hidden className="size-6 flex-none text-[#A5824A]" />
           <div className="min-w-0 flex-1">
             <p className="text-[14.5px]">
               Подарена
@@ -373,12 +365,10 @@ function BookCardPage() {
         </div>
       ) : book.status === 'lost' ? (
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-          <span
+          <TriangleAlert
             aria-hidden
-            className="grid size-8 flex-none rotate-[-6deg] place-items-center rounded-full border-2 border-destructive bg-white/70 font-mono text-sm font-medium text-destructive"
-          >
-            ✕
-          </span>
+            className="size-6 flex-none text-destructive"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-[14.5px]">Потерялась</p>
             <p className="text-[12.5px] text-muted-foreground">
@@ -401,12 +391,7 @@ function BookCardPage() {
         </div>
       ) : (
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-primary/25 bg-accent p-3">
-          <span
-            aria-hidden
-            className="grid size-8 flex-none place-items-center rounded-full border-2 border-primary bg-white/70 font-mono text-sm font-medium text-primary"
-          >
-            ♡
-          </span>
+          <Heart aria-hidden className="size-6 flex-none text-primary" />
           <div className="min-w-0 flex-1">
             <p className="text-[14.5px]">В списке «Хочу»</p>
             <p className="text-[12.5px] text-muted-foreground">
