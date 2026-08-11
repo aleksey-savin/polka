@@ -17,6 +17,7 @@ import { Route as AppFriendsRouteImport } from './routes/_app/friends'
 import { Route as AppLoansRouteImport } from './routes/_app/loans'
 import { Route as AppRequestsRouteImport } from './routes/_app/requests'
 import { Route as AppWishlistRouteImport } from './routes/_app/wishlist'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as AppBooksIndexRouteImport } from './routes/_app/books.index'
@@ -69,6 +70,11 @@ const AppWishlistRoute = AppWishlistRouteImport.update({
   id: '/wishlist',
   path: '/wishlist',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const JoinTokenRoute = JoinTokenRouteImport.update({
   id: '/join/$token',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/loans': typeof AppLoansRoute
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
+  '/api/health': typeof ApiHealthRoute
   '/join/$token': typeof JoinTokenRoute
   '/s/$token': typeof STokenRoute
   '/books/$bookId': typeof AppBooksBookIdRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/loans': typeof AppLoansRoute
   '/requests': typeof AppRequestsRoute
   '/wishlist': typeof AppWishlistRoute
+  '/api/health': typeof ApiHealthRoute
   '/join/$token': typeof JoinTokenRoute
   '/s/$token': typeof STokenRoute
   '/books/$bookId': typeof AppBooksBookIdRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/_app/loans': typeof AppLoansRoute
   '/_app/requests': typeof AppRequestsRoute
   '/_app/wishlist': typeof AppWishlistRoute
+  '/api/health': typeof ApiHealthRoute
   '/join/$token': typeof JoinTokenRoute
   '/s/$token': typeof STokenRoute
   '/_app/books/$bookId': typeof AppBooksBookIdRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/loans'
     | '/requests'
     | '/wishlist'
+    | '/api/health'
     | '/join/$token'
     | '/s/$token'
     | '/books/$bookId'
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/loans'
     | '/requests'
     | '/wishlist'
+    | '/api/health'
     | '/join/$token'
     | '/s/$token'
     | '/books/$bookId'
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/_app/loans'
     | '/_app/requests'
     | '/_app/wishlist'
+    | '/api/health'
     | '/join/$token'
     | '/s/$token'
     | '/_app/books/$bookId'
@@ -278,6 +290,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   JoinTokenRoute: typeof JoinTokenRoute
   STokenRoute: typeof STokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -341,6 +354,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/wishlist'
       preLoaderRoute: typeof AppWishlistRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/join/$token': {
       id: '/join/$token'
@@ -476,6 +496,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiHealthRoute: ApiHealthRoute,
   JoinTokenRoute: JoinTokenRoute,
   STokenRoute: STokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

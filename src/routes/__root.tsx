@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -52,7 +53,44 @@ function NotFoundPage() {
   )
 }
 
-function ErrorPage() {
+function ErrorPage({ error }: { error: Error }) {
+  // Сетевые сбои и 5xx — почти всегда окно выкатки новой версии (~полминуты)
+  const updating = /fetch|load failed|network|50[234]|unexpected token/i.test(
+    error.message,
+  )
+
+  useEffect(() => {
+    if (!updating) return
+    const timer = setInterval(() => {
+      fetch('/api/health', { cache: 'no-store' })
+        .then((res) => {
+          if (res.ok) window.location.reload()
+        })
+        .catch(() => {
+          // ещё обновляется — ждём следующего тика
+        })
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [updating])
+
+  if (updating) {
+    return (
+      <main className="grid min-h-dvh place-items-center px-6 text-center">
+        <div className="grid justify-items-center gap-3">
+          <span
+            aria-hidden
+            className="size-8 animate-spin rounded-full border-3 border-primary border-t-transparent"
+          />
+          <h1 className="text-2xl font-semibold">Полка обновляется</h1>
+          <p className="max-w-sm text-muted-foreground">
+            Выкатывается свежая версия. Страница перезагрузится сама, как только
+            всё будет готово, — ничего делать не нужно.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="grid min-h-dvh place-items-center px-6 text-center">
       <div className="grid justify-items-center gap-3">
