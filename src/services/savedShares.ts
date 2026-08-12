@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, like, or, sql } from 'drizzle-orm'
+import { and, asc, count, eq, isNull, like, or, sql, desc } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { user } from '@/db/schema/auth'
@@ -12,6 +12,7 @@ import {
 import { savedShare, share } from '@/db/schema/circulation'
 import { AppError } from './errors'
 import { activeLoansFor } from './loans'
+import { shelfTint } from './shelfTint'
 import { getMembership } from './members'
 import { normalizeForSearch } from './search'
 import { sanitizeLike } from './series'
@@ -60,6 +61,15 @@ export interface SavedShareRow {
   ownerNames: string
   bookCount: number
   savedAt: Date
+  /** До 6 книг для мини-полки на карточке. */
+  preview: Array<{
+    title: string
+    pages: number | null
+    coverColor: string | null
+    year: number | null
+  }>
+  /** Патина владельца — цвет мини-доски. */
+  boardColor: string
 }
 
 /** Сохранённые полки друзей (отозванные владельцем пропадают сами). */
@@ -96,18 +106,25 @@ export async function listSavedShares(
       .from(libraryMember)
       .innerJoin(user, eq(user.id, libraryMember.userId))
       .where(eq(libraryMember.libraryId, libId))
-    const [cnt] = await db
-      .select({ n: count() })
+    const scopeCond = and(
+      r.scope === 'shelf' && r.shelfId
+        ? eq(book.shelfId, r.shelfId)
+        : eq(book.libraryId, libId),
+      eq(book.status, 'in_library'),
+      eq(book.hidden, false),
+    )
+    const [cnt] = await db.select({ n: count() }).from(book).where(scopeCond)
+    const preview = await db
+      .select({
+        title: book.title,
+        pages: book.pages,
+        coverColor: book.coverColor,
+        year: book.year,
+      })
       .from(book)
-      .where(
-        and(
-          r.scope === 'shelf' && r.shelfId
-            ? eq(book.shelfId, r.shelfId)
-            : eq(book.libraryId, libId),
-          eq(book.status, 'in_library'),
-          eq(book.hidden, false),
-        ),
-      )
+      .where(scopeCond)
+      .orderBy(desc(book.createdAt))
+      .limit(6)
     result.push({
       shareId: r.shareId,
       token: r.token,
@@ -115,6 +132,8 @@ export async function listSavedShares(
       ownerNames: owners.map((o) => o.name).join(' и '),
       bookCount: cnt?.n ?? 0,
       savedAt: r.savedAt,
+      preview,
+      boardColor: shelfTint(preview.map((b) => b.year)).color,
     })
   }
   return result

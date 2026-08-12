@@ -1,7 +1,7 @@
 import { and, asc, eq, max } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { book, library, shelf } from '@/db/schema/catalog'
+import { book, library, libraryMember, shelf } from '@/db/schema/catalog'
 import { AppError } from './errors'
 import { activeLoansFor } from './loans'
 import { assertMember } from './members'
@@ -144,4 +144,29 @@ export async function getShelfView(
       lentTo: lentMap.get(b.id)?.borrowerName ?? null,
     })),
   }
+}
+
+/** Все полки всех моих библиотек — для выбора цели шэринга. */
+export async function listAllMyShelves(
+  userId: string,
+): Promise<
+  Array<{ id: string; name: string; libraryId: string; libraryName: string }>
+> {
+  return db
+    .select({
+      id: shelf.id,
+      name: shelf.name,
+      libraryId: shelf.libraryId,
+      libraryName: library.name,
+    })
+    .from(shelf)
+    .innerJoin(library, eq(library.id, shelf.libraryId))
+    .innerJoin(
+      libraryMember,
+      and(
+        eq(libraryMember.libraryId, shelf.libraryId),
+        eq(libraryMember.userId, userId),
+      ),
+    )
+    .orderBy(asc(library.name), asc(shelf.position))
 }

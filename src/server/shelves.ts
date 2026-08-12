@@ -6,6 +6,7 @@ import {
   deleteShelf,
   getShelfView,
   updateShelf,
+  listAllMyShelves,
 } from '@/services/shelves'
 import { authMiddleware } from './middleware'
 
@@ -48,3 +49,7 @@ export const getShelfViewFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .validator(z.object({ shelfId: z.string() }))
   .handler(({ context, data }) => getShelfView(context.user.id, data.shelfId))
+
+export const listMyShelvesFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => listAllMyShelves(context.user.id))
