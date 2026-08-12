@@ -139,6 +139,10 @@ export const book = sqliteTable(
     refBookId: text('ref_book_id').references(() => refBook.id, {
       onDelete: 'set null',
     }),
+    /** Желание уровня произведения («Хочу» без выбора издания). */
+    refWorkId: text('ref_work_id').references(() => refWork.id, {
+      onDelete: 'set null',
+    }),
     status: text('status', {
       enum: ['in_library', 'wishlist', 'gifted', 'lost'],
     })
@@ -209,7 +213,11 @@ export const refWork = sqliteTable(
     title: text('title').notNull(),
     titleNorm: text('title_norm').notNull(),
     year: integer('year'),
+    /** «роман» / «повесть» / «рассказ» — подпись в шторке произведения. */
+    workType: text('work_type'),
     annotation: text('annotation'),
+    /** Когда лениво подтянули издания; NULL — ещё не тянули. */
+    editionsFetchedAt: integer('editions_fetched_at', { mode: 'timestamp' }),
     fetchedAt: integer('fetched_at', { mode: 'timestamp' })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -218,6 +226,32 @@ export const refWork = sqliteTable(
   (t) => [
     uniqueIndex('ref_work_source_unique').on(t.source, t.sourceId),
     index('ref_work_title_norm_idx').on(t.titleNorm),
+  ],
+)
+
+/** Очередь фонового наполнения: щадящий воркер в server-процессе. */
+export const crawlTask = sqliteTable(
+  'crawl_task',
+  {
+    id: id(),
+    kind: text('kind', { enum: ['author-bibliography'] }).notNull(),
+    source: text('source', { enum: ['fantlab', 'openlibrary'] }).notNull(),
+    authorId: text('author_id')
+      .notNull()
+      .references(() => author.id, { onDelete: 'cascade' }),
+    status: text('status', { enum: ['pending', 'done', 'failed'] })
+      .notNull()
+      .default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    scheduledAt: integer('scheduled_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    doneAt: integer('done_at', { mode: 'timestamp' }),
+    error: text('error'),
+  },
+  (t) => [
+    uniqueIndex('crawl_task_unique').on(t.kind, t.source, t.authorId),
+    index('crawl_task_status_idx').on(t.status, t.scheduledAt),
   ],
 )
 

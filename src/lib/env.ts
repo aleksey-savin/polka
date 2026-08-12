@@ -7,6 +7,8 @@ const envSchema = z.object({
   APP_URL: z.url().default('http://localhost:3000'),
   BETTER_AUTH_SECRET: z.string().min(16).default(DEV_SECRET),
   GOOGLE_BOOKS_API_KEY: z.string().optional(),
+  /** Фоновое наполнение эталона ('0' — выключить). */
+  CRAWL_ENABLED: z.enum(['0', '1']).default('1'),
 })
 
 export const env = envSchema.parse(process.env)

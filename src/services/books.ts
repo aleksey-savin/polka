@@ -6,6 +6,7 @@ import {
   bookPersonal,
   bookTag,
   library,
+  refBook as refBookTable,
   series,
   shelf,
   tag,
@@ -44,6 +45,8 @@ export interface BookInput {
   heightMm?: number | null
   /** Зацепки FantLab-авторов из lookup — проставляют author.fantlabId. */
   fantlabAuthors?: Array<{ name: string; id: number }>
+  /** Желание уровня произведения («Хочу» из библиографии). */
+  refWorkId?: string | null
 }
 
 async function assertShelfInLibrary(
@@ -96,6 +99,7 @@ export async function createBook(
     .values({
       addedBy: userId,
       refBookId,
+      refWorkId: input.refWorkId ?? null,
       libraryId: placement.libraryId,
       shelfId: placement.shelfId,
       status: placement.status,
@@ -130,6 +134,22 @@ export async function createBook(
     } catch {
       // обложка — best-effort: карточка сохраняется и без неё
     }
+  } else if (refBookId) {
+    // обложка уже есть в эталоне — копия файла без похода в сеть
+    const { copyRefCoverToBook } = await import('./covers')
+    const [ref] = await db
+      .select({ coverPath: refBookTable.coverPath })
+      .from(refBookTable)
+      .where(eq(refBookTable.id, refBookId))
+    if (ref?.coverPath) {
+      const saved = await copyRefCoverToBook(created.id, ref.coverPath)
+      if (saved) {
+        await db
+          .update(book)
+          .set({ coverPath: saved.path, coverColor: saved.color })
+          .where(eq(book.id, created.id))
+      }
+    }
   }
   return created
 }
@@ -156,9 +176,14 @@ export async function updateBook(
   const seriesId = input.seriesName
     ? await resolveSeriesByName(userId, input.seriesName)
     : null
+  const refBookId =
+    !current.refBookId && input.isbn13?.trim()
+      ? await bestRefBookIdForIsbn(input.isbn13.trim())
+      : current.refBookId
   await db
     .update(book)
     .set({
+      refBookId,
       libraryId: placement.libraryId,
       shelfId: placement.shelfId,
       status:

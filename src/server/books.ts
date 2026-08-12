@@ -41,6 +41,7 @@ const bookInput = z.object({
   fantlabAuthors: z
     .array(z.object({ name: z.string(), id: z.number().int() }))
     .optional(),
+  refWorkId: z.string().nullable().optional(),
   heightMm: z.number().int().min(60).max(500).nullable().optional(),
 })
 

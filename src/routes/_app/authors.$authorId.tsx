@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -9,7 +9,10 @@ import { dateRu } from '@/lib/dates'
 import { plural } from '@/lib/plural'
 import { getAuthorPageFn } from '@/server/authors'
 import { createBookFn } from '@/server/books'
+import { fetchWorkEditionsFn, getWorkViewFn } from '@/server/reference'
 import { spineFor, textToneFor } from '@/services/spine'
+import type { WorkView } from '@/services/reference'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 
 export const Route = createFileRoute('/_app/authors/$authorId')({
   loader: ({ params }) =>
@@ -28,12 +31,18 @@ function AuthorPage() {
   const router = useRouter()
   const [bioOpen, setBioOpen] = useState(false)
   const [wishBusy, setWishBusy] = useState<string | null>(null)
+  const [openWorkId, setOpenWorkId] = useState<string | null>(null)
 
   async function addToWishlist(workId: string, title: string) {
     setWishBusy(workId)
     try {
       await createBookFn({
-        data: { title, authors: author.name, wishlist: true },
+        data: {
+          title,
+          authors: author.name,
+          wishlist: true,
+          refWorkId: workId,
+        },
       })
       toast.success(`«${title}» — в списке «Хочу»`)
       void router.invalidate()
@@ -198,7 +207,16 @@ function AuthorPage() {
             {author.bibliography.map((w) => (
               <div
                 key={w.id}
-                className="flex items-center gap-3 border-t py-2 first:border-t-0"
+                role="button"
+                tabIndex={0}
+                className="flex cursor-pointer items-center gap-3 border-t py-2 select-none first:border-t-0"
+                onClick={() => setOpenWorkId(w.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setOpenWorkId(w.id)
+                  }
+                }}
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{w.title}</p>
@@ -212,22 +230,38 @@ function AuthorPage() {
                   <span className="flex-none rounded-[3px] border-[1.5px] border-primary px-1.5 font-mono text-[10px] tracking-[0.08em] text-accent-foreground uppercase">
                     есть
                   </span>
+                ) : w.wished ? (
+                  <span className="flex-none rounded-[3px] border-[1.5px] border-stamp px-1.5 font-mono text-[10px] tracking-[0.08em] text-stamp uppercase">
+                    в хочу
+                  </span>
                 ) : (
                   <Button
                     size="sm"
                     variant="outline"
                     className="flex-none text-accent-foreground"
                     loading={wishBusy === w.id}
-                    onClick={() => void addToWishlist(w.id, w.title)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void addToWishlist(w.id, w.title)
+                    }}
                   >
                     В «Хочу»
                   </Button>
                 )}
+                <span aria-hidden className="flex-none text-muted-foreground">
+                  ›
+                </span>
               </div>
             ))}
           </div>
         </section>
       )}
+
+      <WorkSheet
+        workId={openWorkId}
+        onClose={() => setOpenWorkId(null)}
+        onChanged={() => void router.invalidate()}
+      />
 
       {author.series.length > 0 && (
         <section className="mt-6">
@@ -255,5 +289,196 @@ function AuthorPage() {
         </section>
       )}
     </div>
+  )
+}
+
+/** Шторка произведения: аннотация и издания (ленивая загрузка в эталон). */
+function WorkSheet({
+  workId,
+  onClose,
+  onChanged,
+}: {
+  workId: string | null
+  onClose: () => void
+  onChanged: () => void
+}) {
+  const [view, setView] = useState<WorkView | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!workId) {
+      setView(null)
+      return
+    }
+    const alive = { current: true }
+    setLoading(true)
+    void getWorkViewFn({ data: { workId } })
+      .then(async (v) => {
+        if (!alive.current) return
+        setView(v)
+        if (!v.editionsFetched) {
+          const fetched = await fetchWorkEditionsFn({ data: { workId } })
+          if (alive.current) setView(fetched)
+        }
+      })
+      .finally(() => {
+        if (alive.current) setLoading(false)
+      })
+    return () => {
+      alive.current = false
+    }
+  }, [workId])
+
+  async function wish(edition?: WorkView['editions'][number]) {
+    if (!view) return
+    setBusyId(edition?.refBookId ?? 'work')
+    try {
+      await createBookFn({
+        data: edition
+          ? {
+              title: edition.title,
+              authors: view.authorName,
+              publisher: edition.publisher ?? undefined,
+              year: edition.year,
+              pages: edition.pages,
+              isbn13: edition.isbn13 ?? undefined,
+              wishlist: true,
+              refWorkId: view.id,
+            }
+          : {
+              title: view.title,
+              authors: view.authorName,
+              wishlist: true,
+              refWorkId: view.id,
+            },
+      })
+      toast.success(`«${edition?.title ?? view.title}» — в списке «Хочу»`)
+      onClose()
+      onChanged()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <Dialog open={workId !== null} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="grid max-h-[86dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-md"
+      >
+        <div className="px-4 pt-2 pb-1">
+          <DialogTitle className="text-[19px] font-semibold">
+            {view?.title ?? '…'}
+          </DialogTitle>
+          {view && (
+            <p className="font-mono text-[11.5px] text-muted-foreground">
+              {[view.workType, view.year, view.authorName]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          )}
+          {view?.annotation && (
+            <p className="mt-2 line-clamp-3 text-[13.5px] leading-relaxed text-muted-foreground">
+              {view.annotation}
+            </p>
+          )}
+        </div>
+
+        <div className="overflow-y-auto px-4 py-2">
+          {loading || (view && !view.editionsFetched) ? (
+            <p className="flex items-center gap-2.5 py-4 text-sm text-muted-foreground">
+              <span
+                aria-hidden
+                className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent"
+              />
+              Ищем издания…
+            </p>
+          ) : view && view.editions.length > 0 ? (
+            view.editions.map((e) => {
+              const look = spineFor(e.title, e.pages)
+              return (
+                <div
+                  key={e.refBookId}
+                  className="flex items-center gap-3 border-t py-2.5 first:border-t-0"
+                >
+                  {e.coverPath ? (
+                    <img
+                      src={`/api/ref-covers/${e.refBookId}`}
+                      alt=""
+                      loading="lazy"
+                      className="h-14 w-[38px] flex-none rounded-[3px] object-cover shadow-sm"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="h-14 w-[24px] flex-none rounded-[3px]"
+                      style={{
+                        background: e.coverColor ?? look.color,
+                        boxShadow: 'inset 1.5px 0 0 rgba(255,255,255,.35)',
+                      }}
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13.5px] font-semibold">
+                      {e.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {e.publisher && `${e.publisher} · `}
+                      {e.year && (
+                        <span className="font-mono text-[11.5px]">
+                          {e.year}
+                        </span>
+                      )}
+                      {e.pages && (
+                        <>
+                          {' · '}
+                          <span className="font-mono text-[11.5px]">
+                            {e.pages}
+                          </span>{' '}
+                          с.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  {e.have ? (
+                    <span className="flex-none rounded-[3px] border-[1.5px] border-primary px-1.5 font-mono text-[10px] tracking-[0.08em] text-accent-foreground uppercase">
+                      есть
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-none text-accent-foreground"
+                      loading={busyId === e.refBookId}
+                      onClick={() => void wish(e)}
+                    >
+                      В «Хочу»
+                    </Button>
+                  )}
+                </div>
+              )
+            })
+          ) : (
+            <p className="py-4 text-sm text-muted-foreground">
+              Изданий в каталоге Полки пока нет.
+            </p>
+          )}
+        </div>
+
+        <div className="border-t bg-card px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            className="flex min-h-[46px] w-full items-center justify-center rounded-xl border-[1.5px] border-dashed border-primary/45 text-sm font-semibold text-accent-foreground disabled:opacity-60"
+            disabled={busyId === 'work'}
+            onClick={() => void wish()}
+          >
+            В «Хочу» без выбора издания
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

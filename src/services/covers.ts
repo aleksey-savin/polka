@@ -171,3 +171,105 @@ export async function extractCoverAccent(
     return null
   }
 }
+
+/** Обложка эталонного издания: тот же пайплайн, папка covers-ref. */
+export async function saveRefCoverFromUrl(
+  refBookId: string,
+  url: string,
+): Promise<SavedCover | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': POLKA_USER_AGENT },
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!res.ok) return null
+    const bytes = await res.arrayBuffer()
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) return null
+    const dir = join(env.DATA_DIR, 'covers-ref')
+    mkdirSync(dir, { recursive: true })
+    const tmpPath = join(dir, `${refBookId}.orig`)
+    const outPath = join(dir, `${refBookId}.webp`)
+    await Bun.write(tmpPath, bytes)
+    try {
+      await Bun.file(tmpPath)
+        .image()
+        .resize(600, 900, { fit: 'inside' })
+        .webp({ quality: 82 })
+        .write(outPath)
+    } finally {
+      await Bun.file(tmpPath)
+        .delete()
+        .catch(() => {})
+    }
+    const color = await extractCoverAccent(outPath)
+    return { path: `covers-ref/${refBookId}.webp`, color }
+  } catch {
+    return null
+  }
+}
+
+export function refCoverAbsolutePath(relativePath: string): string {
+  if (!/^covers-ref\/[\w-]+\.webp$/.test(relativePath)) {
+    throw new AppError('Некорректный путь обложки', 'invalid')
+  }
+  return join(env.DATA_DIR, relativePath)
+}
+
+/** Копия эталонной обложки в книгу пользователя (без сети). */
+export async function copyRefCoverToBook(
+  bookId: string,
+  refCoverPath: string,
+): Promise<SavedCover | null> {
+  try {
+    const src = refCoverAbsolutePath(refCoverPath)
+    if (!(await Bun.file(src).exists())) return null
+    const outPath = join(coversDir(), `${bookId}.webp`)
+    await Bun.write(outPath, Bun.file(src))
+    const color = await extractCoverAccent(outPath)
+    return { path: `covers/${bookId}.webp`, color }
+  } catch {
+    return null
+  }
+}
+
+/** Портрет автора: маленький webp в data/authors. */
+export async function saveAuthorPhotoFromUrl(
+  authorId: string,
+  url: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': POLKA_USER_AGENT },
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!res.ok) return null
+    const bytes = await res.arrayBuffer()
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) return null
+    const dir = join(env.DATA_DIR, 'authors')
+    mkdirSync(dir, { recursive: true })
+    const tmpPath = join(dir, `${authorId}.orig`)
+    const outPath = join(dir, `${authorId}.webp`)
+    await Bun.write(tmpPath, bytes)
+    try {
+      await Bun.file(tmpPath)
+        .image()
+        .resize(240, 320, { fit: 'inside' })
+        .webp({ quality: 80 })
+        .write(outPath)
+    } finally {
+      await Bun.file(tmpPath)
+        .delete()
+        .catch(() => {})
+    }
+    return `authors/${authorId}.webp`
+  } catch {
+    return null
+  }
+}
+
+export function authorPhotoAbsolutePath(relativePath: string): string {
+  if (!/^authors\/[\w-]+\.webp$/.test(relativePath)) {
+    throw new AppError('Некорректный путь фото', 'invalid')
+  }
+  return join(env.DATA_DIR, relativePath)
+}

@@ -33,7 +33,9 @@ import { Route as AppSeriesSeriesIdRouteImport } from './routes/_app/series.$ser
 import { Route as AppShelvesShelfIdRouteImport } from './routes/_app/shelves.$shelfId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as ApiCoversBookIdRouteImport } from './routes/api/covers.$bookId'
+import { Route as ApiRefCoversRefBookIdRouteImport } from './routes/api/ref-covers.$refBookId'
 import { Route as AppBooksBookIdEditRouteImport } from './routes/_app/books_.$bookId.edit'
+import { Route as ApiAuthorsAuthorIdPhotoRouteImport } from './routes/api/authors.$authorId.photo'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -154,10 +156,20 @@ const ApiCoversBookIdRoute = ApiCoversBookIdRouteImport.update({
   path: '/api/covers/$bookId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRefCoversRefBookIdRoute = ApiRefCoversRefBookIdRouteImport.update({
+  id: '/api/ref-covers/$refBookId',
+  path: '/api/ref-covers/$refBookId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppBooksBookIdEditRoute = AppBooksBookIdEditRouteImport.update({
   id: '/books_/$bookId/edit',
   path: '/books/$bookId/edit',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiAuthorsAuthorIdPhotoRoute = ApiAuthorsAuthorIdPhotoRouteImport.update({
+  id: '/api/authors/$authorId/photo',
+  path: '/api/authors/$authorId/photo',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -181,10 +193,12 @@ export interface FileRoutesByFullPath {
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/covers/$bookId': typeof ApiCoversBookIdRoute
+  '/api/ref-covers/$refBookId': typeof ApiRefCoversRefBookIdRoute
   '/books/': typeof AppBooksIndexRoute
   '/libraries/': typeof AppLibrariesIndexRoute
   '/series/': typeof AppSeriesIndexRoute
   '/books/$bookId/edit': typeof AppBooksBookIdEditRoute
+  '/api/authors/$authorId/photo': typeof ApiAuthorsAuthorIdPhotoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -207,10 +221,12 @@ export interface FileRoutesByTo {
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/covers/$bookId': typeof ApiCoversBookIdRoute
+  '/api/ref-covers/$refBookId': typeof ApiRefCoversRefBookIdRoute
   '/books': typeof AppBooksIndexRoute
   '/libraries': typeof AppLibrariesIndexRoute
   '/series': typeof AppSeriesIndexRoute
   '/books/$bookId/edit': typeof AppBooksBookIdEditRoute
+  '/api/authors/$authorId/photo': typeof ApiAuthorsAuthorIdPhotoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -235,10 +251,12 @@ export interface FileRoutesById {
   '/_app/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/covers/$bookId': typeof ApiCoversBookIdRoute
+  '/api/ref-covers/$refBookId': typeof ApiRefCoversRefBookIdRoute
   '/_app/books/': typeof AppBooksIndexRoute
   '/_app/libraries/': typeof AppLibrariesIndexRoute
   '/_app/series/': typeof AppSeriesIndexRoute
   '/_app/books_/$bookId/edit': typeof AppBooksBookIdEditRoute
+  '/api/authors/$authorId/photo': typeof ApiAuthorsAuthorIdPhotoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -263,10 +281,12 @@ export interface FileRouteTypes {
     | '/shelves/$shelfId'
     | '/api/auth/$'
     | '/api/covers/$bookId'
+    | '/api/ref-covers/$refBookId'
     | '/books/'
     | '/libraries/'
     | '/series/'
     | '/books/$bookId/edit'
+    | '/api/authors/$authorId/photo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -289,10 +309,12 @@ export interface FileRouteTypes {
     | '/shelves/$shelfId'
     | '/api/auth/$'
     | '/api/covers/$bookId'
+    | '/api/ref-covers/$refBookId'
     | '/books'
     | '/libraries'
     | '/series'
     | '/books/$bookId/edit'
+    | '/api/authors/$authorId/photo'
   id:
     | '__root__'
     | '/'
@@ -316,10 +338,12 @@ export interface FileRouteTypes {
     | '/_app/shelves/$shelfId'
     | '/api/auth/$'
     | '/api/covers/$bookId'
+    | '/api/ref-covers/$refBookId'
     | '/_app/books/'
     | '/_app/libraries/'
     | '/_app/series/'
     | '/_app/books_/$bookId/edit'
+    | '/api/authors/$authorId/photo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -331,6 +355,8 @@ export interface RootRouteChildren {
   STokenRoute: typeof STokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCoversBookIdRoute: typeof ApiCoversBookIdRoute
+  ApiRefCoversRefBookIdRoute: typeof ApiRefCoversRefBookIdRoute
+  ApiAuthorsAuthorIdPhotoRoute: typeof ApiAuthorsAuthorIdPhotoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -503,12 +529,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCoversBookIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ref-covers/$refBookId': {
+      id: '/api/ref-covers/$refBookId'
+      path: '/api/ref-covers/$refBookId'
+      fullPath: '/api/ref-covers/$refBookId'
+      preLoaderRoute: typeof ApiRefCoversRefBookIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/books_/$bookId/edit': {
       id: '/_app/books_/$bookId/edit'
       path: '/books/$bookId/edit'
       fullPath: '/books/$bookId/edit'
       preLoaderRoute: typeof AppBooksBookIdEditRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/authors/$authorId/photo': {
+      id: '/api/authors/$authorId/photo'
+      path: '/api/authors/$authorId/photo'
+      fullPath: '/api/authors/$authorId/photo'
+      preLoaderRoute: typeof ApiAuthorsAuthorIdPhotoRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -564,6 +604,8 @@ const rootRouteChildren: RootRouteChildren = {
   STokenRoute: STokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCoversBookIdRoute: ApiCoversBookIdRoute,
+  ApiRefCoversRefBookIdRoute: ApiRefCoversRefBookIdRoute,
+  ApiAuthorsAuthorIdPhotoRoute: ApiAuthorsAuthorIdPhotoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

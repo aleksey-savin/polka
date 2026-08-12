@@ -33,4 +33,8 @@ if (existsSync(migrationsFolder)) {
   void import('@/services/authors')
     .then((m) => m.backfillAuthors())
     .catch(() => {})
+  // фоновое наполнение эталона (M15) — медленный воркер, CRAWL_ENABLED=0 выключает
+  void import('@/services/crawl')
+    .then((m) => m.startCrawlWorker())
+    .catch(() => {})
 }
