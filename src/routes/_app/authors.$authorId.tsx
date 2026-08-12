@@ -319,6 +319,7 @@ function WorkSheet({
         setView(v)
         if (!v.editionsFetched) {
           const fetched = await fetchWorkEditionsFn({ data: { workId } })
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- флаг мутируется в cleanup эффекта
           if (alive.current) setView(fetched)
         }
       })
