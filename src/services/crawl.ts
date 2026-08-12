@@ -4,6 +4,7 @@ import { db } from '@/db'
 import { author, crawlTask, refWorkAuthor } from '@/db/schema/catalog'
 import { env } from '@/lib/env'
 import { saveAuthorPhotoFromUrl } from './covers'
+import { stripBb } from './metadata/fantlab'
 import { stripHtml } from './metadata/types'
 import { ensureRefWork, linkWorkAuthor } from './reference'
 import { POLKA_USER_AGENT } from './userAgent'
@@ -118,7 +119,7 @@ async function crawlFantlabAuthor(authorRow: {
 
   const patch: Record<string, unknown> = {}
   if (typeof data.biography === 'string' && data.biography.trim())
-    patch.bio = stripHtml(data.biography)
+    patch.bio = stripHtml(stripBb(data.biography))
   const birth = yearOf(data.birthday)
   const death = yearOf(data.deathday)
   if (birth) patch.birthYear = birth
@@ -144,7 +145,9 @@ async function crawlFantlabAuthor(authorRow: {
   for (const block of Object.values(data.works_blocks ?? {})) {
     for (const w of block.list ?? []) {
       if (!w.work_id || !w.work_name) continue
-      if (w.lang_id !== undefined && w.lang_id !== 1) continue // только русские
+      // языкового фильтра здесь нет: lang_id — язык оригинала произведения
+      // (у переводных авторов не русский); русскоязычность отбирается на
+      // уровне изданий при ленивой загрузке
       if (w.work_type_name && NON_WORK_TYPES.test(w.work_type_name)) continue
       const workId = await ensureRefWork(
         'fantlab',
@@ -177,7 +180,7 @@ async function crawlOpenlibraryAuthor(authorRow: {
 
   const patch: Record<string, unknown> = {}
   const bio = typeof info.bio === 'string' ? info.bio : info.bio?.value
-  if (bio?.trim()) patch.bio = stripHtml(bio)
+  if (bio?.trim()) patch.bio = stripHtml(stripBb(bio))
   const birth = yearOf(info.birth_date)
   const death = yearOf(info.death_date)
   if (birth) patch.birthYear = birth
