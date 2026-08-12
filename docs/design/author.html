@@ -300,10 +300,39 @@
 
 <div class="page">
   <p class="crumbs">Каталог / Авторы</p>
-  <div class="head">
-    <h1>Сергей Довлатов</h1>
-    <span class="count">2 книги на полках · 5 в каталоге автора</span>
+  <div class="head" style="display: flex; gap: 14px; align-items: center">
+    <span
+      aria-hidden
+      style="
+        flex: none;
+        width: 56px;
+        height: 72px;
+        border-radius: 8px;
+        background: linear-gradient(160deg, #b7a894, #6d5f4e);
+        box-shadow: 0 4px 10px -5px rgba(35, 43, 56, 0.45);
+      "
+    ></span>
+    <div>
+      <h1>Сергей Довлатов</h1>
+      <span class="count">1941–1990 · Россия · 2 книги на полках</span>
+    </div>
   </div>
+  <p
+    style="
+      margin: 12px 0 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--ink-soft);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    "
+  >
+    Русский писатель и журналист. Проза Довлатова — короткая, точная,
+    смешная и горькая одновременно; с 1978 года жил и публиковался в
+    эмиграции в Нью-Йорке… <b style="color: var(--lamp-deep)">ещё</b>
+  </p>
 
   <div class="sec-label">На моих полках <span class="n">· 2</span></div>
   <div class="my-row">
@@ -341,7 +370,7 @@
       <p class="ref-title">Компромисс</p>
       <p class="ref-sub">Азбука · <span class="num">2019</span> · <span class="num">224</span> с.</p>
     </div>
-    <button class="ref-add" type="button">+ Себе</button>
+    <button class="ref-add" type="button">В «Хочу»</button>
   </div>
   <div class="ref-row">
     <span class="ref-spine" style="--c: #d8cbd4"></span>
@@ -349,7 +378,7 @@
       <p class="ref-title">Чемодан</p>
       <p class="ref-sub">Азбука · <span class="num">2021</span> · <span class="num">160</span> с.</p>
     </div>
-    <button class="ref-add" type="button">+ Себе</button>
+    <button class="ref-add" type="button">В «Хочу»</button>
   </div>
   <div class="ref-row">
     <span class="ref-spine" style="--c: #56201a"></span>
@@ -365,7 +394,7 @@
       <p class="ref-title">Иностранка</p>
       <p class="ref-sub">Азбука · <span class="num">2017</span> · <span class="num">192</span> с.</p>
     </div>
-    <button class="ref-add" type="button">+ Себе</button>
+    <button class="ref-add" type="button">В «Хочу»</button>
   </div>
 
   <aside class="mock-notes">
@@ -379,10 +408,15 @@
       автора» — чипы в каталог.
     </p>
     <p class="mock-note">
-      · «Другие книги автора» — из нашего эталонного каталога (M15, фоновое
-      наполнение): корешки-заглушки без внешних картинок, «+ Себе» открывает
-      предзаполненный черновик формы; уже имеющиеся издания помечены штампиком
-      «есть» (по ISBN). До первого фонового прохода секции нет.
+      · «Другие книги автора» — из эталонного каталога (M15): корешки-заглушки
+      без внешних картинок; «В «Хочу»» — один тап, книга падает в виш-лист со
+      всеми данными и скачанной обложкой; уже имеющиеся издания помечены
+      штампиком «есть» (по ISBN). До первого фонового прохода секции нет.
+    </p>
+    <p class="mock-note">
+      · Шапка: фото, годы жизни и страна — из FantLab (отдаёт всегда), био —
+      из FantLab/OpenLibrary, у кого есть (у Довлатова на FantLab пусто —
+      блок тогда скрыт). Свёрнуто до 3 строк, «ещё» разворачивает.
     </p>
     <p class="mock-note">
       · Правок автора на странице нет — сущность эталонная; имя меняется
