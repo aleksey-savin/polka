@@ -38,6 +38,54 @@ const WORK_TYPE_RU: Record<string, string> = {
 const workTypeRu = (t: string | null) =>
   t ? (WORK_TYPE_RU[t.toLowerCase()] ?? t) : null
 
+/** Группы библиографии: порядок и заголовки во множественном числе. */
+const TYPE_ORDER = [
+  'роман',
+  'роман-эпопея',
+  'повесть',
+  'рассказ',
+  'микрорассказ',
+  'сборник',
+  'поэма',
+  'пьеса',
+  'киносценарий',
+  'документальное',
+]
+const TYPE_PLURAL: Record<string, string> = {
+  роман: 'Романы',
+  'роман-эпопея': 'Романы-эпопеи',
+  повесть: 'Повести',
+  рассказ: 'Рассказы',
+  микрорассказ: 'Микрорассказы',
+  сборник: 'Сборники',
+  поэма: 'Поэмы',
+  пьеса: 'Пьесы',
+  киносценарий: 'Киносценарии',
+  документальное: 'Документальное',
+}
+
+function groupBibliography<T extends { workType: string | null }>(
+  rows: Array<T>,
+): Array<{ label: string; items: Array<T> }> {
+  const groups = new Map<string, Array<T>>()
+  for (const row of rows) {
+    const key = (workTypeRu(row.workType) ?? 'другое').toLowerCase()
+    const list = groups.get(key) ?? []
+    list.push(row)
+    groups.set(key, list)
+  }
+  return [...groups.entries()]
+    .sort((a, b) => {
+      const ia = a[0] === 'другое' ? 999 : TYPE_ORDER.indexOf(a[0])
+      const ib = b[0] === 'другое' ? 999 : TYPE_ORDER.indexOf(b[0])
+      return (ia === -1 ? 500 : ia) - (ib === -1 ? 500 : ib)
+    })
+    .map(([key, items]) => ({
+      label: TYPE_PLURAL[key] ?? key.charAt(0).toUpperCase() + key.slice(1),
+      items,
+    }))
+}
+
 const STATUS_NOTE: Record<string, string> = {
   wishlist: 'в списке «Хочу»',
   gifted: 'подарена',
@@ -222,53 +270,64 @@ function AuthorPage() {
             <span className="text-stamp">· {author.bibliography.length}</span>
           </SectionLabel>
           <div>
-            {author.bibliography.map((w) => (
-              <div
-                key={w.id}
-                role="button"
-                tabIndex={0}
-                className="flex cursor-pointer items-center gap-3 border-t py-2 select-none first:border-t-0"
-                onClick={() => setOpenWorkId(w.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    setOpenWorkId(w.id)
-                  }
-                }}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{w.title}</p>
-                </div>
-                {w.year && (
-                  <span className="flex-none font-mono text-xs text-muted-foreground">
-                    {w.year}
-                  </span>
-                )}
-                {w.have ? (
-                  <span className="flex-none rounded-[3px] border-[1.5px] border-primary px-1.5 font-mono text-[10px] tracking-[0.08em] text-accent-foreground uppercase">
-                    есть
-                  </span>
-                ) : w.wished ? (
-                  <span className="flex-none rounded-[3px] border-[1.5px] border-stamp px-1.5 font-mono text-[10px] tracking-[0.08em] text-stamp uppercase">
-                    в хочу
-                  </span>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-none text-accent-foreground"
-                    loading={wishBusy === w.id}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void addToWishlist(w.id, w.title)
+            {groupBibliography(author.bibliography).map((group) => (
+              <div key={group.label} className="mb-3 last:mb-0">
+                <h3 className="mt-3 mb-1 font-mono text-[10.5px] font-medium tracking-[0.1em] text-muted-foreground uppercase first:mt-1">
+                  {group.label}{' '}
+                  <span className="text-stamp">· {group.items.length}</span>
+                </h3>
+                {group.items.map((w) => (
+                  <div
+                    key={w.id}
+                    role="button"
+                    tabIndex={0}
+                    className="flex cursor-pointer items-center gap-3 border-t py-2 select-none first:border-t-0"
+                    onClick={() => setOpenWorkId(w.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setOpenWorkId(w.id)
+                      }
                     }}
                   >
-                    В «Хочу»
-                  </Button>
-                )}
-                <span aria-hidden className="flex-none text-muted-foreground">
-                  ›
-                </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{w.title}</p>
+                    </div>
+                    {w.year && (
+                      <span className="flex-none font-mono text-xs text-muted-foreground">
+                        {w.year}
+                      </span>
+                    )}
+                    {w.have ? (
+                      <span className="flex-none rounded-[3px] border-[1.5px] border-primary px-1.5 font-mono text-[10px] tracking-[0.08em] text-accent-foreground uppercase">
+                        есть
+                      </span>
+                    ) : w.wished ? (
+                      <span className="flex-none rounded-[3px] border-[1.5px] border-stamp px-1.5 font-mono text-[10px] tracking-[0.08em] text-stamp uppercase">
+                        в хочу
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-none text-accent-foreground"
+                        loading={wishBusy === w.id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void addToWishlist(w.id, w.title)
+                        }}
+                      >
+                        В «Хочу»
+                      </Button>
+                    )}
+                    <span
+                      aria-hidden
+                      className="flex-none text-muted-foreground"
+                    >
+                      ›
+                    </span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -324,8 +383,10 @@ function WorkSheet({
   const [loading, setLoading] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [openEditionId, setOpenEditionId] = useState<string | null>(null)
+  const [annoOpen, setAnnoOpen] = useState(false)
 
   useEffect(() => {
+    setAnnoOpen(false)
     if (!workId) {
       setView(null)
       return
@@ -401,9 +462,24 @@ function WorkSheet({
             </p>
           )}
           {view?.annotation && (
-            <p className="mt-2 line-clamp-3 text-[13.5px] leading-relaxed whitespace-pre-line text-muted-foreground">
-              {view.annotation}
-            </p>
+            <>
+              <p
+                className={`mt-2 text-[13.5px] leading-relaxed whitespace-pre-line text-muted-foreground ${
+                  annoOpen ? '' : 'line-clamp-3'
+                }`}
+              >
+                {view.annotation}
+              </p>
+              {view.annotation.length > 180 && (
+                <button
+                  type="button"
+                  className="mt-1 text-[13px] font-semibold text-accent-foreground"
+                  onClick={() => setAnnoOpen((v) => !v)}
+                >
+                  {annoOpen ? 'свернуть' : 'читать полностью'}
+                </button>
+              )}
+            </>
           )}
         </div>
 
