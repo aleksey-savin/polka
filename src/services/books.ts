@@ -17,6 +17,7 @@ import { assertMember, memberLibraryIds } from './members'
 import { normalizeForSearch } from './search'
 import { resolveSeriesByName, sanitizeLike } from './series'
 import { bookAuthorLinks, syncBookAuthors } from './authors'
+import { bestRefBookIdForIsbn } from './reference'
 import { setBookTags } from './tags'
 
 export interface BookInput {
@@ -87,10 +88,14 @@ export async function createBook(
   const seriesId = input.seriesName
     ? await resolveSeriesByName(userId, input.seriesName)
     : null
+  const refBookId = input.isbn13?.trim()
+    ? await bestRefBookIdForIsbn(input.isbn13.trim())
+    : null
   const [created] = await db
     .insert(book)
     .values({
       addedBy: userId,
+      refBookId,
       libraryId: placement.libraryId,
       shelfId: placement.shelfId,
       status: placement.status,

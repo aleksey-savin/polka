@@ -1,10 +1,14 @@
 import { useState } from 'react'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { toast } from 'sonner'
 
 import { SectionLabel } from '@/components/layout/SectionLabel'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { dateRu } from '@/lib/dates'
 import { plural } from '@/lib/plural'
 import { getAuthorPageFn } from '@/server/authors'
+import { createBookFn } from '@/server/books'
 import { spineFor, textToneFor } from '@/services/spine'
 
 export const Route = createFileRoute('/_app/authors/$authorId')({
@@ -21,7 +25,24 @@ const STATUS_NOTE: Record<string, string> = {
 
 function AuthorPage() {
   const author = Route.useLoaderData()
+  const router = useRouter()
   const [bioOpen, setBioOpen] = useState(false)
+  const [wishBusy, setWishBusy] = useState<string | null>(null)
+
+  async function addToWishlist(workId: string, title: string) {
+    setWishBusy(workId)
+    try {
+      await createBookFn({
+        data: { title, authors: author.name, wishlist: true },
+      })
+      toast.success(`«${title}» — в списке «Хочу»`)
+      void router.invalidate()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setWishBusy(null)
+    }
+  }
 
   const years =
     author.birthYear || author.deathYear
@@ -156,6 +177,55 @@ function AuthorPage() {
               boxShadow: '0 3px 6px -2px rgba(35,43,56,.22)',
             }}
           />
+        </section>
+      )}
+
+      {author.bibliography.length > 0 && (
+        <section className="mt-6">
+          <SectionLabel
+            trailing={
+              author.refUpdatedAt ? (
+                <span className="font-sans text-[11px] font-normal tracking-normal normal-case">
+                  из каталога Полки · {dateRu(author.refUpdatedAt)}
+                </span>
+              ) : undefined
+            }
+          >
+            Библиография{' '}
+            <span className="text-stamp">· {author.bibliography.length}</span>
+          </SectionLabel>
+          <div>
+            {author.bibliography.map((w) => (
+              <div
+                key={w.id}
+                className="flex items-center gap-3 border-t py-2 first:border-t-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{w.title}</p>
+                </div>
+                {w.year && (
+                  <span className="flex-none font-mono text-xs text-muted-foreground">
+                    {w.year}
+                  </span>
+                )}
+                {w.have ? (
+                  <span className="flex-none rounded-[3px] border-[1.5px] border-primary px-1.5 font-mono text-[10px] tracking-[0.08em] text-accent-foreground uppercase">
+                    есть
+                  </span>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-none text-accent-foreground"
+                    loading={wishBusy === w.id}
+                    onClick={() => void addToWishlist(w.id, w.title)}
+                  >
+                    В «Хочу»
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
         </section>
       )}
 

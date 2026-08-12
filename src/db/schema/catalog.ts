@@ -135,6 +135,10 @@ export const book = sqliteTable(
       .default(false),
     /** Высота книги в мм (из FantLab format_mm или руками) — высота корешка. */
     heightMm: integer('height_mm'),
+    /** Издание эталонного каталога, из которого создан экземпляр. */
+    refBookId: text('ref_book_id').references(() => refBook.id, {
+      onDelete: 'set null',
+    }),
     status: text('status', {
       enum: ['in_library', 'wishlist', 'gifted', 'lost'],
     })
@@ -189,6 +193,117 @@ export const bookAuthor = sqliteTable(
   (t) => [
     primaryKey({ columns: [t.bookId, t.authorId] }),
     index('book_author_author_idx').on(t.authorId),
+  ],
+)
+
+/* ── Эталонный каталог (M14): неизменяемые справочные данные ──
+   ref_work — произведение, ref_book — издание; сборники связывают их M:N.
+   Пользователь эталон не редактирует; правки живут в его book-копиях. */
+
+export const refWork = sqliteTable(
+  'ref_work',
+  {
+    id: id(),
+    source: text('source', { enum: ['fantlab', 'openlibrary'] }).notNull(),
+    sourceId: text('source_id').notNull(),
+    title: text('title').notNull(),
+    titleNorm: text('title_norm').notNull(),
+    year: integer('year'),
+    annotation: text('annotation'),
+    fetchedAt: integer('fetched_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('ref_work_source_unique').on(t.source, t.sourceId),
+    index('ref_work_title_norm_idx').on(t.titleNorm),
+  ],
+)
+
+export const refWorkAuthor = sqliteTable(
+  'ref_work_author',
+  {
+    workId: text('work_id')
+      .notNull()
+      .references(() => refWork.id, { onDelete: 'cascade' }),
+    authorId: text('author_id')
+      .notNull()
+      .references(() => author.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.workId, t.authorId] }),
+    index('ref_work_author_author_idx').on(t.authorId),
+  ],
+)
+
+export const refBook = sqliteTable(
+  'ref_book',
+  {
+    id: id(),
+    source: text('source', {
+      enum: ['fantlab', 'google', 'openlibrary'],
+    }).notNull(),
+    sourceRef: text('source_ref').notNull(),
+    isbn13: text('isbn13'),
+    isbn10: text('isbn10'),
+    title: text('title').notNull(),
+    titleNorm: text('title_norm').notNull(),
+    authors: text('authors').notNull().default(''),
+    publisher: text('publisher'),
+    year: integer('year'),
+    pages: integer('pages'),
+    heightMm: integer('height_mm'),
+    coverType: text('cover_type', { enum: ['soft', 'hard'] }),
+    language: text('language').notNull().default('ru'),
+    annotation: text('annotation'),
+    seriesName: text('series_name'),
+    coverUrl: text('cover_url'),
+    coverPath: text('cover_path'),
+    coverColor: text('cover_color'),
+    rawJson: text('raw_json'),
+    fetchedAt: integer('fetched_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('ref_book_source_unique').on(t.source, t.sourceRef),
+    index('ref_book_isbn13_idx').on(t.isbn13),
+  ],
+)
+
+export const refBookWork = sqliteTable(
+  'ref_book_work',
+  {
+    refBookId: text('ref_book_id')
+      .notNull()
+      .references(() => refBook.id, { onDelete: 'cascade' }),
+    workId: text('work_id')
+      .notNull()
+      .references(() => refWork.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.refBookId, t.workId] }),
+    index('ref_book_work_work_idx').on(t.workId),
+  ],
+)
+
+export const refBookAuthor = sqliteTable(
+  'ref_book_author',
+  {
+    refBookId: text('ref_book_id')
+      .notNull()
+      .references(() => refBook.id, { onDelete: 'cascade' }),
+    authorId: text('author_id')
+      .notNull()
+      .references(() => author.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.refBookId, t.authorId] }),
+    index('ref_book_author_author_idx').on(t.authorId),
   ],
 )
 

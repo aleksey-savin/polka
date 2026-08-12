@@ -14,6 +14,8 @@ import { db } from '@/db'
 import { author, book, bookAuthor, series } from '@/db/schema/catalog'
 import { AppError } from './errors'
 import { memberLibraryIds } from './members'
+import { authorBibliography, authorRefUpdatedAt } from './reference'
+import type { BibliographyRow } from './reference'
 import { normalizeForSearch } from './search'
 
 /** Разрез строки «Фамилия Имя; Фамилия Имя» на имена. */
@@ -112,6 +114,8 @@ export interface AuthorPage {
     status: string
   }>
   series: Array<{ id: string; name: string; bookCount: number }>
+  bibliography: Array<BibliographyRow>
+  refUpdatedAt: Date | null
 }
 
 /** Страница автора: его книги на моих полках и серии. */
@@ -166,6 +170,11 @@ export async function getAuthorPage(
     }
   }
 
+  const [bibliography, refUpdatedAt] = await Promise.all([
+    authorBibliography(userId, authorId),
+    authorRefUpdatedAt(authorId),
+  ])
+
   return {
     id: row.id,
     name: row.name,
@@ -176,6 +185,8 @@ export async function getAuthorPage(
     photoPath: row.photoPath,
     myBooks: myBooks.map(({ seriesId: _s, seriesName: _n, ...b }) => b),
     series: [...seriesMap.values()],
+    bibliography,
+    refUpdatedAt,
   }
 }
 

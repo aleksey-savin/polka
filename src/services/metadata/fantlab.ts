@@ -62,6 +62,10 @@ export function parseFantlabSearch(
  * ВАЖНО: поле `description` издания — примечания («Внецикловый роман»,
  * иллюстратор…), НЕ аннотация; настоящая аннотация — у произведения (/work).
  */
+/** Типы содержимого, не являющиеся произведениями для библиографии. */
+const NON_WORK_TYPES =
+  /стать|предислов|послеслов|коммент|интервью|примечан|указател/i
+
 export function parseFantlabEdition(json: unknown): {
   extra: Partial<MetadataDraft>
   workId: number | null
@@ -95,17 +99,23 @@ export function parseFantlabEdition(json: unknown): {
 
   let workId: number | null =
     typeof e.edition_work_id === 'number' ? e.edition_work_id : null
-  if (workId === null && Array.isArray(e.content)) {
-    // В content ссылки вида <a href="/work569">; аннотацию берём только
-    // если произведение в издании ровно одно (иначе это сборник).
-    const ids = new Set<string>()
+  if (Array.isArray(e.content)) {
+    // Строки вида « Автор. <a href="/work569">Название</a> (повесть), стр…» —
+    // собираем произведения для эталонного каталога (без статей/предисловий).
+    const works: Array<{ id: number; title: string; author?: string }> = []
     for (const line of e.content) {
       if (typeof line !== 'string') continue
-      for (const match of line.matchAll(/\/work(\d+)/g)) {
-        if (match[1]) ids.add(match[1])
-      }
+      const m = /<a href="\/work(\d+)">([^<]+)<\/a>\s*(\(([^)]*)\))?/.exec(line)
+      if (!m || !m[1] || !m[2]) continue
+      if (m[4] && NON_WORK_TYPES.test(m[4])) continue
+      const author = line.split('<a')[0]?.trim().replace(/\.$/, '') || undefined
+      works.push({ id: Number(m[1]), title: m[2].trim(), author })
     }
-    if (ids.size === 1) workId = Number([...ids][0])
+    if (works.length > 0) extra.fantlabWorks = works
+    // аннотацию произведения берём только когда оно в издании ровно одно
+    if (workId === null && works.length === 1 && works[0]) {
+      workId = works[0].id
+    }
   }
   return { extra, workId }
 }
@@ -135,6 +145,7 @@ export async function fetchFantlab(
 
     let extra: Partial<MetadataDraft> = {}
     if (parsed.editionId !== null) {
+      parsed.draft.sourceRef = String(parsed.editionId)
       try {
         const editionRes = await fetch(
           `${BASE}/edition/${parsed.editionId}/extended`,

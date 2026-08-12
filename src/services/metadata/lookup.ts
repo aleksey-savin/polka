@@ -5,6 +5,7 @@ import { book } from '@/db/schema/catalog'
 import { lookupCache } from '@/db/schema/circulation'
 import { AppError } from '@/services/errors'
 import { parseIsbn } from '@/services/isbn'
+import { persistLookup, refLookup } from '@/services/reference'
 import { memberLibraryIds } from '@/services/members'
 import { fetchFantlab } from './fantlab'
 import { fetchGoogleBooks } from './googleBooks'
@@ -87,6 +88,18 @@ export async function lookupIsbn(
 
   const duplicates = await findDuplicates(userId, parsed.isbn13)
 
+  // эталонный каталог — первый и вечный источник (независимость от API)
+  const refResults = await refLookup(parsed.isbn13)
+  if (refResults && refResults.length > 0) {
+    const merged = mergeResults(refResults)
+    return {
+      ...merged,
+      ...parsed,
+      found: Boolean(merged.draft.title),
+      duplicates,
+    }
+  }
+
   const cached = await readCache(parsed.isbn13)
   if (cached) {
     return {
@@ -102,10 +115,18 @@ export async function lookupIsbn(
     fetchGoogleBooks(parsed.isbn13),
     fetchOpenLibrary(parsed.isbn13),
   ])
-  const merged = mergeResults(
-    settled.map((s) => (s.status === 'fulfilled' ? s.value : null)),
+  const sourceResults = settled.map((s) =>
+    s.status === 'fulfilled' ? s.value : null,
   )
-  if (merged.sources.length > 0) await writeCache(parsed.isbn13, merged)
+  const merged = mergeResults(sourceResults)
+  if (merged.sources.length > 0) {
+    await writeCache(parsed.isbn13, merged)
+    try {
+      await persistLookup(parsed.isbn13, parsed.isbn10, sourceResults)
+    } catch {
+      // эталон — best-effort: неудача записи не ломает добавление книги
+    }
+  }
 
   return {
     ...merged,

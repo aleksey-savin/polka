@@ -21,9 +21,10 @@ interface GbVolumeInfo {
 
 export function parseGoogleBooks(json: unknown): MetadataDraft | null {
   const items = (
-    json as { items?: Array<{ volumeInfo?: GbVolumeInfo }> } | null
+    json as { items?: Array<{ id?: string; volumeInfo?: GbVolumeInfo }> } | null
   )?.items
-  const info = items?.[0]?.volumeInfo
+  const first = items?.[0]
+  const info = first?.volumeInfo
   if (!info?.title) return null
   const draft: MetadataDraft = { title: info.title }
   if (info.authors?.length) draft.authors = info.authors.join('; ')

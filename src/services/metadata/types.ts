@@ -15,6 +15,10 @@ export interface MetadataDraft {
   coverType?: 'soft' | 'hard'
   /** Пары «имя — fantlabId» из BB-тегов [autor=…] поиска FantLab. */
   fantlabAuthors?: Array<{ name: string; id: number }>
+  /** Идентификатор записи в источнике (edition_id / volumeId / OL key). */
+  sourceRef?: string
+  /** Произведения издания из FantLab content — для эталонного каталога. */
+  fantlabWorks?: Array<{ id: number; title: string; author?: string }>
 }
 
 export type MetadataSource = 'fantlab' | 'google' | 'openlibrary'
