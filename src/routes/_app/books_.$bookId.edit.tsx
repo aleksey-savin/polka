@@ -31,6 +31,7 @@ function EditBookPage() {
     wishlist: book.status === 'wishlist',
     coverUrl: '',
     coverType: book.coverType ?? '',
+    giftEdition: book.giftEdition,
     heightMm: book.heightMm?.toString() ?? '',
   })
   const [busy, setBusy] = useState(false)

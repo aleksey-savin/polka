@@ -127,7 +127,7 @@
 }
 
 /* Переплёты корешков (гайдлайн «Живые полки»): --sc — цвет корешка.
-   hard: кант — крышки выступают сверху/снизу; gift: кант + золото;
+   hard: кант — крышки выступают сверху/снизу;
    .flat-* — те же книги лёжа в стопке «Неразобранное» (канты по бокам). */
 .spine-hard::before,
 .spine-hard::after {
@@ -143,22 +143,6 @@
   top: 0;
 }
 .spine-hard::after {
-  bottom: 0;
-}
-.spine-gift::before,
-.spine-gift::after {
-  content: '';
-  position: absolute;
-  left: -1.5px;
-  right: -1.5px;
-  height: 4px;
-  border-radius: 2px;
-  background: color-mix(in oklab, var(--sc) 62%, #232b38);
-}
-.spine-gift::before {
-  top: 0;
-}
-.spine-gift::after {
   bottom: 0;
 }
 .spine-soft {

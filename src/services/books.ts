@@ -37,7 +37,8 @@ export interface BookInput {
   wishlist?: boolean
   /** URL обложки из метаданных — скачается на диск при сохранении (best-effort). */
   coverUrl?: string
-  coverType?: 'soft' | 'hard' | 'gift' | null
+  coverType?: 'soft' | 'hard' | null
+  giftEdition?: boolean
   heightMm?: number | null
 }
 
@@ -102,6 +103,7 @@ export async function createBook(
       seriesId,
       seriesNumber: input.seriesNumber?.trim() || null,
       coverType: input.coverType ?? null,
+      giftEdition: input.giftEdition ?? false,
       heightMm: input.heightMm ?? null,
       titleNorm: normalizeForSearch(input.title),
       authorsNorm: normalizeForSearch(input.authors ?? ''),
@@ -166,6 +168,7 @@ export async function updateBook(
       seriesId,
       seriesNumber: input.seriesNumber?.trim() || null,
       coverType: input.coverType ?? null,
+      giftEdition: input.giftEdition ?? false,
       heightMm: input.heightMm ?? null,
       titleNorm: normalizeForSearch(input.title),
       authorsNorm: normalizeForSearch(input.authors ?? ''),
@@ -232,7 +235,8 @@ export interface BookCard {
   addedBy: string
   createdAt: Date
   hidden: boolean
-  coverType: 'soft' | 'hard' | 'gift' | null
+  coverType: 'soft' | 'hard' | null
+  giftEdition: boolean
   heightMm: number | null
 }
 
@@ -286,6 +290,7 @@ export async function getBookCard(
     createdAt: row.createdAt,
     hidden: row.hidden,
     coverType: row.coverType,
+    giftEdition: row.giftEdition,
     heightMm: row.heightMm,
   }
 }

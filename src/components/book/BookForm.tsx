@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { SeriesCombobox } from '@/components/book/SeriesCombobox'
 import { TagsInput } from '@/components/book/TagsInput'
+import { ActionMenu } from '@/components/ui/action-menu'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,7 +28,10 @@ export interface BookFormValue {
   wishlist: boolean
   /** Обложка из найденных метаданных — скачается при сохранении. */
   coverUrl: string
-  coverType: '' | 'soft' | 'hard' | 'gift'
+  coverType: '' | 'soft' | 'hard'
+  /** Подарочное издание — тип издания, влияет на габариты корешка. */
+  giftEdition: boolean
+  /** Высота в мм: поля в форме нет, значение живёт из FantLab. */
   heightMm: string
 }
 
@@ -49,6 +53,7 @@ export const EMPTY_BOOK_FORM: BookFormValue = {
   wishlist: false,
   coverUrl: '',
   coverType: '',
+  giftEdition: false,
   heightMm: '',
 }
 
@@ -72,8 +77,51 @@ export function toBookInput(v: BookFormValue) {
     wishlist: v.wishlist,
     coverUrl: v.coverUrl || undefined,
     coverType: v.coverType || null,
+    giftEdition: v.giftEdition,
     heightMm: v.heightMm ? Number(v.heightMm) : null,
   }
+}
+
+export interface FormSecondaryAction {
+  key: string
+  label: string
+  danger?: boolean
+  onSelect: () => void
+}
+
+const BINDING_OPTIONS = [
+  ['', 'Не знаю'],
+  ['soft', 'Мягкая обложка'],
+  ['hard', 'Твёрдый переплёт'],
+] as const
+
+/** Поля ≥48px со шрифтом 16px — iOS не зумит форму. */
+const FIELD = 'h-12 rounded-xl text-[16px]'
+
+function SwitchRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card px-3.5 py-3 text-[14.5px] select-none">
+      {label}
+      <input
+        type="checkbox"
+        className="peer sr-only"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span
+        aria-hidden
+        className="relative ml-auto h-7 w-[46px] flex-none rounded-full bg-border transition-colors peer-checked:bg-primary after:absolute after:top-[3px] after:left-[3px] after:size-[22px] after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-[18px]"
+      />
+    </label>
+  )
 }
 
 export function BookForm({
@@ -81,7 +129,7 @@ export function BookForm({
   onChange,
   onSubmit,
   submitLabel,
-  extraActions,
+  secondaryActions = [],
   busy,
   error,
 }: {
@@ -89,7 +137,7 @@ export function BookForm({
   onChange: (value: BookFormValue) => void
   onSubmit: () => void
   submitLabel: string
-  extraActions?: React.ReactNode
+  secondaryActions?: Array<FormSecondaryAction>
   busy?: boolean
   error?: string | null
 }) {
@@ -129,7 +177,7 @@ export function BookForm({
 
   return (
     <form
-      className="grid gap-4"
+      className="grid gap-4 pb-24 sm:pb-0"
       onSubmit={(e) => {
         e.preventDefault()
         onSubmit()
@@ -156,6 +204,7 @@ export function BookForm({
         <Input
           id="bf-title"
           required
+          className={FIELD}
           value={value.title}
           onChange={(e) => set('title', e.target.value)}
           placeholder="Анна Каренина"
@@ -165,17 +214,46 @@ export function BookForm({
         <Label htmlFor="bf-authors">Авторы</Label>
         <Input
           id="bf-authors"
+          className={FIELD}
           value={value.authors}
           onChange={(e) => set('authors', e.target.value)}
           placeholder="Фамилия Имя; Фамилия Имя"
         />
       </div>
 
+      <div className="grid gap-1.5">
+        <Label>Переплёт</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {BINDING_OPTIONS.map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              aria-pressed={value.coverType === val}
+              className={`min-h-11 rounded-full border px-4 py-2 text-sm font-medium ${
+                value.coverType === val
+                  ? 'border-primary/45 bg-accent text-accent-foreground'
+                  : 'bg-card'
+              }`}
+              onClick={() => set('coverType', val)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <SwitchRow
+        label="Подарочное издание"
+        checked={value.giftEdition}
+        onChange={(v) => set('giftEdition', v)}
+      />
+
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-1.5">
           <Label htmlFor="bf-publisher">Издательство</Label>
           <Input
             id="bf-publisher"
+            className={FIELD}
             value={value.publisher}
             onChange={(e) => set('publisher', e.target.value)}
           />
@@ -185,6 +263,7 @@ export function BookForm({
           <Input
             id="bf-year"
             inputMode="numeric"
+            className={`${FIELD} font-mono`}
             value={value.year}
             onChange={(e) =>
               set('year', e.target.value.replace(/\D/g, '').slice(0, 4))
@@ -205,6 +284,8 @@ export function BookForm({
           <Label htmlFor="bf-vol">Том</Label>
           <Input
             id="bf-vol"
+            inputMode="numeric"
+            className={`${FIELD} font-mono`}
             value={value.seriesNumber}
             onChange={(e) => set('seriesNumber', e.target.value)}
             placeholder="3"
@@ -218,6 +299,7 @@ export function BookForm({
           <Input
             id="bf-pages"
             inputMode="numeric"
+            className={`${FIELD} font-mono`}
             value={value.pages}
             onChange={(e) =>
               set('pages', e.target.value.replace(/\D/g, '').slice(0, 5))
@@ -228,41 +310,11 @@ export function BookForm({
           <Label htmlFor="bf-isbn">ISBN-13</Label>
           <Input
             id="bf-isbn"
-            className="font-mono text-[13px]"
+            inputMode="numeric"
+            className={`${FIELD} font-mono`}
             value={value.isbn13}
             onChange={(e) => set('isbn13', e.target.value)}
             placeholder="978-5-…"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor="bf-cover-type">Переплёт</Label>
-          <select
-            id="bf-cover-type"
-            className="h-10 rounded-lg border bg-card px-3 text-sm"
-            value={value.coverType}
-            onChange={(e) =>
-              set('coverType', e.target.value as BookFormValue['coverType'])
-            }
-          >
-            <option value="">Не знаю</option>
-            <option value="soft">Мягкая обложка</option>
-            <option value="hard">Твёрдый переплёт</option>
-            <option value="gift">Подарочное издание</option>
-          </select>
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="bf-height">Высота, мм</Label>
-          <Input
-            id="bf-height"
-            inputMode="numeric"
-            placeholder="215"
-            value={value.heightMm}
-            onChange={(e) =>
-              set('heightMm', e.target.value.replace(/\D/g, '').slice(0, 3))
-            }
           />
         </div>
       </div>
@@ -272,6 +324,7 @@ export function BookForm({
         <Textarea
           id="bf-annotation"
           rows={3}
+          className="rounded-xl text-[16px]"
           value={value.annotation}
           onChange={(e) => set('annotation', e.target.value)}
         />
@@ -286,22 +339,18 @@ export function BookForm({
         />
       </div>
 
-      <label className="flex items-center gap-2.5 text-sm">
-        <input
-          type="checkbox"
-          className="size-4 accent-primary"
-          checked={value.wishlist}
-          onChange={(e) => set('wishlist', e.target.checked)}
-        />
-        «Хочу» — книги ещё нет, это виш-лист
-      </label>
+      <SwitchRow
+        label="«Хочу» — книги ещё нет, это виш-лист"
+        checked={value.wishlist}
+        onChange={(v) => set('wishlist', v)}
+      />
 
       {!value.wishlist && (
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-1.5">
             <Label>Библиотека</Label>
             <select
-              className="h-10 rounded-lg border bg-card px-3 text-sm"
+              className="h-12 rounded-xl border bg-card px-3 text-[16px]"
               value={value.libraryId}
               onChange={(e) =>
                 onChange({ ...value, libraryId: e.target.value, shelfId: '' })
@@ -317,7 +366,7 @@ export function BookForm({
           <div className="grid gap-1.5">
             <Label>Полка</Label>
             <select
-              className="h-10 rounded-lg border bg-card px-3 text-sm"
+              className="h-12 rounded-xl border bg-card px-3 text-[16px]"
               value={value.shelfId}
               onChange={(e) => set('shelfId', e.target.value)}
             >
@@ -333,16 +382,56 @@ export function BookForm({
       )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="flex flex-wrap gap-2.5">
+
+      {/* Липкая панель сохранения: на мобильном всегда под пальцем */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t bg-card px-4 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:border-0 sm:bg-transparent sm:p-0">
         <Button
           type="submit"
-          size="lg"
+          className="h-12 flex-1 sm:flex-none sm:px-6"
           loading={busy}
           disabled={!value.title.trim()}
         >
           {submitLabel}
         </Button>
-        {extraActions}
+        {secondaryActions.length > 0 && (
+          <>
+            <div className="hidden gap-2 sm:flex">
+              {secondaryActions.map((a) => (
+                <Button
+                  key={a.key}
+                  type="button"
+                  variant={a.danger ? 'ghost' : 'outline'}
+                  className={`h-12 ${a.danger ? 'text-destructive' : ''}`}
+                  disabled={busy}
+                  onClick={a.onSelect}
+                >
+                  {a.label}
+                </Button>
+              ))}
+            </div>
+            <span className="sm:hidden">
+              <ActionMenu
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 w-12 rounded-xl"
+                    aria-label="Ещё варианты"
+                    disabled={busy}
+                  >
+                    ···
+                  </Button>
+                }
+                entries={secondaryActions.map((a) => ({
+                  key: a.key,
+                  label: a.label,
+                  danger: a.danger,
+                  onSelect: a.onSelect,
+                }))}
+              />
+            </span>
+          </>
+        )}
       </div>
     </form>
   )

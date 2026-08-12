@@ -194,13 +194,13 @@ function LibrariesPage() {
                 const look = spineFor(b.title, b.pages, {
                   heightMm: b.heightMm,
                   coverType: b.coverType,
+                  giftEdition: b.giftEdition,
                 })
                 const bg = b.coverColor ?? look.color
                 const lightText = b.coverColor
                   ? textToneFor(b.coverColor) === 'light'
                   : look.dark
-                const hardEdge =
-                  b.coverType === 'hard' || b.coverType === 'gift'
+                const hardEdge = b.coverType === 'hard'
                 return (
                   <Link
                     key={b.id}

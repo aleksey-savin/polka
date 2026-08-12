@@ -92,7 +92,8 @@ export interface ShelfView {
     coverColor: string | null
     hidden: boolean
     heightMm: number | null
-    coverType: 'soft' | 'hard' | 'gift' | null
+    coverType: 'soft' | 'hard' | null
+    giftEdition: boolean
     lentTo: string | null
   }>
 }
@@ -127,6 +128,7 @@ export async function getShelfView(
       hidden: book.hidden,
       heightMm: book.heightMm,
       coverType: book.coverType,
+      giftEdition: book.giftEdition,
     })
     .from(book)
     .where(and(eq(book.shelfId, shelfId), eq(book.status, 'in_library')))

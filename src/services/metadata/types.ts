@@ -12,7 +12,7 @@ export interface MetadataDraft {
   /** Из FantLab format_mm («145x215» → 215). */
   heightMm?: number
   /** Из FantLab cover_type («твёрдая»/«мягкая»). */
-  coverType?: 'soft' | 'hard' | 'gift'
+  coverType?: 'soft' | 'hard'
 }
 
 export type MetadataSource = 'fantlab' | 'google' | 'openlibrary'

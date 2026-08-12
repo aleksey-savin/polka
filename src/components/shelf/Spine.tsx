@@ -6,7 +6,6 @@ import type { CoverType } from '@/services/spine'
 const BINDING_CLASS: Record<CoverType, string> = {
   soft: 'spine-soft rounded-[2px]',
   hard: 'spine-hard',
-  gift: 'spine-gift',
 }
 
 /**
@@ -20,6 +19,7 @@ export function Spine({
   pages,
   heightMm,
   coverType,
+  giftEdition,
   lentTo,
   coverColor,
 }: {
@@ -29,12 +29,13 @@ export function Spine({
   pages?: number | null
   heightMm?: number | null
   coverType?: CoverType | null
+  giftEdition?: boolean
   /** Книга на руках — корешок «вынут»: наклон и полупрозрачность. */
   lentTo?: string | null
   /** Акцентный цвет обложки — если есть, красит корешок. */
   coverColor?: string | null
 }) {
-  const look = spineFor(title, pages, { heightMm, coverType })
+  const look = spineFor(title, pages, { heightMm, coverType, giftEdition })
   const color = coverColor ?? look.color
   const darkBg = coverColor ? textToneFor(coverColor) === 'light' : look.dark
   const author = authors ? lastName(authors) : ''
@@ -46,7 +47,6 @@ export function Spine({
     textSpace,
   )
   const authorFit = twoLines ? fitSpineText(author, textSpace, 10, 8) : null
-  const gift = coverType === 'gift'
   return (
     <Link
       to="/books/$bookId"
@@ -66,38 +66,12 @@ export function Spine({
           'inset -1px 0 0 rgba(35,43,56,.10), inset 1px 0 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(35,43,56,.06)',
       }}
     >
-      {gift && (
-        <>
-          <span
-            aria-hidden
-            className="absolute inset-x-1 top-[9px] h-px"
-            style={{ background: 'rgba(201,162,84,.75)' }}
-          />
-          <span
-            aria-hidden
-            className="absolute inset-x-1 bottom-[9px] h-px"
-            style={{ background: 'rgba(201,162,84,.75)' }}
-          />
-          <span
-            aria-hidden
-            className="absolute -bottom-[11px] left-1/2 h-[14px] w-[7px] -translate-x-1/2 rotate-[4deg] rounded-b-[2px]"
-            style={{
-              background: '#B23F38',
-              clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%)',
-            }}
-          />
-        </>
-      )}
       <span
         className="absolute inset-0 grid place-items-center overflow-hidden font-display text-xs font-medium whitespace-nowrap"
         style={{
           writingMode: 'vertical-rl',
           transform: 'rotate(180deg)',
-          color: gift
-            ? '#C9A254'
-            : darkBg
-              ? 'rgba(255,255,255,.9)'
-              : 'rgba(35,43,56,.82)',
+          color: darkBg ? 'rgba(255,255,255,.9)' : 'rgba(35,43,56,.82)',
         }}
       >
         {twoLines && authorFit ? (

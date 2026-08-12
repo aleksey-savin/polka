@@ -142,6 +142,7 @@ function ShelfPage() {
           pages: b.pages,
           heightMm: b.heightMm,
           coverType: b.coverType,
+          giftEdition: b.giftEdition,
           lentTo: b.lentTo,
           coverColor: b.coverColor,
         }))}

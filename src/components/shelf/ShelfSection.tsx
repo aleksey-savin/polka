@@ -11,6 +11,7 @@ export interface ShelfSectionBook {
   pages: number | null
   heightMm?: number | null
   coverType?: CoverType | null
+  giftEdition?: boolean
   lentTo?: string | null
   coverColor?: string | null
 }
@@ -62,6 +63,7 @@ export function ShelfSection({
               pages={b.pages}
               heightMm={b.heightMm}
               coverType={b.coverType}
+              giftEdition={b.giftEdition}
               lentTo={b.lentTo}
               coverColor={b.coverColor}
             />

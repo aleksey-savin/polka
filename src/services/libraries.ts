@@ -78,7 +78,8 @@ export interface LibraryOverview {
       authors: string
       pages: number | null
       heightMm: number | null
-      coverType: 'soft' | 'hard' | 'gift' | null
+      coverType: 'soft' | 'hard' | null
+      giftEdition: boolean
       coverColor: string | null
     }>
   }
@@ -120,6 +121,7 @@ export async function getLibraryOverview(
       coverColor: book.coverColor,
       heightMm: book.heightMm,
       coverType: book.coverType,
+      giftEdition: book.giftEdition,
       createdAt: book.createdAt,
     })
     .from(book)
@@ -162,6 +164,7 @@ export async function getLibraryOverview(
               pages,
               heightMm,
               coverType,
+              giftEdition,
               coverColor,
             }) => ({
               id,
@@ -170,6 +173,7 @@ export async function getLibraryOverview(
               pages,
               heightMm,
               coverType,
+              giftEdition,
               coverColor,
               lentTo: lentMap.get(id)?.borrowerName ?? null,
             }),
@@ -181,13 +185,23 @@ export async function getLibraryOverview(
       books: unsorted
         .slice(0, UNSORTED_PREVIEW)
         .map(
-          ({ id, title, authors, pages, heightMm, coverType, coverColor }) => ({
+          ({
             id,
             title,
             authors,
             pages,
             heightMm,
             coverType,
+            giftEdition,
+            coverColor,
+          }) => ({
+            id,
+            title,
+            authors,
+            pages,
+            heightMm,
+            coverType,
+            giftEdition,
             coverColor,
           }),
         ),

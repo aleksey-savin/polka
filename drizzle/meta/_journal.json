@@ -43,6 +43,13 @@
       "when": 1786483355471,
       "tag": "0005_amused_landau",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786534993057,
+      "tag": "0006_cute_beyonder",
+      "breakpoints": true
     }
   ]
 }

@@ -25,7 +25,16 @@ describe('spineFor', () => {
   test('без мм — фолбэк по переплёту', () => {
     expect(spineFor('X', 300, { coverType: 'soft' }).height).toBe(118)
     expect(spineFor('X', 300, { coverType: 'hard' }).height).toBe(138)
-    expect(spineFor('X', 300, { coverType: 'gift' }).height).toBe(152)
+  })
+  test('подарочное издание — крупнее по умолчанию', () => {
+    expect(spineFor('X', 300, { giftEdition: true }).height).toBe(152)
+    expect(spineFor('X', 300, { giftEdition: true }).width).toBeGreaterThan(
+      spineFor('X', 300).width,
+    )
+    // известные мм важнее фолбэка
+    expect(
+      spineFor('X', 300, { giftEdition: true, heightMm: 165 }).height,
+    ).toBe(102)
   })
   test('совсем без данных — детерминированная вариация', () => {
     const h = spineFor('Пикник на обочине', 384).height

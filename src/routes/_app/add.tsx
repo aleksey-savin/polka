@@ -87,6 +87,7 @@ function AddPage() {
           seriesName: result.draft.seriesName ?? '',
           coverUrl: result.draft.coverUrl ?? '',
           coverType: result.draft.coverType ?? '',
+          giftEdition: false,
           heightMm: result.draft.heightMm?.toString() ?? '',
           isbn13: result.isbn13,
           isbn10: result.isbn10 ?? '',
@@ -183,31 +184,21 @@ function AddPage() {
           submitLabel="Сохранить и добавить ещё"
           busy={busy}
           error={error}
-          extraActions={
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                disabled={busy}
-                onClick={() => void save(true)}
-              >
-                Сохранить и открыть карточку
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="lg"
-                disabled={busy}
-                onClick={() => {
-                  setDraft(null)
-                  setLookup(null)
-                }}
-              >
-                Отмена
-              </Button>
-            </>
-          }
+          secondaryActions={[
+            {
+              key: 'open',
+              label: 'Сохранить и открыть карточку',
+              onSelect: () => void save(true),
+            },
+            {
+              key: 'cancel',
+              label: 'Отмена',
+              onSelect: () => {
+                setDraft(null)
+                setLookup(null)
+              },
+            },
+          ]}
         />
       </div>
     )

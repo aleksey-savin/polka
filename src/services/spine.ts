@@ -7,7 +7,7 @@ const LIGHT = ['#E8E2D4', '#D9CDB8', '#C9D2C5', '#CBD3DD', '#D8CBD4', '#E3D3C0']
 const DARK = ['#4A5A6E', '#6E5A4A']
 const PALETTE = [...LIGHT, ...DARK]
 
-export type CoverType = 'soft' | 'hard' | 'gift'
+export type CoverType = 'soft' | 'hard'
 
 function hashString(value: string): number {
   let hash = 5381
@@ -30,22 +30,34 @@ export interface SpineAppearance {
 const FALLBACK_HEIGHT: Record<CoverType, number> = {
   soft: 118,
   hard: 138,
-  gift: 152,
 }
+/** Подарочные издания обычно крупнее — фолбэк без известных мм. */
+const GIFT_FALLBACK_HEIGHT = 152
 
 export function spineFor(
   title: string,
   pages?: number | null,
-  physical?: { heightMm?: number | null; coverType?: CoverType | null },
+  physical?: {
+    heightMm?: number | null
+    coverType?: CoverType | null
+    giftEdition?: boolean
+  },
 ): SpineAppearance {
   const hash = hashString(title)
   const color = PALETTE[hash % PALETTE.length] ?? '#E8E2D4'
   const p = pages ?? 300
-  const width = clamp(18, Math.round(14 + p / 14), 56)
+  // подарочные — на плотной бумаге, блок толще при тех же страницах
+  const width = clamp(
+    18,
+    Math.round((14 + p / 14) * (physical?.giftEdition ? 1.12 : 1)),
+    56,
+  )
 
   let height: number
   if (physical?.heightMm) {
     height = clamp(96, Math.round(physical.heightMm * 0.62), 168)
+  } else if (physical?.giftEdition) {
+    height = GIFT_FALLBACK_HEIGHT
   } else if (physical?.coverType) {
     height = FALLBACK_HEIGHT[physical.coverType]
   } else {
