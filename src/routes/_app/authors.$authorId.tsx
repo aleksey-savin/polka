@@ -99,7 +99,7 @@ function AuthorPage() {
       {author.bio && (
         <>
           <p
-            className={`mt-3 text-sm leading-relaxed text-muted-foreground ${
+            className={`mt-3 text-sm leading-relaxed whitespace-pre-line text-muted-foreground ${
               bioOpen ? '' : 'line-clamp-3'
             }`}
           >
@@ -382,7 +382,7 @@ function WorkSheet({
             </p>
           )}
           {view?.annotation && (
-            <p className="mt-2 line-clamp-3 text-[13.5px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 line-clamp-3 text-[13.5px] leading-relaxed whitespace-pre-line text-muted-foreground">
               {view.annotation}
             </p>
           )}

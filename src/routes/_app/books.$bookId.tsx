@@ -520,7 +520,7 @@ function BookCardPage() {
           {book.annotation && (
             <>
               <p
-                className={`max-w-[60ch] text-[15px] leading-[1.65] ${annotationOpen ? '' : 'line-clamp-4'}`}
+                className={`max-w-[60ch] text-[15px] leading-[1.65] whitespace-pre-line ${annotationOpen ? '' : 'line-clamp-4'}`}
               >
                 {book.annotation}
               </p>

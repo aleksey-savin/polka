@@ -41,10 +41,15 @@ export function yearFrom(value: string | undefined): number | undefined {
   return match ? Number(match[0]) : undefined
 }
 
-/** Снимает HTML-теги из аннотаций внешних источников. */
+/** Снимает HTML-теги, сохраняя абзацы и переносы (рендер — pre-line). */
 export function stripHtml(value: string): string {
   return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .replace(/<\/?p[^>]*>/gi, '\n')
     .replace(/<[^>]*>/g, '')
-    .replace(/\s+\n/g, '\n')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
