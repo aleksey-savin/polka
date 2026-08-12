@@ -128,10 +128,6 @@ function LibrariesPage() {
             <>
               <b className="font-medium text-foreground">{s.bookCount}</b>{' '}
               {plural(s.bookCount, 'книга', 'книги', 'книг')}
-              {s.accentColor
-                ? ' · цвет задан вручную'
-                : s.tint.medianYear !== null &&
-                  ` · медиана изданий ${s.tint.medianYear}`}
             </>
           }
           boardColor={s.accentColor ?? s.tint.color}

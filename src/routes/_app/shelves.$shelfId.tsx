@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 
+import { Ellipsis, Pencil, Trash2 } from 'lucide-react'
+
 import { BatchBar } from '@/components/book/BatchBar'
 import { BookRow } from '@/components/book/BookRow'
-import { AccentPanel } from '@/components/shelf/AccentPanel'
+import { ShelfColorSheet } from '@/components/shelf/ShelfColorSheet'
 import { ShelfSection } from '@/components/shelf/ShelfSection'
+import { ActionMenu } from '@/components/ui/action-menu'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { plural } from '@/lib/plural'
@@ -31,6 +33,9 @@ function ShelfPage() {
   const navigate = Route.useNavigate()
   const [selected, setSelected] = useState<Array<string>>([])
   const [sort, setSort] = useState<SortKey>('shelf')
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [colorOpen, setColorOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const refresh = () => void router.invalidate()
 
   const sorted = useMemo(() => {
@@ -73,17 +78,8 @@ function ShelfPage() {
         <span className="font-mono text-xs text-muted-foreground">
           <b className="font-medium text-foreground">{shelf.books.length}</b>{' '}
           {plural(shelf.books.length, 'книга', 'книги', 'книг')}
-          {shelf.tint.medianYear !== null && !shelf.accentColor && (
-            <>
-              {' '}
-              · медиана изданий{' '}
-              <b className="font-medium text-foreground">
-                {shelf.tint.medianYear}
-              </b>
-            </>
-          )}
         </span>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {shelf.books.length === 0 && (
             <Button asChild variant="outline">
               <Link
@@ -94,15 +90,45 @@ function ShelfPage() {
               </Link>
             </Button>
           )}
-          <RenameShelfDialog
-            shelfId={shelf.id}
-            current={shelf.name}
-            onRenamed={refresh}
-          />
-          <DeleteShelfDialog
-            name={shelf.name}
-            count={shelf.books.length}
-            onConfirm={() => void removeShelf()}
+          <ActionMenu
+            caption={`Полка «${shelf.name}»`}
+            trigger={
+              <Button variant="ghost">
+                Ещё <Ellipsis aria-hidden />
+              </Button>
+            }
+            entries={[
+              {
+                key: 'rename',
+                label: 'Переименовать',
+                icon: <Pencil />,
+                onSelect: () => setRenameOpen(true),
+              },
+              {
+                key: 'color',
+                label: 'Цвет полки',
+                icon: (
+                  <span
+                    aria-hidden
+                    className="size-[21px] rounded-full border"
+                    style={{
+                      background:
+                        shelf.accentColor ??
+                        'linear-gradient(120deg, var(--patina-old), var(--patina-fresh))',
+                    }}
+                  />
+                ),
+                onSelect: () => setColorOpen(true),
+              },
+              'separator',
+              {
+                key: 'delete',
+                label: 'Удалить полку',
+                icon: <Trash2 />,
+                danger: true,
+                onSelect: () => setDeleteOpen(true),
+              },
+            ]}
           />
         </div>
       </div>
@@ -122,11 +148,26 @@ function ShelfPage() {
         emptyHint="Пока пусто. «+ Добавить сюда» — и первая книга встанет на полку."
       />
 
-      <AccentPanel
+      <ShelfColorSheet
         shelfId={shelf.id}
         accentColor={shelf.accentColor}
-        tint={shelf.tint}
+        open={colorOpen}
+        onOpenChange={setColorOpen}
         onChanged={refresh}
+      />
+      <RenameShelfDialog
+        shelfId={shelf.id}
+        current={shelf.name}
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        onRenamed={refresh}
+      />
+      <DeleteShelfDialog
+        name={shelf.name}
+        count={shelf.books.length}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={() => void removeShelf()}
       />
 
       {shelf.books.length > 0 && (
@@ -215,13 +256,16 @@ function ShelfPage() {
 function RenameShelfDialog({
   shelfId,
   current,
+  open,
+  onOpenChange,
   onRenamed,
 }: {
   shelfId: string
   current: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onRenamed: () => void
 }) {
-  const [open, setOpen] = useState(false)
   const [name, setName] = useState(current)
   const [busy, setBusy] = useState(false)
 
@@ -230,7 +274,7 @@ function RenameShelfDialog({
     setBusy(true)
     try {
       await updateShelfFn({ data: { shelfId, name: name.trim() } })
-      setOpen(false)
+      onOpenChange(false)
       onRenamed()
     } finally {
       setBusy(false)
@@ -238,10 +282,7 @@ function RenameShelfDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost">Переименовать</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Переименовать полку</DialogTitle>
@@ -264,19 +305,18 @@ function RenameShelfDialog({
 function DeleteShelfDialog({
   name,
   count,
+  open,
+  onOpenChange,
   onConfirm,
 }: {
   name: string
   count: number
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }) {
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="ghost" className="text-destructive">
-          Удалить
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Удалить полку «{name}»?</DialogTitle>
