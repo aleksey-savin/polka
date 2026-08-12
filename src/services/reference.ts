@@ -513,3 +513,67 @@ export async function fetchWorkEditions(
     .where(eq(refWork.id, workId))
   return getWorkView(userId, workId)
 }
+
+export interface RefBookView {
+  id: string
+  title: string
+  publisher: string | null
+  year: number | null
+  pages: number | null
+  isbn13: string | null
+  seriesName: string | null
+  annotation: string | null
+  coverPath: string | null
+  coverColor: string | null
+  coverType: 'soft' | 'hard' | null
+  /** Произведения в издании — состав сборника. */
+  works: Array<{ id: string; title: string }>
+  /** Моя книга с этим ISBN — если издание уже на полке. */
+  myBookId: string | null
+}
+
+/** Детали издания эталона для шторки. */
+export async function getRefBookView(
+  userId: string,
+  refBookId: string,
+): Promise<RefBookView> {
+  const [row] = await db.select().from(refBook).where(eq(refBook.id, refBookId))
+  if (!row) throw new Error('Издание не найдено')
+
+  const works = await db
+    .select({ id: refWork.id, title: refWork.title })
+    .from(refBookWork)
+    .innerJoin(refWork, eq(refWork.id, refBookWork.workId))
+    .where(eq(refBookWork.refBookId, refBookId))
+
+  let myBookId: string | null = null
+  if (row.isbn13) {
+    const libIds = await memberLibraryIds(userId)
+    const accessible = or(
+      libIds.length > 0 ? inArray(book.libraryId, libIds) : undefined,
+      eq(book.addedBy, userId),
+    )
+    const [mine] = await db
+      .select({ id: book.id })
+      .from(book)
+      .where(and(accessible, eq(book.isbn13, row.isbn13)))
+      .limit(1)
+    myBookId = mine?.id ?? null
+  }
+
+  return {
+    id: row.id,
+    title: row.title,
+    publisher: row.publisher,
+    year: row.year,
+    pages: row.pages,
+    isbn13: row.isbn13,
+    seriesName: row.seriesName,
+    annotation: row.annotation,
+    coverPath: row.coverPath,
+    coverColor: row.coverColor,
+    coverType: row.coverType,
+    works,
+    myBookId,
+  }
+}

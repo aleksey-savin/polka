@@ -1,7 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import { fetchWorkEditions, getWorkView } from '@/services/reference'
+import {
+  fetchWorkEditions,
+  getRefBookView,
+  getWorkView,
+} from '@/services/reference'
 import { authMiddleware } from './middleware'
 
 export const getWorkViewFn = createServerFn({ method: 'GET' })
@@ -15,4 +19,11 @@ export const fetchWorkEditionsFn = createServerFn({ method: 'POST' })
   .validator(z.object({ workId: z.string() }))
   .handler(({ context, data }) =>
     fetchWorkEditions(context.user.id, data.workId),
+  )
+
+export const getRefBookViewFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(z.object({ refBookId: z.string() }))
+  .handler(({ context, data }) =>
+    getRefBookView(context.user.id, data.refBookId),
   )

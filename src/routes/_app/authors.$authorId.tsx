@@ -9,9 +9,13 @@ import { dateRu } from '@/lib/dates'
 import { plural } from '@/lib/plural'
 import { getAuthorPageFn } from '@/server/authors'
 import { createBookFn } from '@/server/books'
-import { fetchWorkEditionsFn, getWorkViewFn } from '@/server/reference'
+import {
+  fetchWorkEditionsFn,
+  getRefBookViewFn,
+  getWorkViewFn,
+} from '@/server/reference'
 import { spineFor, textToneFor } from '@/services/spine'
-import type { WorkView } from '@/services/reference'
+import type { RefBookView, WorkView } from '@/services/reference'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 
 export const Route = createFileRoute('/_app/authors/$authorId')({
@@ -19,6 +23,20 @@ export const Route = createFileRoute('/_app/authors/$authorId')({
     getAuthorPageFn({ data: { authorId: params.authorId } }),
   component: AuthorPage,
 })
+
+const WORK_TYPE_RU: Record<string, string> = {
+  shortstory: 'рассказ',
+  story: 'повесть',
+  novel: 'роман',
+  collection: 'сборник',
+  poem: 'поэма',
+  piece: 'пьеса',
+  microstory: 'микрорассказ',
+  documental: 'документальное',
+  other: '',
+}
+const workTypeRu = (t: string | null) =>
+  t ? (WORK_TYPE_RU[t.toLowerCase()] ?? t) : null
 
 const STATUS_NOTE: Record<string, string> = {
   wishlist: 'в списке «Хочу»',
@@ -305,6 +323,7 @@ function WorkSheet({
   const [view, setView] = useState<WorkView | null>(null)
   const [loading, setLoading] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [openEditionId, setOpenEditionId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!workId) {
@@ -376,7 +395,7 @@ function WorkSheet({
           </DialogTitle>
           {view && (
             <p className="font-mono text-[11.5px] text-muted-foreground">
-              {[view.workType, view.year, view.authorName]
+              {[workTypeRu(view.workType), view.year, view.authorName]
                 .filter(Boolean)
                 .join(' · ')}
             </p>
@@ -403,7 +422,16 @@ function WorkSheet({
               return (
                 <div
                   key={e.refBookId}
-                  className="flex items-center gap-3 border-t py-2.5 first:border-t-0"
+                  role="button"
+                  tabIndex={0}
+                  className="flex cursor-pointer items-center gap-3 border-t py-2.5 select-none first:border-t-0"
+                  onClick={() => setOpenEditionId(e.refBookId)}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                      ev.preventDefault()
+                      setOpenEditionId(e.refBookId)
+                    }
+                  }}
                 >
                   {e.coverPath ? (
                     <img
@@ -454,11 +482,17 @@ function WorkSheet({
                       variant="outline"
                       className="flex-none text-accent-foreground"
                       loading={busyId === e.refBookId}
-                      onClick={() => void wish(e)}
+                      onClick={(ev) => {
+                        ev.stopPropagation()
+                        void wish(e)
+                      }}
                     >
                       В «Хочу»
                     </Button>
                   )}
+                  <span aria-hidden className="flex-none text-muted-foreground">
+                    ›
+                  </span>
                 </div>
               )
             })
@@ -478,6 +512,170 @@ function WorkSheet({
           >
             В «Хочу» без выбора издания
           </button>
+        </div>
+      </DialogContent>
+      <EditionSheet
+        refBookId={openEditionId}
+        authorName={view?.authorName ?? ''}
+        workId={view?.id ?? null}
+        onClose={() => setOpenEditionId(null)}
+        onChanged={onChanged}
+      />
+    </Dialog>
+  )
+}
+
+/** Шторка издания: обложка, полная мета, состав сборника, действие. */
+function EditionSheet({
+  refBookId,
+  authorName,
+  workId,
+  onClose,
+  onChanged,
+}: {
+  refBookId: string | null
+  authorName: string
+  workId: string | null
+  onClose: () => void
+  onChanged: () => void
+}) {
+  const [view, setView] = useState<RefBookView | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!refBookId) {
+      setView(null)
+      return
+    }
+    void getRefBookViewFn({ data: { refBookId } }).then(setView)
+  }, [refBookId])
+
+  async function wish() {
+    if (!view) return
+    setBusy(true)
+    try {
+      await createBookFn({
+        data: {
+          title: view.title,
+          authors: authorName,
+          publisher: view.publisher ?? undefined,
+          year: view.year,
+          pages: view.pages,
+          isbn13: view.isbn13 ?? undefined,
+          seriesName: view.seriesName ?? undefined,
+          coverType: view.coverType,
+          wishlist: true,
+          refWorkId: workId,
+        },
+      })
+      toast.success(`«${view.title}» — в списке «Хочу»`)
+      onClose()
+      onChanged()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const look = view ? spineFor(view.title, view.pages) : null
+
+  return (
+    <Dialog open={refBookId !== null} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="grid max-h-[86dvh] grid-rows-[minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-md"
+      >
+        <div className="overflow-y-auto px-4 pt-2 pb-3">
+          <div className="flex items-start gap-3.5">
+            {view?.coverPath ? (
+              <img
+                src={`/api/ref-covers/${view.id}`}
+                alt=""
+                className="w-[96px] flex-none rounded-[4px] shadow-md"
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="grid aspect-[7/10] w-[96px] flex-none content-end rounded-[4px] p-2"
+                style={{
+                  background: view?.coverColor ?? look?.color ?? '#D9CDB8',
+                  boxShadow: 'inset 3px 0 0 rgba(255,255,255,.3)',
+                }}
+              >
+                <span className="font-display text-[11px] leading-tight font-bold text-white/90">
+                  {view?.title}
+                </span>
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-[17px] leading-snug font-semibold">
+                {view?.title ?? '…'}
+              </DialogTitle>
+              {view?.seriesName && (
+                <p className="mt-1 truncate text-[12.5px] text-stamp">
+                  {view.seriesName}
+                </p>
+              )}
+              <p className="mt-1.5 text-[13px] text-muted-foreground">
+                {view?.publisher && (
+                  <>
+                    {view.publisher}
+                    <br />
+                  </>
+                )}
+                {view?.year && (
+                  <span className="font-mono text-xs">{view.year}</span>
+                )}
+                {view?.pages && (
+                  <>
+                    {' · '}
+                    <span className="font-mono text-xs">{view.pages}</span> с.
+                  </>
+                )}
+                {view?.coverType && (
+                  <> · {view.coverType === 'hard' ? 'твёрдый' : 'мягкая'}</>
+                )}
+              </p>
+              {view?.isbn13 && (
+                <p className="mt-1 font-mono text-xs text-muted-foreground">
+                  {view.isbn13}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {view?.annotation && (
+            <p className="mt-3 text-[13.5px] leading-relaxed whitespace-pre-line text-muted-foreground">
+              {view.annotation}
+            </p>
+          )}
+
+          {view && view.works.length > 1 && (
+            <p className="mt-3 text-[13px] text-muted-foreground">
+              <b className="font-medium text-foreground">Содержит:</b>{' '}
+              {view.works.map((w) => w.title).join(' · ')}
+            </p>
+          )}
+        </div>
+
+        <div className="border-t bg-card px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {view?.myBookId ? (
+            <Button asChild className="h-12 w-full" variant="outline">
+              <Link to="/books/$bookId" params={{ bookId: view.myBookId }}>
+                Эта книга у вас есть — открыть
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              className="h-12 w-full"
+              loading={busy}
+              disabled={!view}
+              onClick={() => void wish()}
+            >
+              В «Хочу» это издание
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
