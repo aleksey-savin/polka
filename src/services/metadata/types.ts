@@ -13,6 +13,8 @@ export interface MetadataDraft {
   heightMm?: number
   /** Из FantLab cover_type («твёрдая»/«мягкая»). */
   coverType?: 'soft' | 'hard'
+  /** Пары «имя — fantlabId» из BB-тегов [autor=…] поиска FantLab. */
+  fantlabAuthors?: Array<{ name: string; id: number }>
 }
 
 export type MetadataSource = 'fantlab' | 'google' | 'openlibrary'

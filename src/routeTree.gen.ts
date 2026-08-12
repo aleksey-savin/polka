@@ -22,6 +22,7 @@ import { Route as AppWishlistRouteImport } from './routes/_app/wishlist'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as STokenRouteImport } from './routes/s.$token'
+import { Route as AppAuthorsAuthorIdRouteImport } from './routes/_app/authors.$authorId'
 import { Route as AppBooksIndexRouteImport } from './routes/_app/books.index'
 import { Route as AppBooksBookIdRouteImport } from './routes/_app/books.$bookId'
 import { Route as AppBooksNewRouteImport } from './routes/_app/books.new'
@@ -98,6 +99,11 @@ const STokenRoute = STokenRouteImport.update({
   path: '/s/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppAuthorsAuthorIdRoute = AppAuthorsAuthorIdRouteImport.update({
+  id: '/authors/$authorId',
+  path: '/authors/$authorId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBooksIndexRoute = AppBooksIndexRouteImport.update({
   id: '/books/',
   path: '/books/',
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/join/$token': typeof JoinTokenRoute
   '/s/$token': typeof STokenRoute
+  '/authors/$authorId': typeof AppAuthorsAuthorIdRoute
   '/books/$bookId': typeof AppBooksBookIdRoute
   '/books/new': typeof AppBooksNewRoute
   '/invite/$token': typeof AppInviteTokenRoute
@@ -192,6 +199,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/join/$token': typeof JoinTokenRoute
   '/s/$token': typeof STokenRoute
+  '/authors/$authorId': typeof AppAuthorsAuthorIdRoute
   '/books/$bookId': typeof AppBooksBookIdRoute
   '/books/new': typeof AppBooksNewRoute
   '/invite/$token': typeof AppInviteTokenRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/join/$token': typeof JoinTokenRoute
   '/s/$token': typeof STokenRoute
+  '/_app/authors/$authorId': typeof AppAuthorsAuthorIdRoute
   '/_app/books/$bookId': typeof AppBooksBookIdRoute
   '/_app/books/new': typeof AppBooksNewRoute
   '/_app/invite/$token': typeof AppInviteTokenRoute
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/join/$token'
     | '/s/$token'
+    | '/authors/$authorId'
     | '/books/$bookId'
     | '/books/new'
     | '/invite/$token'
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/join/$token'
     | '/s/$token'
+    | '/authors/$authorId'
     | '/books/$bookId'
     | '/books/new'
     | '/invite/$token'
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/join/$token'
     | '/s/$token'
+    | '/_app/authors/$authorId'
     | '/_app/books/$bookId'
     | '/_app/books/new'
     | '/_app/invite/$token'
@@ -414,6 +426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof STokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/authors/$authorId': {
+      id: '/_app/authors/$authorId'
+      path: '/authors/$authorId'
+      fullPath: '/authors/$authorId'
+      preLoaderRoute: typeof AppAuthorsAuthorIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/books/': {
       id: '/_app/books/'
       path: '/books'
@@ -502,6 +521,7 @@ interface AppRouteChildren {
   AppRequestsRoute: typeof AppRequestsRoute
   AppUnsortedRoute: typeof AppUnsortedRoute
   AppWishlistRoute: typeof AppWishlistRoute
+  AppAuthorsAuthorIdRoute: typeof AppAuthorsAuthorIdRoute
   AppBooksBookIdRoute: typeof AppBooksBookIdRoute
   AppBooksNewRoute: typeof AppBooksNewRoute
   AppInviteTokenRoute: typeof AppInviteTokenRoute
@@ -521,6 +541,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppRequestsRoute: AppRequestsRoute,
   AppUnsortedRoute: AppUnsortedRoute,
   AppWishlistRoute: AppWishlistRoute,
+  AppAuthorsAuthorIdRoute: AppAuthorsAuthorIdRoute,
   AppBooksBookIdRoute: AppBooksBookIdRoute,
   AppBooksNewRoute: AppBooksNewRoute,
   AppInviteTokenRoute: AppInviteTokenRoute,

@@ -158,6 +158,40 @@ export const book = sqliteTable(
   ],
 )
 
+/** Автор — эталонная сущность: общая, дедуп по nameNorm, правок из UI нет.
+    Био-поля заполняются фоновым обогащением (M15). */
+export const author = sqliteTable('author', {
+  id: id(),
+  name: text('name').notNull(),
+  nameNorm: text('name_norm').notNull().unique(),
+  fantlabId: integer('fantlab_id'),
+  openlibraryId: text('openlibrary_id'),
+  bio: text('bio'),
+  birthYear: integer('birth_year'),
+  deathYear: integer('death_year'),
+  country: text('country'),
+  photoPath: text('photo_path'),
+  createdAt: createdAt(),
+})
+
+export const bookAuthor = sqliteTable(
+  'book_author',
+  {
+    bookId: text('book_id')
+      .notNull()
+      .references(() => book.id, { onDelete: 'cascade' }),
+    authorId: text('author_id')
+      .notNull()
+      .references(() => author.id, { onDelete: 'cascade' }),
+    /** Порядок соавторов как в строке book.authors. */
+    position: integer('position').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.bookId, t.authorId] }),
+    index('book_author_author_idx').on(t.authorId),
+  ],
+)
+
 export const bookPersonal = sqliteTable(
   'book_personal',
   {

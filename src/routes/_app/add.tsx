@@ -89,6 +89,7 @@ function AddPage() {
           coverType: result.draft.coverType ?? '',
           giftEdition: false,
           heightMm: result.draft.heightMm?.toString() ?? '',
+          fantlabAuthors: result.draft.fantlabAuthors ?? [],
           isbn13: result.isbn13,
           isbn10: result.isbn10 ?? '',
           libraryId: dest.libraryId,

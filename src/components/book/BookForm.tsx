@@ -33,6 +33,8 @@ export interface BookFormValue {
   giftEdition: boolean
   /** Высота в мм: поля в форме нет, значение живёт из FantLab. */
   heightMm: string
+  /** Зацепки FantLab-авторов из lookup — скрытое поле. */
+  fantlabAuthors: Array<{ name: string; id: number }>
 }
 
 export const EMPTY_BOOK_FORM: BookFormValue = {
@@ -55,6 +57,7 @@ export const EMPTY_BOOK_FORM: BookFormValue = {
   coverType: '',
   giftEdition: false,
   heightMm: '',
+  fantlabAuthors: [],
 }
 
 /** Перевод значения формы в input серверной функции. */
@@ -79,6 +82,7 @@ export function toBookInput(v: BookFormValue) {
     coverType: v.coverType || null,
     giftEdition: v.giftEdition,
     heightMm: v.heightMm ? Number(v.heightMm) : null,
+    fantlabAuthors: v.fantlabAuthors.length > 0 ? v.fantlabAuthors : undefined,
   }
 }
 

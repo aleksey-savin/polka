@@ -1,12 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { listAuthorFacet } from '@/services/authors'
 import {
   createBook,
   deleteBook,
   getBookCard,
   giftBook,
-  listAuthors,
   listBooks,
   markLost,
   moveBooks,
@@ -38,6 +38,9 @@ const bookInput = z.object({
   coverUrl: z.url().optional(),
   coverType: z.enum(['soft', 'hard']).nullable().optional(),
   giftEdition: z.boolean().optional(),
+  fantlabAuthors: z
+    .array(z.object({ name: z.string(), id: z.number().int() }))
+    .optional(),
   heightMm: z.number().int().min(60).max(500).nullable().optional(),
 })
 
@@ -154,4 +157,4 @@ export const setBookHiddenFn = createServerFn({ method: 'POST' })
 
 export const listAuthorsFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .handler(({ context }) => listAuthors(context.user.id))
+  .handler(({ context }) => listAuthorFacet(context.user.id))

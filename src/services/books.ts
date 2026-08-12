@@ -16,6 +16,7 @@ import { AppError } from './errors'
 import { assertMember, memberLibraryIds } from './members'
 import { normalizeForSearch } from './search'
 import { resolveSeriesByName, sanitizeLike } from './series'
+import { bookAuthorLinks, syncBookAuthors } from './authors'
 import { setBookTags } from './tags'
 
 export interface BookInput {
@@ -40,6 +41,8 @@ export interface BookInput {
   coverType?: 'soft' | 'hard' | null
   giftEdition?: boolean
   heightMm?: number | null
+  /** Зацепки FantLab-авторов из lookup — проставляют author.fantlabId. */
+  fantlabAuthors?: Array<{ name: string; id: number }>
 }
 
 async function assertShelfInLibrary(
@@ -110,6 +113,7 @@ export async function createBook(
     })
     .returning({ id: book.id })
   if (!created) throw new AppError('Не удалось сохранить книгу')
+  await syncBookAuthors(created.id, input.authors ?? '', input.fantlabAuthors)
   if (input.tags) await setBookTags(userId, created.id, input.tags)
   if (input.coverUrl) {
     try {
@@ -175,6 +179,7 @@ export async function updateBook(
       updatedAt: new Date(),
     })
     .where(eq(book.id, bookId))
+  await syncBookAuthors(bookId, input.authors ?? '', input.fantlabAuthors)
   if (input.tags) await setBookTags(userId, bookId, input.tags)
 }
 
@@ -238,6 +243,7 @@ export interface BookCard {
   coverType: 'soft' | 'hard' | null
   giftEdition: boolean
   heightMm: number | null
+  authorLinks: Array<{ id: string; name: string }>
 }
 
 export async function getBookCard(
@@ -263,6 +269,7 @@ export async function getBookCard(
     .innerJoin(tag, eq(tag.id, bookTag.tagId))
     .where(eq(bookTag.bookId, bookId))
     .orderBy(asc(tag.name))
+  const authorLinks = await bookAuthorLinks(bookId)
   return {
     id: row.id,
     title: row.title,
@@ -292,6 +299,7 @@ export async function getBookCard(
     coverType: row.coverType,
     giftEdition: row.giftEdition,
     heightMm: row.heightMm,
+    authorLinks,
   }
 }
 
@@ -492,36 +500,4 @@ export async function setBookHidden(
     .update(book)
     .set({ hidden, updatedAt: new Date() })
     .where(eq(book.id, bookId))
-}
-
-export interface AuthorFacet {
-  name: string
-  count: number
-}
-
-/** Авторы моих книг со счётчиками — для фильтра каталога (частые + саджест). */
-export async function listAuthors(userId: string): Promise<Array<AuthorFacet>> {
-  const libIds = await memberLibraryIds(userId)
-  const accessible = or(
-    libIds.length > 0 ? inArray(book.libraryId, libIds) : undefined,
-    and(eq(book.addedBy, userId), eq(book.status, 'wishlist')),
-  )
-  const rows = await db
-    .select({ authors: book.authors })
-    .from(book)
-    .where(accessible)
-  const counts = new Map<string, AuthorFacet>()
-  for (const r of rows) {
-    for (const raw of r.authors.split(';')) {
-      const name = raw.trim()
-      if (!name) continue
-      const key = normalizeForSearch(name)
-      const cur = counts.get(key)
-      if (cur) cur.count += 1
-      else counts.set(key, { name, count: 1 })
-    }
-  }
-  return [...counts.values()].sort(
-    (a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ru'),
-  )
 }

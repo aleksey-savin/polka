@@ -38,7 +38,16 @@ export function parseFantlabSearch(
   if (!match) return null
   const draft: MetadataDraft = {}
   if (match.name) draft.title = stripBb(match.name)
-  if (match.autors) draft.authors = stripBb(match.autors)
+  if (match.autors) {
+    draft.authors = stripBb(match.autors)
+    // пары «имя — id» из [autor=14093]Сергей Довлатов[/autor]
+    const pairs = [
+      ...match.autors.matchAll(/\[autor=(\d+)\]([^[]+)\[\/autor\]/g),
+    ]
+      .map((m) => ({ id: Number(m[1]), name: (m[2] ?? '').trim() }))
+      .filter((a) => a.name && Number.isFinite(a.id))
+    if (pairs.length > 0) draft.fantlabAuthors = pairs
+  }
   if (match.publisher) draft.publisher = stripBb(match.publisher)
   if (match.series) draft.seriesName = stripBb(match.series)
   if (typeof match.year === 'number') draft.year = match.year

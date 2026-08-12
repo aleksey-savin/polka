@@ -19,7 +19,8 @@ import { listMyLibrariesFn } from '@/server/libraries'
 import { listSeriesFn } from '@/server/series'
 import { createBorrowRequestFn, searchFriendsBooksFn } from '@/server/shares'
 import { listMyTagsFn } from '@/server/tags'
-import type { AuthorFacet, CatalogRow } from '@/services/books'
+import type { AuthorFacetRow } from '@/services/authors'
+import type { CatalogRow } from '@/services/books'
 import type { LibrarySummary } from '@/services/libraries'
 import type { FriendBookRow, SavedShareRow } from '@/services/savedShares'
 import type { SeriesListItem } from '@/services/series'
@@ -29,7 +30,7 @@ interface MineData {
   libraries: Array<LibrarySummary>
   series: Array<SeriesListItem>
   tags: Array<{ id: string; name: string; bookCount: number }>
-  authors: Array<AuthorFacet>
+  authors: Array<AuthorFacetRow>
 }
 interface FriendsData {
   rows: Array<FriendBookRow>

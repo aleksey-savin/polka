@@ -53,6 +53,9 @@ export function mergeResults(
     }
   }
 
+  const flAuthors = bySource.get('fantlab')?.fantlabAuthors
+  if (flAuthors && flAuthors.length > 0) draft.fantlabAuthors = flAuthors
+
   const coverCandidates = BIB_ORDER.map(
     (s) => bySource.get(s)?.coverUrl,
   ).filter((u): u is string => Boolean(u))

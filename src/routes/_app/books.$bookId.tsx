@@ -331,10 +331,27 @@ function BookCardPage() {
           <h1 className="text-[25px] leading-[1.16] font-semibold tracking-[-0.015em] md:text-[28px]">
             {book.title}
           </h1>
-          {book.authors && (
+          {book.authorLinks.length > 0 ? (
             <p className="mt-1 text-[15px] text-muted-foreground">
-              {book.authors}
+              {book.authorLinks.map((a, i) => (
+                <Fragment key={a.id}>
+                  {i > 0 && ', '}
+                  <Link
+                    to="/authors/$authorId"
+                    params={{ authorId: a.id }}
+                    className="hover:text-foreground hover:underline"
+                  >
+                    {a.name}
+                  </Link>
+                </Fragment>
+              ))}
             </p>
+          ) : (
+            book.authors && (
+              <p className="mt-1 text-[15px] text-muted-foreground">
+                {book.authors}
+              </p>
+            )
           )}
           {editionParts.length > 0 && (
             <p className="mt-1.5 text-[13px] text-muted-foreground">

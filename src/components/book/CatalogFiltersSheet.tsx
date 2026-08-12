@@ -8,7 +8,7 @@ import { plural } from '@/lib/plural'
 import { listBooksFn } from '@/server/books'
 import { getLibraryOverviewFn } from '@/server/libraries'
 import { normalizeForSearch } from '@/services/search'
-import type { AuthorFacet } from '@/services/books'
+import type { AuthorFacetRow } from '@/services/authors'
 
 export interface CatalogFilterValues {
   library?: string
@@ -120,7 +120,7 @@ export function CatalogFiltersSheet({
   libraries: Array<{ id: string; name: string }>
   series: Array<{ id: string; name: string; bookCount: number }>
   tags: Array<{ id: string; name: string; bookCount: number }>
-  authors: Array<AuthorFacet>
+  authors: Array<AuthorFacetRow>
   onApply: (value: CatalogFilterValues) => void
 }) {
   const [draft, setDraft] = useState<CatalogFilterValues>(value)

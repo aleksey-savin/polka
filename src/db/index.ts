@@ -29,4 +29,8 @@ if (existsSync(migrationsFolder)) {
   void import('@/services/coverColors')
     .then((m) => m.backfillCoverColors())
     .catch(() => {})
+  // бэкфилл авторов из денормализованных строк (M13)
+  void import('@/services/authors')
+    .then((m) => m.backfillAuthors())
+    .catch(() => {})
 }
