@@ -78,6 +78,20 @@
       "when": 1786573653812,
       "tag": "0010_repending-crawl",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1786584393931,
+      "tag": "0011_handy_smasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1786584592841,
+      "tag": "0012_repending-cycles",
+      "breakpoints": true
     }
   ]
 }

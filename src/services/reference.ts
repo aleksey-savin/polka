@@ -214,7 +214,13 @@ export async function authorBibliography(
     })
     .from(refWork)
     .innerJoin(refWorkAuthor, eq(refWorkAuthor.workId, refWork.id))
-    .where(eq(refWorkAuthor.authorId, authorId))
+    .where(
+      and(
+        eq(refWorkAuthor.authorId, authorId),
+        // циклы — не строки библиографии, у них своя шторка
+        sql`(${refWork.workType} is null or ${refWork.workType} != 'cycle')`,
+      ),
+    )
     .orderBy(asc(refWork.year), asc(refWork.titleNorm))
   if (works.length === 0) return []
 

@@ -278,7 +278,7 @@ export function BookForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-1.5">
-          <Label>Серия</Label>
+          <Label>Издательская серия</Label>
           <SeriesCombobox
             value={value.seriesName}
             onChange={(v) => set('seriesName', v)}

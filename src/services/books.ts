@@ -422,13 +422,9 @@ export async function listBooks(
   if (filters.yearTo) conditions.push(lte(book.year, filters.yearTo))
   if (filters.query?.trim()) {
     const q = `%${sanitizeLike(normalizeForSearch(filters.query))}%`
-    conditions.push(
-      or(
-        like(book.titleNorm, q),
-        like(book.authorsNorm, q),
-        like(series.nameNorm, q),
-      ),
-    )
+    // издательская серия в текстовом поиске не участвует (M16) —
+    // для неё есть отдельный фильтр
+    conditions.push(or(like(book.titleNorm, q), like(book.authorsNorm, q)))
   }
 
   const rows = await db

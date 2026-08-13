@@ -4,6 +4,7 @@ import { db } from '@/db'
 import { author, crawlTask, refWorkAuthor } from '@/db/schema/catalog'
 import { env } from '@/lib/env'
 import { saveAuthorPhotoFromUrl } from './covers'
+import { linkCycleChild } from './cycles'
 import { stripBb } from './metadata/fantlab'
 import { stripHtml } from './metadata/types'
 import { ensureRefWork, linkWorkAuthor } from './reference'
@@ -82,6 +83,32 @@ async function ensureCrawlTasks(): Promise<void> {
   }
 }
 
+/** Узел дерева циклов FantLab (cycles_blocks). */
+export interface CycleNode {
+  work_id?: number
+  work_name?: string
+  work_year?: number
+  work_type_name?: string
+  children?: Array<CycleNode>
+}
+
+/** Состав цикла по порядку чтения; вложенные подциклы разворачиваем в плоский
+    список, произведения без русского названия пропускаем. */
+export function flattenCycle(
+  nodes: Array<CycleNode> | undefined,
+): Array<CycleNode> {
+  const out: Array<CycleNode> = []
+  for (const node of nodes ?? []) {
+    if (node.work_type_name === 'cycle') {
+      out.push(...flattenCycle(node.children))
+      continue
+    }
+    if (!node.work_id || !node.work_name?.trim()) continue
+    out.push(node)
+  }
+  return out
+}
+
 const yearOf = (value: unknown): number | null => {
   if (typeof value !== 'string') return null
   const m = /(1[5-9]|20)\d{2}/.exec(value)
@@ -114,6 +141,7 @@ async function crawlFantlabAuthor(authorRow: {
         }>
       }
     >
+    cycles_blocks?: Record<string, { list?: Array<CycleNode> }>
   } | null
   if (!data) throw new Error('fantlab: пустой ответ')
 
@@ -157,6 +185,38 @@ async function crawlFantlabAuthor(authorRow: {
         w.work_type_name ?? null,
       )
       await linkWorkAuthor(workId, authorRow.id)
+    }
+  }
+
+  // циклы: «Харри Холе», а не издательская серия «Несбё (новое оформление)».
+  // Безымянные технические циклы (межавторские проекты) пропускаем.
+  for (const block of Object.values(data.cycles_blocks ?? {})) {
+    for (const node of block.list ?? []) {
+      if (node.work_type_name !== 'cycle') continue
+      const name = node.work_name?.trim()
+      if (!node.work_id || !name) continue
+      const children = flattenCycle(node.children)
+      if (children.length < 2) continue
+      const cycleId = await ensureRefWork(
+        'fantlab',
+        String(node.work_id),
+        name,
+        null,
+        'cycle',
+      )
+      await linkWorkAuthor(cycleId, authorRow.id)
+      let position = 0
+      for (const child of children) {
+        const childId = await ensureRefWork(
+          'fantlab',
+          String(child.work_id),
+          child.work_name ?? '',
+          child.work_year ?? null,
+          child.work_type_name ?? null,
+        )
+        await linkWorkAuthor(childId, authorRow.id)
+        await linkCycleChild(cycleId, childId, ++position)
+      }
     }
   }
 }

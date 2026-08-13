@@ -128,7 +128,7 @@ function CatalogPage() {
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
           <Input
             className="h-12 min-w-52 flex-1 rounded-xl text-[16px]"
-            placeholder="Название, автор или серия…"
+            placeholder="Название или автор…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoComplete="off"

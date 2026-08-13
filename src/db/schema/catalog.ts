@@ -272,6 +272,25 @@ export const refWorkAuthor = sqliteTable(
   ],
 )
 
+/** Цикл → входящие произведения по порядку чтения (M16).
+    Цикл — тот же ref_work с workType 'cycle'; издательские серии тут ни при чём. */
+export const refWorkLink = sqliteTable(
+  'ref_work_link',
+  {
+    parentId: text('parent_id')
+      .notNull()
+      .references(() => refWork.id, { onDelete: 'cascade' }),
+    childId: text('child_id')
+      .notNull()
+      .references(() => refWork.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.parentId, t.childId] }),
+    index('ref_work_link_child_idx').on(t.childId),
+  ],
+)
+
 export const refBook = sqliteTable(
   'ref_book',
   {

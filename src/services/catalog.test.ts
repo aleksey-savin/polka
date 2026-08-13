@@ -124,8 +124,10 @@ describe('каталог: сквозной сценарий', () => {
     const stem = await listBooks(alex, { query: 'стругацки' })
     expect(stem.rows).toHaveLength(2)
 
+    // издательская серия из текстового поиска исключена (M16) —
+    // для неё есть отдельный фильтр
     const bySeries = await listBooks(alex, { query: 'миры братьев' })
-    expect(bySeries.rows).toHaveLength(2)
+    expect(bySeries.rows).toHaveLength(0)
 
     const nothing = await listBooks(alex, { query: 'пелевин' })
     expect(nothing.rows).toHaveLength(0)

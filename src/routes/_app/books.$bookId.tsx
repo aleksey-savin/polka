@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import type { ReactNode } from 'react'
 
 import { MoveDialog } from '@/components/book/MoveDialog'
+import { CycleRow, CycleSheet } from '@/components/book/CycleSheet'
 import { SectionLabel } from '@/components/layout/SectionLabel'
 import { PersonalPanel } from '@/components/book/PersonalPanel'
 import { GiftDialog, LendDialog } from '@/components/book/status-dialogs'
@@ -40,18 +41,20 @@ import {
 } from '@/server/books'
 import { dateHuman, dateRu, dateShort } from '@/lib/dates'
 import { removeCoverFn, uploadCoverFn } from '@/server/covers'
+import { bookCycleFn } from '@/server/cycles'
 import { bookLoanHistoryFn, returnLoanFn } from '@/server/loans'
 import { listBookPersonalFn } from '@/server/personal'
 import { spineFor } from '@/services/spine'
 
 export const Route = createFileRoute('/_app/books/$bookId')({
   loader: async ({ params }) => {
-    const [book, personal, loans] = await Promise.all([
+    const [book, personal, loans, cycle] = await Promise.all([
       getBookCardFn({ data: { bookId: params.bookId } }),
       listBookPersonalFn({ data: { bookId: params.bookId } }),
       bookLoanHistoryFn({ data: { bookId: params.bookId } }),
+      bookCycleFn({ data: { bookId: params.bookId } }),
     ])
-    return { book, personal, loans }
+    return { book, personal, loans, cycle }
   },
   component: BookCardPage,
 })
@@ -62,7 +65,7 @@ const LANG_LABEL: Record<string, string> = {
 }
 
 function BookCardPage() {
-  const { book, personal, loans } = Route.useLoaderData()
+  const { book, personal, loans, cycle } = Route.useLoaderData()
   const router = useRouter()
   const navigate = Route.useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -72,6 +75,7 @@ function BookCardPage() {
   const [giftOpen, setGiftOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [annotationOpen, setAnnotationOpen] = useState(false)
+  const [cycleOpen, setCycleOpen] = useState(false)
   const [coverBusy, setCoverBusy] = useState(false)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const refresh = () => void router.invalidate()
@@ -195,6 +199,15 @@ function BookCardPage() {
     },
   ]
 
+  // окно из трёх соседей вокруг текущей книги — весь цикл живёт в шторке
+  const neighbors = (() => {
+    if (!cycle) return []
+    const i = cycle.members.findIndex((m) => m.current)
+    if (i < 0) return cycle.members.slice(0, 3)
+    const from = Math.max(0, Math.min(i - 1, cycle.members.length - 3))
+    return cycle.members.slice(from, from + 3)
+  })()
+
   const editionParts: Array<ReactNode> = []
   if (book.publisher) editionParts.push(book.publisher)
   if (book.year)
@@ -307,26 +320,24 @@ function BookCardPage() {
         </div>
 
         <div className="min-w-0 flex-1 pb-1">
-          {book.seriesName && book.seriesId && (
-            <p className="mb-2 flex items-center gap-1.5">
-              <Link
-                to="/series/$seriesId"
-                params={{ seriesId: book.seriesId }}
-                className="min-w-0"
-              >
-                <Badge
-                  variant="outline"
-                  className="max-w-full min-w-0 rounded-full border-stamp/30 text-stamp"
-                >
-                  <span className="truncate">{book.seriesName}</span>
-                </Badge>
-              </Link>
-              {book.seriesNumber && (
-                <span className="flex-none text-[12.5px] text-muted-foreground">
-                  том {book.seriesNumber}
+          {cycle && (
+            <button
+              type="button"
+              className="mb-2 flex max-w-full min-w-0 items-center gap-[7px] rounded-full border border-stamp/30 bg-card px-3 py-1 text-[12.5px] font-semibold text-stamp"
+              onClick={() => setCycleOpen(true)}
+            >
+              <span aria-hidden className="flex flex-none items-end gap-[1.5px]">
+                <span className="h-[11px] w-[3.5px] rounded-[1px] bg-stamp/75" />
+                <span className="h-[8px] w-[3.5px] rounded-[1px] bg-stamp/75" />
+                <span className="h-[10px] w-[3.5px] rounded-[1px] bg-stamp/75" />
+              </span>
+              <span className="truncate">{cycle.title}</span>
+              {cycle.currentPosition && (
+                <span className="flex-none font-mono text-[11px] text-muted-foreground">
+                  №{cycle.currentPosition} из {cycle.total}
                 </span>
               )}
-            </p>
+            </button>
           )}
           <h1 className="text-[25px] leading-[1.16] font-semibold tracking-[-0.015em] md:text-[28px]">
             {book.title}
@@ -547,6 +558,36 @@ function BookCardPage() {
         </section>
       )}
 
+      {/* ── Цикл: соседние произведения ── */}
+      {cycle && neighbors.length > 0 && (
+        <section className="mt-7">
+          <SectionLabel>
+            Цикл <span className="text-stamp">· {cycle.title}</span>
+          </SectionLabel>
+          {neighbors.map((m) => (
+            <CycleRow
+              key={m.workId}
+              member={m}
+              authorName={cycle.authorName ?? book.authors}
+              onOpenBook={(bookId) =>
+                void navigate({ to: '/books/$bookId', params: { bookId } })
+              }
+              onOpenWork={() => setCycleOpen(true)}
+              onChanged={refresh}
+            />
+          ))}
+          {cycle.total > neighbors.length && (
+            <button
+              type="button"
+              className="mt-2 text-[13px] font-semibold text-accent-foreground"
+              onClick={() => setCycleOpen(true)}
+            >
+              Весь цикл · {cycle.total} →
+            </button>
+          )}
+        </section>
+      )}
+
       {/* ── Личное ── */}
       <section className="mt-7">
         <SectionLabel>Мой формуляр</SectionLabel>
@@ -561,6 +602,34 @@ function BookCardPage() {
       <section className="mt-7">
         <SectionLabel>Каталожная карточка</SectionLabel>
         <dl className="ruled-card">
+          {book.seriesName && (
+            <div className="flex h-8 items-baseline gap-3 overflow-hidden whitespace-nowrap">
+              <dt className="w-[108px] flex-none text-[12.5px] text-muted-foreground">
+                Изд. серия
+              </dt>
+              <dd className="m-0 min-w-0 truncate text-sm">
+                {book.seriesId ? (
+                  <Link
+                    to="/series/$seriesId"
+                    params={{ seriesId: book.seriesId }}
+                    className="hover:underline"
+                  >
+                    {book.seriesName}
+                  </Link>
+                ) : (
+                  book.seriesName
+                )}
+                {book.seriesNumber && (
+                  <span className="text-muted-foreground">
+                    {' · том '}
+                    <span className="font-mono text-[13px]">
+                      {book.seriesNumber}
+                    </span>
+                  </span>
+                )}
+              </dd>
+            </div>
+          )}
           {(book.isbn13 || book.isbn10) && (
             <div className="flex h-8 items-baseline gap-3 overflow-hidden whitespace-nowrap">
               <dt className="w-[108px] flex-none text-[12.5px] text-muted-foreground">
@@ -717,6 +786,15 @@ function BookCardPage() {
         onOpenChange={setDeleteOpen}
         onConfirm={() => void removeBook()}
       />
+      {cycle && (
+        <CycleSheet
+          cycle={cycle}
+          open={cycleOpen}
+          onClose={() => setCycleOpen(false)}
+          onChanged={refresh}
+        />
+      )}
+
       <MoveDialog
         open={moveOpen}
         onOpenChange={setMoveOpen}
