@@ -4,13 +4,13 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Logo } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -234,7 +234,7 @@ function AskDialog({
   }
 
   return (
-    <Dialog
+    <Drawer
       open={book !== null}
       onOpenChange={(open) => {
         if (!open) {
@@ -245,27 +245,27 @@ function AskDialog({
         }
       }}
     >
-      <DialogContent>
+      <DrawerContent>
         {done ? (
           <>
-            <DialogHeader>
-              <DialogTitle>Заявка отправлена</DialogTitle>
-              <DialogDescription>
+            <DrawerHeader>
+              <DrawerTitle>Заявка отправлена</DrawerTitle>
+              <DrawerDescription>
                 Хозяева увидят её и решат, когда передать книгу.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
+              </DrawerDescription>
+            </DrawerHeader>
+            <DrawerFooter>
               <Button onClick={onClose}>Хорошо</Button>
-            </DialogFooter>
+            </DrawerFooter>
           </>
         ) : (
           <>
-            <DialogHeader>
-              <DialogTitle>Хочу почитать «{book?.title}»</DialogTitle>
-              <DialogDescription>
+            <DrawerHeader>
+              <DrawerTitle>Хочу почитать «{book?.title}»</DrawerTitle>
+              <DrawerDescription>
                 Хозяева увидят заявку и ответят при встрече.
-              </DialogDescription>
-            </DialogHeader>
+              </DrawerDescription>
+            </DrawerHeader>
             <div className="grid gap-3">
               {!meName && (
                 <div className="grid gap-1.5">
@@ -294,17 +294,17 @@ function AskDialog({
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
-            <DialogFooter>
+            <DrawerFooter>
               <Button
                 onClick={() => void submit()}
                 disabled={busy || !effectiveName.trim()}
               >
                 Отправить заявку
               </Button>
-            </DialogFooter>
+            </DrawerFooter>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }

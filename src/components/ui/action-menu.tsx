@@ -2,11 +2,11 @@ import { useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,14 +81,13 @@ export function ActionMenu({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent
-        showCloseButton={false}
+    <Drawer open={open} onOpenChange={setOpen}>
+      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+      <DrawerContent
         aria-describedby={undefined}
         className="gap-1 px-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]"
       >
-        <DialogTitle className="sr-only">Действия</DialogTitle>
+        <DrawerTitle className="sr-only">Действия</DrawerTitle>
         {caption && (
           <p className="truncate px-2.5 pt-1 text-center text-[12.5px] text-muted-foreground">
             {caption}
@@ -127,7 +126,7 @@ export function ActionMenu({
             </button>
           ),
         )}
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }

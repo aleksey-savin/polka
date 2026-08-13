@@ -1,14 +1,15 @@
 import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
-import { WorkSheet } from '@/components/book/WorkSheet'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import { createBookFn } from '@/server/books'
 import type { CycleMember, CycleView } from '@/services/cycles'
 
@@ -16,6 +17,7 @@ import type { CycleMember, CycleView } from '@/services/cycles'
  * Шторка цикла: произведения по порядку чтения.
  * В строке две независимые оси — чтение (штамп) и наличие (подпись + «В Хочу»).
  * Прочитать можно и не владея книгой, поэтому кнопка живёт по наличию.
+ * Вглубь — только страницами: шторки над шторками в приложении нет.
  */
 
 /** Штамп чтения — общий для шторки и секции «Цикл» на карточке книги. */
@@ -36,14 +38,13 @@ export function ReadingStamp({ value }: { value: 'read' | 'reading' }) {
 export function CycleRow({
   member,
   authorName,
-  onOpenBook,
-  onOpenWork,
+  onNavigate,
   onChanged,
 }: {
   member: CycleMember
   authorName: string | null
-  onOpenBook: (bookId: string) => void
-  onOpenWork: (workId: string) => void
+  /** Закрыть шторку перед уходом на страницу (на карточке книги не нужно). */
+  onNavigate?: () => void
   onChanged: () => void
 }) {
   const [busy, setBusy] = useState(false)
@@ -69,44 +70,40 @@ export function CycleRow({
     }
   }
 
-  const open = () =>
-    member.bookId ? onOpenBook(member.bookId) : onOpenWork(member.workId)
+  const target = member.bookId
+    ? ({ to: '/books/$bookId', params: { bookId: member.bookId } } as const)
+    : ({ to: '/works/$workId', params: { workId: member.workId } } as const)
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      className="flex cursor-pointer items-center gap-2.5 border-t py-2.5 select-none first:border-t-0"
-      onClick={open}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          open()
-        }
-      }}
-    >
-      <span className="w-[26px] flex-none font-mono text-[11.5px] text-muted-foreground">
-        #{member.position}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p
-          className={`truncate text-sm ${
-            member.current
-              ? 'font-semibold text-accent-foreground'
-              : 'font-medium'
-          }`}
-        >
-          {member.title}
-          {member.current && ' — вы здесь'}
-        </p>
-        <p className="truncate text-[11.5px] text-muted-foreground">
-          {member.year && (
-            <span className="font-mono text-[11px]">{member.year}</span>
-          )}
-          {member.year && (member.place || !member.owned) && ' · '}
-          {member.place ?? (member.owned ? '' : 'нет в библиотеке')}
-        </p>
-      </div>
+    <div className="flex items-center gap-2.5 border-t py-2.5 first:border-t-0">
+      <Link
+        {...target}
+        onClick={onNavigate}
+        className="flex min-w-0 flex-1 items-center gap-2.5"
+      >
+        <span className="w-[26px] flex-none font-mono text-[11.5px] text-muted-foreground">
+          #{member.position}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span
+            className={`block truncate text-sm ${
+              member.current
+                ? 'font-semibold text-accent-foreground'
+                : 'font-medium'
+            }`}
+          >
+            {member.title}
+            {member.current && ' — вы здесь'}
+          </span>
+          <span className="block truncate text-[11.5px] text-muted-foreground">
+            {member.year && (
+              <span className="font-mono text-[11px]">{member.year}</span>
+            )}
+            {member.year && (member.place || !member.owned) && ' · '}
+            {member.place ?? (member.owned ? '' : 'нет в библиотеке')}
+          </span>
+        </span>
+      </Link>
       {member.reading && <ReadingStamp value={member.reading} />}
       {!member.owned && !member.wished && (
         <Button
@@ -114,10 +111,7 @@ export function CycleRow({
           variant="outline"
           className="flex-none text-accent-foreground"
           loading={busy}
-          onClick={(e) => {
-            e.stopPropagation()
-            void wish()
-          }}
+          onClick={() => void wish()}
         >
           В Хочу
         </Button>
@@ -140,9 +134,6 @@ export function CycleSheet({
   onClose: () => void
   onChanged: () => void
 }) {
-  const navigate = useNavigate()
-  const [workId, setWorkId] = useState<string | null>(null)
-
   const readShare = cycle.total > 0 ? cycle.readCount / cycle.total : 0
   const stats = [
     `прочитано ${cycle.readCount} из ${cycle.total}`,
@@ -151,51 +142,37 @@ export function CycleSheet({
   ].filter(Boolean)
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent
-          aria-describedby={undefined}
-          className="grid max-h-[86dvh] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-md"
-        >
-          <div className="px-4 pt-3.5 pb-2.5">
-            <DialogTitle className="truncate pr-9 text-[19px] font-semibold">
-              {cycle.title}
-            </DialogTitle>
-            <p className="truncate text-[12.5px] text-muted-foreground">
-              цикл{cycle.authorName && ` · ${cycle.authorName}`}
-            </p>
-            <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-secondary">
-              <span
-                className="block h-full rounded-full bg-primary"
-                style={{ width: `${Math.round(readShare * 100)}%` }}
-              />
-            </div>
-            <p className="mt-1.5 truncate font-mono text-[11px] text-muted-foreground">
-              {stats.join(' · ')}
-            </p>
+    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent className="max-h-[86dvh] gap-0 p-0">
+        <DrawerHeader className="px-4 pt-1 pb-2.5">
+          <DrawerTitle className="truncate text-[19px] font-semibold">
+            {cycle.title}
+          </DrawerTitle>
+          <DrawerDescription className="truncate text-[12.5px]">
+            цикл{cycle.authorName && ` · ${cycle.authorName}`}
+          </DrawerDescription>
+          <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary">
+            <span
+              className="block h-full rounded-full bg-primary"
+              style={{ width: `${Math.round(readShare * 100)}%` }}
+            />
           </div>
-          <div className="overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {cycle.members.map((m) => (
-              <CycleRow
-                key={m.workId}
-                member={m}
-                authorName={cycle.authorName}
-                onOpenBook={(bookId) => {
-                  onClose()
-                  void navigate({ to: '/books/$bookId', params: { bookId } })
-                }}
-                onOpenWork={setWorkId}
-                onChanged={onChanged}
-              />
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-      <WorkSheet
-        workId={workId}
-        onClose={() => setWorkId(null)}
-        onChanged={onChanged}
-      />
-    </>
+          <p className="mt-1.5 truncate font-mono text-[11px] text-muted-foreground">
+            {stats.join(' · ')}
+          </p>
+        </DrawerHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {cycle.members.map((m) => (
+            <CycleRow
+              key={m.workId}
+              member={m}
+              authorName={cycle.authorName}
+              onNavigate={onClose}
+              onChanged={onChanged}
+            />
+          ))}
+        </div>
+      </DrawerContent>
+    </Drawer>
   )
 }

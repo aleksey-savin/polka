@@ -3,14 +3,14 @@ import type { ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createLibraryFn, createInviteFn } from '@/server/libraries'
@@ -41,21 +41,21 @@ export function NewLibraryDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Drawer open={open} onOpenChange={setOpen}>
+      <DrawerTrigger asChild>
         {trigger ?? (
           <Button variant="ghost" className="text-accent-foreground">
             + библиотека
           </Button>
         )}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Новая библиотека</DialogTitle>
-          <DialogDescription>
+      </DrawerTrigger>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Новая библиотека</DrawerTitle>
+          <DrawerDescription>
             Физическое место, где стоят книги: дом, дача, кабинет.
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         <div className="grid gap-1.5">
           <Label htmlFor="lib-name">Название</Label>
           <Input
@@ -66,7 +66,7 @@ export function NewLibraryDialog({
             onKeyDown={(e) => e.key === 'Enter' && void submit()}
           />
         </div>
-        <DialogFooter>
+        <DrawerFooter>
           <Button
             onClick={() => void submit()}
             loading={busy}
@@ -74,9 +74,9 @@ export function NewLibraryDialog({
           >
             Создать библиотеку
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -111,14 +111,14 @@ export function NewShelfDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Drawer open={open} onOpenChange={setOpen}>
+      <DrawerTrigger asChild>
         {trigger ?? <Button variant="outline">+ Полка</Button>}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Новая полка</DialogTitle>
-        </DialogHeader>
+      </DrawerTrigger>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Новая полка</DrawerTitle>
+        </DrawerHeader>
         <div className="grid gap-1.5">
           <Label htmlFor="shelf-name">Название</Label>
           <Input
@@ -130,7 +130,7 @@ export function NewShelfDialog({
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
-        <DialogFooter>
+        <DrawerFooter>
           <Button
             onClick={() => void submit()}
             loading={busy}
@@ -138,9 +138,9 @@ export function NewShelfDialog({
           >
             Создать полку
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -175,8 +175,8 @@ export function InviteDialog({
   }
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
+    <Drawer>
+      <DrawerTrigger asChild>
         {trigger ?? (
           <button
             type="button"
@@ -185,16 +185,16 @@ export function InviteDialog({
             + пригласить
           </button>
         )}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Совладелец для «{libraryName}»</DialogTitle>
-          <DialogDescription>
+      </DrawerTrigger>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Совладелец для «{libraryName}»</DrawerTitle>
+          <DrawerDescription>
             Отправьте ссылку — человек войдёт в свой аккаунт и станет
             полноправным участником библиотеки: книги, полки и выдачи станут
             общими. Оценки и заметки у каждого останутся свои.
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         {link ? (
           <div className="grid gap-2">
             <Input
@@ -208,13 +208,13 @@ export function InviteDialog({
             </Button>
           </div>
         ) : (
-          <DialogFooter>
+          <DrawerFooter>
             <Button onClick={() => void generate()} loading={busy}>
               Создать ссылку-приглашение
             </Button>
-          </DialogFooter>
+          </DrawerFooter>
         )}
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }

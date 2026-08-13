@@ -523,6 +523,7 @@ export async function fetchWorkEditions(
 export interface RefBookView {
   id: string
   title: string
+  authors: string
   publisher: string | null
   year: number | null
   pages: number | null
@@ -570,6 +571,7 @@ export async function getRefBookView(
   return {
     id: row.id,
     title: row.title,
+    authors: row.authors,
     publisher: row.publisher,
     year: row.year,
     pages: row.pages,

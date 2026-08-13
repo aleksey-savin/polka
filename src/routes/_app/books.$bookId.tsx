@@ -26,12 +26,12 @@ import { ActionMenu } from '@/components/ui/action-menu'
 import type { ActionMenuEntry } from '@/components/ui/action-menu'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import {
   deleteBookFn,
   getBookCardFn,
@@ -569,10 +569,6 @@ function BookCardPage() {
               key={m.workId}
               member={m}
               authorName={cycle.authorName ?? book.authors}
-              onOpenBook={(bookId) =>
-                void navigate({ to: '/books/$bookId', params: { bookId } })
-              }
-              onOpenWork={() => setCycleOpen(true)}
               onChanged={refresh}
             />
           ))}
@@ -726,11 +722,11 @@ function BookCardPage() {
           e.target.value = ''
         }}
       />
-      <Dialog open={coverOpen} onOpenChange={setCoverOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Обложка</DialogTitle>
-          </DialogHeader>
+      <Drawer open={coverOpen} onOpenChange={setCoverOpen}>
+        <DrawerContent className="max-w-sm">
+          <DrawerHeader>
+            <DrawerTitle>Обложка</DrawerTitle>
+          </DrawerHeader>
           {book.coverPath ? (
             <img
               src={`/api/covers/${book.id}?v=${book.coverPath}`}
@@ -742,7 +738,7 @@ function BookCardPage() {
               У книги пока нет обложки — загрузите фото или скан.
             </p>
           )}
-          <DialogFooter className="gap-2">
+          <DrawerFooter className="gap-2">
             <Button
               variant="outline"
               loading={coverBusy}
@@ -763,9 +759,9 @@ function BookCardPage() {
                 Убрать
               </Button>
             )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
       <LendDialog
         bookId={book.id}
         bookTitle={book.title}
@@ -824,21 +820,21 @@ function DeleteBookDialog({
   onConfirm: () => void
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Удалить «{title}»?</DialogTitle>
-        </DialogHeader>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Удалить «{title}»?</DrawerTitle>
+        </DrawerHeader>
         <p className="text-sm text-muted-foreground">
           Карточка, тэги, история выдач и обложка будут удалены навсегда.
           Отменить нельзя.
         </p>
-        <DialogFooter>
+        <DrawerFooter>
           <Button variant="destructive" onClick={onConfirm}>
             Удалить книгу
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer'
 import { updateShelfFn } from '@/server/shelves'
 
 export const ACCENT_PRESETS = [
@@ -45,11 +45,11 @@ export function ShelfColorSheet({
     'relative grid size-11 place-items-center rounded-full border-2 disabled:opacity-50'
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
-        <DialogTitle className="text-[17px] font-semibold">
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent aria-describedby={undefined} className="sm:max-w-sm">
+        <DrawerTitle className="text-[17px] font-semibold">
           Цвет полки
-        </DialogTitle>
+        </DrawerTitle>
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
@@ -101,7 +101,7 @@ export function ShelfColorSheet({
           />
           Свой цвет…
         </label>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }

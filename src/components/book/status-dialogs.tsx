@@ -2,13 +2,13 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { giftBookFn } from '@/server/books'
@@ -54,15 +54,15 @@ export function LendDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>«{bookTitle}» — кому даёте?</DialogTitle>
-          <DialogDescription>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>«{bookTitle}» — кому даёте?</DrawerTitle>
+          <DrawerDescription>
             Книга останется на полке со штампом «НА РУКАХ», а на этой странице
             появится запись в формуляре.
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5">
             <Label htmlFor="lend-name">Кому</Label>
@@ -90,7 +90,7 @@ export function LendDialog({
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
-        <DialogFooter>
+        <DrawerFooter>
           <Button
             onClick={() => void submit()}
             loading={busy}
@@ -98,9 +98,9 @@ export function LendDialog({
           >
             Дать почитать
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -137,16 +137,16 @@ export function GiftDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>«{bookTitle}» уезжает насовсем?</DialogTitle>
-          <DialogDescription>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>«{bookTitle}» уезжает насовсем?</DrawerTitle>
+          <DrawerDescription>
             Книга уйдёт с полки, но останется в каталоге со штампом «ПОДАРЕНА» —
             найдётся фильтром. Если передумаете, на карточке будет кнопка «Снова
             в библиотеку».
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         <div className="grid gap-1.5">
           <Label htmlFor="gift-to">Кому подарили</Label>
           <Input
@@ -158,7 +158,7 @@ export function GiftDialog({
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <DialogFooter>
+        <DrawerFooter>
           <Button
             onClick={() => void submit()}
             loading={busy}
@@ -166,8 +166,8 @@ export function GiftDialog({
           >
             Подарить
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }

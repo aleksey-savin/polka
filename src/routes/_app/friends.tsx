@@ -8,14 +8,14 @@ import { ActionMenu } from '@/components/ui/action-menu'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { dateRu } from '@/lib/dates'
 import { plural } from '@/lib/plural'
@@ -331,19 +331,19 @@ function FriendsPage() {
         onOpenChange={setShareOpen}
         onCreated={refresh}
       />
-      <Dialog
+      <Drawer
         open={revoke !== null}
         onOpenChange={(o) => !o && setRevoke(null)}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Отозвать ссылку на «{revoke?.name}»?</DialogTitle>
-          </DialogHeader>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Отозвать ссылку на «{revoke?.name}»?</DrawerTitle>
+          </DrawerHeader>
           <p className="text-sm text-muted-foreground">
             Витрина сразу закроется и пропадёт из «Друзей» у всех, кто её
             сохранил. Новую ссылку можно создать в любой момент.
           </p>
-          <DialogFooter>
+          <DrawerFooter>
             <Button
               variant="destructive"
               onClick={() => {
@@ -358,9 +358,9 @@ function FriendsPage() {
             >
               Отозвать
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }
@@ -437,20 +437,20 @@ function ShareSheet({
   }
 
   return (
-    <Dialog
+    <Drawer
       open={open}
       onOpenChange={(o) => {
         onOpenChange(o)
         if (o) void load()
       }}
     >
-      <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Чем поделиться?</DialogTitle>
-          <DialogDescription>
+      <DrawerContent aria-describedby={undefined} className="sm:max-w-sm">
+        <DrawerHeader>
+          <DrawerTitle>Чем поделиться?</DrawerTitle>
+          <DrawerDescription>
             Гость увидит только книги: без заметок, оценок и имён должников.
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         <div className="grid max-h-[46dvh] gap-1.5 overflow-y-auto">
           {targets.map((t) => {
             const on = t.key === selectedKey
@@ -480,7 +480,7 @@ function ShareSheet({
             )
           })}
         </div>
-        <DialogFooter>
+        <DrawerFooter>
           <Button
             size="lg"
             loading={busy}
@@ -489,9 +489,9 @@ function ShareSheet({
           >
             Создать ссылку{selected ? ` на «${selected.label}»` : ''}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -511,19 +511,19 @@ function InvitePolkaDialog() {
   }
 
   return (
-    <Dialog onOpenChange={(o) => !o && setLink(null)}>
-      <DialogTrigger asChild>
+    <Drawer onOpenChange={(o) => !o && setLink(null)}>
+      <DrawerTrigger asChild>
         <Button variant="outline">Пригласить в Полку</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Приглашение зарегистрироваться</DialogTitle>
-          <DialogDescription>
+      </DrawerTrigger>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Приглашение зарегистрироваться</DrawerTitle>
+          <DrawerDescription>
             Регистрация в Полке — только по таким ссылкам. Ссылка одноразовая,
             живёт 7 дней. Чтобы человек попал в вашу библиотеку совладельцем —
             после регистрации пришлите ему ещё инвайт из шапки библиотеки.
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         {link ? (
           <div className="grid gap-2">
             <Input
@@ -544,13 +544,13 @@ function InvitePolkaDialog() {
             </Button>
           </div>
         ) : (
-          <DialogFooter>
+          <DrawerFooter>
             <Button onClick={() => void generate()} loading={busy}>
               Создать ссылку
             </Button>
-          </DialogFooter>
+          </DrawerFooter>
         )}
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }

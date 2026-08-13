@@ -3,10 +3,10 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { SectionLabel } from '@/components/layout/SectionLabel'
-import { WorkSheet, workTypeRu } from '@/components/book/WorkSheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { dateRu } from '@/lib/dates'
+import { workTypeRu } from '@/lib/work-types'
 import { plural } from '@/lib/plural'
 import { getAuthorPageFn } from '@/server/authors'
 import { createBookFn } from '@/server/books'
@@ -78,7 +78,6 @@ function AuthorPage() {
   const router = useRouter()
   const [bioOpen, setBioOpen] = useState(false)
   const [wishBusy, setWishBusy] = useState<string | null>(null)
-  const [openWorkId, setOpenWorkId] = useState<string | null>(null)
 
   async function addToWishlist(workId: string, title: string) {
     setWishBusy(workId)
@@ -260,25 +259,22 @@ function AuthorPage() {
                 {group.items.map((w) => (
                   <div
                     key={w.id}
-                    role="button"
-                    tabIndex={0}
-                    className="flex cursor-pointer items-center gap-3 border-t py-2 select-none first:border-t-0"
-                    onClick={() => setOpenWorkId(w.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        setOpenWorkId(w.id)
-                      }
-                    }}
+                    className="flex items-center gap-3 border-t py-2 first:border-t-0"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{w.title}</p>
-                    </div>
-                    {w.year && (
-                      <span className="flex-none font-mono text-xs text-muted-foreground">
-                        {w.year}
+                    <Link
+                      to="/works/$workId"
+                      params={{ workId: w.id }}
+                      className="flex min-w-0 flex-1 items-center gap-3"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {w.title}
                       </span>
-                    )}
+                      {w.year && (
+                        <span className="flex-none font-mono text-xs text-muted-foreground">
+                          {w.year}
+                        </span>
+                      )}
+                    </Link>
                     {w.have ? (
                       <span className="flex-none rounded-[3px] border-[1.5px] border-primary px-1.5 font-mono text-[10px] tracking-[0.08em] text-accent-foreground uppercase">
                         есть
@@ -293,12 +289,9 @@ function AuthorPage() {
                         variant="outline"
                         className="flex-none text-accent-foreground"
                         loading={wishBusy === w.id}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          void addToWishlist(w.id, w.title)
-                        }}
+                        onClick={() => void addToWishlist(w.id, w.title)}
                       >
-                        В «Хочу»
+                        В Хочу
                       </Button>
                     )}
                     <span
@@ -314,12 +307,6 @@ function AuthorPage() {
           </div>
         </section>
       )}
-
-      <WorkSheet
-        workId={openWorkId}
-        onClose={() => setOpenWorkId(null)}
-        onChanged={() => void router.invalidate()}
-      />
 
       {author.series.length > 0 && (
         <section className="mt-6">

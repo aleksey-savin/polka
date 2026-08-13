@@ -10,12 +10,12 @@ import { ShelfSection } from '@/components/shelf/ShelfSection'
 import { ActionMenu } from '@/components/ui/action-menu'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { plural } from '@/lib/plural'
 import { deleteShelfFn, getShelfViewFn, updateShelfFn } from '@/server/shelves'
@@ -283,23 +283,23 @@ function RenameShelfDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Переименовать полку</DialogTitle>
-        </DialogHeader>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Переименовать полку</DrawerTitle>
+        </DrawerHeader>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
         />
-        <DialogFooter>
+        <DrawerFooter>
           <Button onClick={() => void submit()} disabled={busy || !name.trim()}>
             Сохранить
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -317,22 +317,22 @@ function DeleteShelfDialog({
   onConfirm: () => void
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Удалить полку «{name}»?</DialogTitle>
-        </DialogHeader>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Удалить полку «{name}»?</DrawerTitle>
+        </DrawerHeader>
         <p className="text-sm text-muted-foreground">
           {count > 0
             ? `Книги (${count}) не пропадут — они переедут в «Неразобранное» этой библиотеки.`
             : 'Полка пустая.'}
         </p>
-        <DialogFooter>
+        <DrawerFooter>
           <Button variant="destructive" onClick={onConfirm}>
             Удалить полку
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }

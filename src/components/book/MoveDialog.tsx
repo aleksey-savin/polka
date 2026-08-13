@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { plural } from '@/lib/plural'
@@ -145,20 +145,20 @@ export function MoveDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>
             Переместить{' '}
             {bookIds.length === 1
               ? 'книгу'
               : `${bookIds.length} ${plural(bookIds.length, 'книгу', 'книги', 'книг')}`}
-          </DialogTitle>
-          <DialogDescription>
+          </DrawerTitle>
+          <DrawerDescription>
             {contextLabel ??
               'Книга встанет на выбранную полку; из «Хочу» — переедет в библиотеку.'}
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         <div className="grid gap-4">
           {libraries.length > 1 && (
             <div className="grid gap-1.5">
@@ -233,7 +233,7 @@ export function MoveDialog({
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
-        <DialogFooter>
+        <DrawerFooter>
           <Button
             size="lg"
             onClick={() => void submit()}
@@ -249,9 +249,9 @@ export function MoveDialog({
               </>
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 

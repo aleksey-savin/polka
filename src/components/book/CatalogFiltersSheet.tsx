@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { plural } from '@/lib/plural'
 import { listBooksFn } from '@/server/books'
@@ -207,16 +207,15 @@ export function CatalogFiltersSheet({
   const tagsShown = allTags ? tags : tags.slice(0, 10)
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
         aria-describedby={undefined}
-        className="grid max-h-[88dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-md"
+        className="max-h-[88dvh] gap-0 overflow-hidden p-0 sm:max-w-md"
       >
         <div className="flex items-baseline justify-between px-4 pt-3.5 pb-1">
-          <DialogTitle className="text-[17px] font-semibold">
+          <DrawerTitle className="text-[17px] font-semibold">
             Фильтры
-          </DialogTitle>
+          </DrawerTitle>
           <button
             type="button"
             className="p-1 text-[13.5px] font-medium text-muted-foreground"
@@ -226,7 +225,7 @@ export function CatalogFiltersSheet({
           </button>
         </div>
 
-        <div className="grid gap-5 overflow-y-auto px-4 py-2">
+        <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto px-4 py-2">
           <section>
             <FilterLabel>Где книга</FilterLabel>
             <div className="flex flex-wrap gap-1.5">
@@ -495,7 +494,7 @@ export function CatalogFiltersSheet({
               : `Показать ${count} ${plural(count, 'книгу', 'книги', 'книг')}`}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   )
 }

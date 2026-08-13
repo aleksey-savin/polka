@@ -26,11 +26,13 @@ import { Route as AppAuthorsAuthorIdRouteImport } from './routes/_app/authors.$a
 import { Route as AppBooksIndexRouteImport } from './routes/_app/books.index'
 import { Route as AppBooksBookIdRouteImport } from './routes/_app/books.$bookId'
 import { Route as AppBooksNewRouteImport } from './routes/_app/books.new'
+import { Route as AppEditionsRefBookIdRouteImport } from './routes/_app/editions.$refBookId'
 import { Route as AppInviteTokenRouteImport } from './routes/_app/invite.$token'
 import { Route as AppLibrariesIndexRouteImport } from './routes/_app/libraries.index'
 import { Route as AppSeriesIndexRouteImport } from './routes/_app/series.index'
 import { Route as AppSeriesSeriesIdRouteImport } from './routes/_app/series.$seriesId'
 import { Route as AppShelvesShelfIdRouteImport } from './routes/_app/shelves.$shelfId'
+import { Route as AppWorksWorkIdRouteImport } from './routes/_app/works.$workId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as ApiCoversBookIdRouteImport } from './routes/api/covers.$bookId'
 import { Route as ApiRefCoversRefBookIdRouteImport } from './routes/api/ref-covers.$refBookId'
@@ -121,6 +123,11 @@ const AppBooksNewRoute = AppBooksNewRouteImport.update({
   path: '/books/new',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEditionsRefBookIdRoute = AppEditionsRefBookIdRouteImport.update({
+  id: '/editions/$refBookId',
+  path: '/editions/$refBookId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppInviteTokenRoute = AppInviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
@@ -144,6 +151,11 @@ const AppSeriesSeriesIdRoute = AppSeriesSeriesIdRouteImport.update({
 const AppShelvesShelfIdRoute = AppShelvesShelfIdRouteImport.update({
   id: '/shelves/$shelfId',
   path: '/shelves/$shelfId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWorksWorkIdRoute = AppWorksWorkIdRouteImport.update({
+  id: '/works/$workId',
+  path: '/works/$workId',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -188,9 +200,11 @@ export interface FileRoutesByFullPath {
   '/authors/$authorId': typeof AppAuthorsAuthorIdRoute
   '/books/$bookId': typeof AppBooksBookIdRoute
   '/books/new': typeof AppBooksNewRoute
+  '/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/invite/$token': typeof AppInviteTokenRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
+  '/works/$workId': typeof AppWorksWorkIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/covers/$bookId': typeof ApiCoversBookIdRoute
   '/api/ref-covers/$refBookId': typeof ApiRefCoversRefBookIdRoute
@@ -216,9 +230,11 @@ export interface FileRoutesByTo {
   '/authors/$authorId': typeof AppAuthorsAuthorIdRoute
   '/books/$bookId': typeof AppBooksBookIdRoute
   '/books/new': typeof AppBooksNewRoute
+  '/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/invite/$token': typeof AppInviteTokenRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
+  '/works/$workId': typeof AppWorksWorkIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/covers/$bookId': typeof ApiCoversBookIdRoute
   '/api/ref-covers/$refBookId': typeof ApiRefCoversRefBookIdRoute
@@ -246,9 +262,11 @@ export interface FileRoutesById {
   '/_app/authors/$authorId': typeof AppAuthorsAuthorIdRoute
   '/_app/books/$bookId': typeof AppBooksBookIdRoute
   '/_app/books/new': typeof AppBooksNewRoute
+  '/_app/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/_app/invite/$token': typeof AppInviteTokenRoute
   '/_app/series/$seriesId': typeof AppSeriesSeriesIdRoute
   '/_app/shelves/$shelfId': typeof AppShelvesShelfIdRoute
+  '/_app/works/$workId': typeof AppWorksWorkIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/covers/$bookId': typeof ApiCoversBookIdRoute
   '/api/ref-covers/$refBookId': typeof ApiRefCoversRefBookIdRoute
@@ -276,9 +294,11 @@ export interface FileRouteTypes {
     | '/authors/$authorId'
     | '/books/$bookId'
     | '/books/new'
+    | '/editions/$refBookId'
     | '/invite/$token'
     | '/series/$seriesId'
     | '/shelves/$shelfId'
+    | '/works/$workId'
     | '/api/auth/$'
     | '/api/covers/$bookId'
     | '/api/ref-covers/$refBookId'
@@ -304,9 +324,11 @@ export interface FileRouteTypes {
     | '/authors/$authorId'
     | '/books/$bookId'
     | '/books/new'
+    | '/editions/$refBookId'
     | '/invite/$token'
     | '/series/$seriesId'
     | '/shelves/$shelfId'
+    | '/works/$workId'
     | '/api/auth/$'
     | '/api/covers/$bookId'
     | '/api/ref-covers/$refBookId'
@@ -333,9 +355,11 @@ export interface FileRouteTypes {
     | '/_app/authors/$authorId'
     | '/_app/books/$bookId'
     | '/_app/books/new'
+    | '/_app/editions/$refBookId'
     | '/_app/invite/$token'
     | '/_app/series/$seriesId'
     | '/_app/shelves/$shelfId'
+    | '/_app/works/$workId'
     | '/api/auth/$'
     | '/api/covers/$bookId'
     | '/api/ref-covers/$refBookId'
@@ -480,6 +504,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBooksNewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/editions/$refBookId': {
+      id: '/_app/editions/$refBookId'
+      path: '/editions/$refBookId'
+      fullPath: '/editions/$refBookId'
+      preLoaderRoute: typeof AppEditionsRefBookIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/invite/$token': {
       id: '/_app/invite/$token'
       path: '/invite/$token'
@@ -513,6 +544,13 @@ declare module '@tanstack/react-router' {
       path: '/shelves/$shelfId'
       fullPath: '/shelves/$shelfId'
       preLoaderRoute: typeof AppShelvesShelfIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/works/$workId': {
+      id: '/_app/works/$workId'
+      path: '/works/$workId'
+      fullPath: '/works/$workId'
+      preLoaderRoute: typeof AppWorksWorkIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
@@ -564,9 +602,11 @@ interface AppRouteChildren {
   AppAuthorsAuthorIdRoute: typeof AppAuthorsAuthorIdRoute
   AppBooksBookIdRoute: typeof AppBooksBookIdRoute
   AppBooksNewRoute: typeof AppBooksNewRoute
+  AppEditionsRefBookIdRoute: typeof AppEditionsRefBookIdRoute
   AppInviteTokenRoute: typeof AppInviteTokenRoute
   AppSeriesSeriesIdRoute: typeof AppSeriesSeriesIdRoute
   AppShelvesShelfIdRoute: typeof AppShelvesShelfIdRoute
+  AppWorksWorkIdRoute: typeof AppWorksWorkIdRoute
   AppBooksIndexRoute: typeof AppBooksIndexRoute
   AppLibrariesIndexRoute: typeof AppLibrariesIndexRoute
   AppSeriesIndexRoute: typeof AppSeriesIndexRoute
@@ -584,9 +624,11 @@ const AppRouteChildren: AppRouteChildren = {
   AppAuthorsAuthorIdRoute: AppAuthorsAuthorIdRoute,
   AppBooksBookIdRoute: AppBooksBookIdRoute,
   AppBooksNewRoute: AppBooksNewRoute,
+  AppEditionsRefBookIdRoute: AppEditionsRefBookIdRoute,
   AppInviteTokenRoute: AppInviteTokenRoute,
   AppSeriesSeriesIdRoute: AppSeriesSeriesIdRoute,
   AppShelvesShelfIdRoute: AppShelvesShelfIdRoute,
+  AppWorksWorkIdRoute: AppWorksWorkIdRoute,
   AppBooksIndexRoute: AppBooksIndexRoute,
   AppLibrariesIndexRoute: AppLibrariesIndexRoute,
   AppSeriesIndexRoute: AppSeriesIndexRoute,
