@@ -110,7 +110,7 @@ export function WorkSheet({
         aria-describedby={undefined}
         className="grid max-h-[86dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-md"
       >
-        <div className="px-4 pt-2 pb-1">
+        <div className="px-4 pt-3.5 pb-1">
           <DialogTitle className="text-[19px] font-semibold">
             {view?.title ?? '…'}
           </DialogTitle>
@@ -322,7 +322,7 @@ function EditionSheet({
         aria-describedby={undefined}
         className="grid max-h-[86dvh] grid-rows-[minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-md"
       >
-        <div className="overflow-y-auto px-4 pt-2 pb-3">
+        <div className="overflow-y-auto px-4 pt-3.5 pb-3">
           <div className="flex items-start gap-3.5">
             {view?.coverPath ? (
               <img

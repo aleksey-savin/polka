@@ -213,7 +213,7 @@ export function CatalogFiltersSheet({
         aria-describedby={undefined}
         className="grid max-h-[88dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-md"
       >
-        <div className="flex items-baseline justify-between px-4 pt-2 pb-1">
+        <div className="flex items-baseline justify-between px-4 pt-3.5 pb-1">
           <DialogTitle className="text-[17px] font-semibold">
             Фильтры
           </DialogTitle>

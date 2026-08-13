@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { createBookFn } from '@/server/books'
-import { plural } from '@/lib/plural'
 import type { CycleMember, CycleView } from '@/services/cycles'
 
 /**
@@ -146,8 +145,7 @@ export function CycleSheet({
 
   const readShare = cycle.total > 0 ? cycle.readCount / cycle.total : 0
   const stats = [
-    `${cycle.total} ${plural(cycle.total, 'произведение', 'произведения', 'произведений')}`,
-    `прочитано ${cycle.readCount}`,
+    `прочитано ${cycle.readCount} из ${cycle.total}`,
     `на полках ${cycle.ownedCount}`,
     cycle.wishedCount > 0 ? `в «Хочу» ${cycle.wishedCount}` : null,
   ].filter(Boolean)
@@ -159,20 +157,22 @@ export function CycleSheet({
           aria-describedby={undefined}
           className="grid max-h-[86dvh] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-md"
         >
-          <div className="px-4 pt-2 pb-2.5">
-            <DialogTitle className="text-[19px] font-semibold">
+          <div className="px-4 pt-3.5 pb-2.5">
+            <DialogTitle className="truncate pr-9 text-[19px] font-semibold">
               {cycle.title}
             </DialogTitle>
-            <p className="font-mono text-[11.5px] text-muted-foreground">
-              цикл · {stats.join(' · ')}
-              {cycle.authorName && ` · ${cycle.authorName}`}
+            <p className="truncate text-[12.5px] text-muted-foreground">
+              цикл{cycle.authorName && ` · ${cycle.authorName}`}
             </p>
-            <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary">
+            <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-secondary">
               <span
                 className="block h-full rounded-full bg-primary"
                 style={{ width: `${Math.round(readShare * 100)}%` }}
               />
             </div>
+            <p className="mt-1.5 truncate font-mono text-[11px] text-muted-foreground">
+              {stats.join(' · ')}
+            </p>
           </div>
           <div className="overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {cycle.members.map((m) => (
