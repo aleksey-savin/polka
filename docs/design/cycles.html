@@ -56,7 +56,6 @@
     --card: #ffffff;
     --lamp: #2f6b4f;
     --lamp-deep: #275c43;
-    --lamp-tint: #eaf2ed;
     --stamp: #4353a5;
     --patina: #ddbe8a;
     --patina-fresh: #f2f1ec;
@@ -208,15 +207,12 @@
     font-size: 12.5px;
   }
 
-  /* секция цикла на карточке */
-  .cycle-rows {
-    margin-top: 4px;
-  }
+  /* строка произведения: две независимые оси */
   .c-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 2px;
+    padding: 9px 2px;
     border-top: 1px solid var(--line);
   }
   .c-row:first-child {
@@ -229,9 +225,12 @@
     font-size: 11.5px;
     color: var(--ink-soft);
   }
-  .c-title {
+  .c-main {
     min-width: 0;
     flex: 1;
+  }
+  .c-title {
+    margin: 0;
     font-size: 14px;
     font-weight: 500;
     white-space: nowrap;
@@ -242,49 +241,56 @@
     color: var(--lamp-deep);
     font-weight: 600;
   }
-  .c-year {
-    flex: none;
-    font-family: var(--mono);
+  .c-meta {
+    margin: 1px 0 0;
     font-size: 11.5px;
     color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .tag-read {
+  .c-meta .y {
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .c-marks {
     flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stamp {
     font-family: var(--mono);
     font-size: 9.5px;
     letter-spacing: 0.07em;
     text-transform: uppercase;
+    border-radius: 3px;
+    padding: 2px 5px;
+    white-space: nowrap;
+  }
+  .stamp-read {
     border: 1.5px solid var(--lamp);
     color: var(--lamp-deep);
-    border-radius: 3px;
-    padding: 1px 5px;
   }
-  .tag-reading {
-    flex: none;
-    font-family: var(--mono);
-    font-size: 9.5px;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
+  .stamp-reading {
     border: 1.5px solid var(--stamp);
     color: var(--stamp);
-    border-radius: 3px;
-    padding: 1px 5px;
-  }
-  .tag-shelf {
-    flex: none;
-    font-size: 11px;
-    color: var(--ink-soft);
   }
   .wish-btn {
     flex: none;
-    height: 32px;
-    padding: 0 10px;
-    border-radius: 9px;
+    height: 34px;
+    padding: 0 11px;
+    border-radius: 10px;
     border: 1px solid var(--line);
     background: var(--card);
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--lamp-deep);
+    white-space: nowrap;
+  }
+  .chev {
+    flex: none;
+    color: var(--ink-soft);
   }
   .all-link {
     display: inline-block;
@@ -297,7 +303,42 @@
     padding: 0;
   }
 
-  /* каталожная карточка со строкой серии */
+  /* легенда двух осей */
+  .axes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 10px;
+  }
+  .axis {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    padding: 11px 13px 12px;
+  }
+  .axis h3 {
+    margin: 0 0 8px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .axis p {
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .axis p:last-child {
+    margin-bottom: 0;
+  }
+  .axis .val {
+    color: var(--ink-soft);
+  }
+
+  /* каталожная карточка */
   .ruled {
     border: 1px solid var(--line);
     border-radius: 12px;
@@ -334,7 +375,7 @@
     font-size: 13px;
   }
 
-  /* форма: поле */
+  /* форма */
   .field label {
     display: block;
     margin-bottom: 6px;
@@ -386,7 +427,10 @@
     transform: translateY(0);
   }
   @media (prefers-reduced-motion: reduce) {
-    .sheet, .scrim { transition: none; }
+    .sheet,
+    .scrim {
+      transition: none;
+    }
   }
   .sheet-grip {
     width: 38px;
@@ -418,7 +462,7 @@
   .progress i {
     display: block;
     height: 100%;
-    width: 23%;
+    width: 31%;
     border-radius: 2px;
     background: linear-gradient(90deg, var(--lamp), var(--lamp-deep));
   }
@@ -427,11 +471,7 @@
     padding: 4px 0 calc(16px + env(safe-area-inset-bottom));
   }
   .sheet-body .c-row {
-    padding: 10px 2px;
-  }
-  .chev {
-    flex: none;
-    color: var(--ink-soft);
+    padding: 11px 2px;
   }
 
   .mock-notes {
@@ -453,12 +493,38 @@
     font-size: 13px;
     color: var(--ink-soft);
   }
+  .mock-note:last-child {
+    margin-bottom: 0;
+  }
 </style>
 
 <div class="page">
-  <h1 style="margin: 0 0 4px; font-size: 24px; font-weight: 600">
-    Циклы — макет
-  </h1>
+  <h1 style="margin: 0 0 4px; font-size: 24px; font-weight: 600">Циклы — макет</h1>
+
+  <div class="demo-label">Две независимые оси в строке</div>
+  <div class="axes">
+    <div class="axis">
+      <h3>Чтение</h3>
+      <p>
+        <span class="stamp stamp-read">прочитана</span>
+        <span class="val">когда угодно и в любом виде</span>
+      </p>
+      <p>
+        <span class="stamp stamp-reading">читаю</span>
+        <span class="val">сейчас в работе</span>
+      </p>
+      <p><span class="val">без штампа — не читал</span></p>
+    </div>
+    <div class="axis">
+      <h3>Наличие</h3>
+      <p><span class="val">«полка „Детективы"» — книга есть</span></p>
+      <p><span class="val">«в „Хочу"» — уже в виш-листе</span></p>
+      <p>
+        <button class="wish-btn" type="button">В Хочу</button>
+        <span class="val">книги нет</span>
+      </p>
+    </div>
+  </div>
 
   <div class="demo-label">Карточка книги: цикл вместо серии</div>
   <div class="hero">
@@ -472,29 +538,42 @@
       </button>
       <h1 class="hero-title">Призрак</h1>
       <p class="hero-author">Ю Несбё</p>
-      <p class="hero-edition">Азбука · <span class="num">2019</span> · <span class="num">544</span> с.</p>
+      <p class="hero-edition">
+        Азбука · <span class="num">2019</span> · <span class="num">544</span> с.
+      </p>
     </div>
   </div>
 
   <div class="demo-label">Секция «Цикл» на карточке (соседние части)</div>
-  <div class="cycle-rows">
+  <div>
     <div class="c-row">
       <span class="c-num">#8</span>
-      <span class="c-title">Леопард</span>
-      <span class="c-year">2009</span>
-      <span class="tag-read">прочитана</span>
+      <div class="c-main">
+        <p class="c-title">Леопард</p>
+        <p class="c-meta"><span class="y">2009</span> · нет в библиотеке</p>
+      </div>
+      <div class="c-marks">
+        <span class="stamp stamp-read">прочитана</span>
+        <button class="wish-btn" type="button">В Хочу</button>
+      </div>
     </div>
     <div class="c-row">
       <span class="c-num">#9</span>
-      <span class="c-title current">Призрак — вы здесь</span>
-      <span class="c-year">2011</span>
-      <span class="tag-reading">читаю</span>
+      <div class="c-main">
+        <p class="c-title current">Призрак — вы здесь</p>
+        <p class="c-meta"><span class="y">2011</span> · полка «Детективы»</p>
+      </div>
+      <div class="c-marks"><span class="stamp stamp-reading">читаю</span></div>
     </div>
     <div class="c-row">
       <span class="c-num">#10</span>
-      <span class="c-title">Полиция</span>
-      <span class="c-year">2013</span>
-      <button class="wish-btn" type="button">В «Хочу»</button>
+      <div class="c-main">
+        <p class="c-title">Полиция</p>
+        <p class="c-meta"><span class="y">2013</span> · нет в библиотеке</p>
+      </div>
+      <div class="c-marks">
+        <button class="wish-btn" type="button">В Хочу</button>
+      </div>
     </div>
   </div>
   <button class="all-link" type="button" id="openCycle2">Весь цикл · 13 →</button>
@@ -517,27 +596,32 @@
 
   <div class="demo-label">Форма книги: поле переименовано</div>
   <div class="field">
-    <label>Издательская серия</label>
-    <input class="input" value="Ю Несбё (новое оформление)" />
+    <label for="ser">Издательская серия</label>
+    <input class="input" id="ser" value="Ю Несбё (новое оформление)" />
   </div>
 
   <aside class="mock-notes">
     <h2 class="mock-notes-title">Примечания макета</h2>
+    <p class="mock-note">
+      · Чтение и наличие независимы: прочитанное давно или прослушанное в аудио
+      книгой на полке не становится, поэтому «В Хочу» показывается по наличию и
+      статусом чтения не блокируется — штамп и кнопка спокойно стоят рядом
+      (строка #8 и «Тараканы» в шторке).
+    </p>
     <p class="mock-note">
       · Цикл вычисляется из эталона (издание → произведение → родительский
       цикл), в книге ничего не хранится. Чип с мини-корешками — только когда
       цикл найден; серии-пилюли больше нет нигде.
     </p>
     <p class="mock-note">
-      · Шторка цикла: прогресс прочитанного, произведения по порядку;
-      статусы — «прочитана»/«читаю»/«на полке» для моих книг, «В «Хочу»» для
-      отсутствующих; тап по строке с моей книгой ведёт в её карточку,
-      по отсутствующей — в шторку произведения с изданиями.
+      · Шапка шторки считает обе оси: «прочитано 4 · на полках 3 · в „Хочу" 2»,
+      полоска — по прочитанному. Тап по строке с моей книгой ведёт в её
+      карточку, по отсутствующей — в шторку произведения с изданиями.
     </p>
     <p class="mock-note">
       · Издательская серия — строка в каталожной карточке, поле формы
-      «Издательская серия», из текстового поиска каталога исключена
-      (плейсхолдер станет «Название или автор…»); фильтр по серии остаётся.
+      «Издательская серия», из текстового поиска каталога исключена (плейсхолдер
+      станет «Название или автор…»); фильтр по серии остаётся.
     </p>
     <p class="mock-note">
       · Ручная разметка циклов — вне текущего скоупа (позже, вместе с
@@ -552,51 +636,70 @@
     <div class="sheet-grip" aria-hidden="true"></div>
     <div class="sheet-head">
       <h2 class="sheet-title">Харри Холе</h2>
-      <p class="sheet-sub">цикл · 13 произведений · прочитано 3 · Ю Несбё</p>
+      <p class="sheet-sub">
+        цикл · 13 произведений · прочитано 4 · на полках 3 · в «Хочу» 2
+      </p>
       <div class="progress"><i></i></div>
     </div>
     <div class="sheet-body">
       <div class="c-row">
         <span class="c-num">#1</span>
-        <span class="c-title">Нетопырь</span>
-        <span class="c-year">1997</span>
-        <span class="tag-read">прочитана</span>
-        <span class="chev">›</span>
+        <div class="c-main">
+          <p class="c-title">Нетопырь</p>
+          <p class="c-meta"><span class="y">1997</span> · полка «Детективы»</p>
+        </div>
+        <div class="c-marks">
+          <span class="stamp stamp-read">прочитана</span>
+          <span class="chev">›</span>
+        </div>
       </div>
       <div class="c-row">
         <span class="c-num">#2</span>
-        <span class="c-title">Тараканы</span>
-        <span class="c-year">1998</span>
-        <span class="tag-read">прочитана</span>
-        <span class="chev">›</span>
+        <div class="c-main">
+          <p class="c-title">Тараканы</p>
+          <p class="c-meta"><span class="y">1998</span> · слушал в аудио, книги нет</p>
+        </div>
+        <div class="c-marks">
+          <span class="stamp stamp-read">прочитана</span>
+          <button class="wish-btn" type="button">В Хочу</button>
+        </div>
       </div>
       <div class="c-row">
         <span class="c-num">#3</span>
-        <span class="c-title">Красношейка</span>
-        <span class="c-year">2000</span>
-        <span class="tag-shelf">на полке</span>
-        <span class="chev">›</span>
+        <div class="c-main">
+          <p class="c-title">Красношейка</p>
+          <p class="c-meta"><span class="y">2000</span> · полка «Детективы»</p>
+        </div>
+        <div class="c-marks"><span class="chev">›</span></div>
       </div>
       <div class="c-row">
         <span class="c-num">#4</span>
-        <span class="c-title">Немезида</span>
-        <span class="c-year">2002</span>
-        <button class="wish-btn" type="button">В «Хочу»</button>
-        <span class="chev">›</span>
+        <div class="c-main">
+          <p class="c-title">Немезида</p>
+          <p class="c-meta"><span class="y">2002</span> · в «Хочу»</p>
+        </div>
+        <div class="c-marks"><span class="chev">›</span></div>
       </div>
       <div class="c-row">
         <span class="c-num">#5</span>
-        <span class="c-title">Пентаграмма</span>
-        <span class="c-year">2003</span>
-        <button class="wish-btn" type="button">В «Хочу»</button>
-        <span class="chev">›</span>
+        <div class="c-main">
+          <p class="c-title">Пентаграмма</p>
+          <p class="c-meta"><span class="y">2003</span> · нет в библиотеке</p>
+        </div>
+        <div class="c-marks">
+          <button class="wish-btn" type="button">В Хочу</button>
+        </div>
       </div>
       <div class="c-row">
         <span class="c-num">#9</span>
-        <span class="c-title current">Призрак — вы здесь</span>
-        <span class="c-year">2011</span>
-        <span class="tag-reading">читаю</span>
-        <span class="chev">›</span>
+        <div class="c-main">
+          <p class="c-title current">Призрак — вы здесь</p>
+          <p class="c-meta"><span class="y">2011</span> · полка «Детективы»</p>
+        </div>
+        <div class="c-marks">
+          <span class="stamp stamp-reading">читаю</span>
+          <span class="chev">›</span>
+        </div>
       </div>
     </div>
   </div>
@@ -605,9 +708,13 @@
 <script>
   const wrap = document.getElementById('cycleWrap')
   for (const id of ['openCycle', 'openCycle2']) {
-    document.getElementById(id).addEventListener('click', () => wrap.classList.add('open'))
+    document
+      .getElementById(id)
+      .addEventListener('click', () => wrap.classList.add('open'))
   }
-  document.querySelector('[data-close]').addEventListener('click', () => wrap.classList.remove('open'))
+  document
+    .querySelector('[data-close]')
+    .addEventListener('click', () => wrap.classList.remove('open'))
 </script>
 
 </body>
