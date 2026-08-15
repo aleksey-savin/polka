@@ -20,17 +20,33 @@ import {
   getShareViewFn,
   saveShareFn,
 } from '@/server/shares'
+import {
+  getListShareViewFn,
+  holdGiftFn,
+  publicShareKindFn,
+  releaseGiftFn,
+} from '@/server/lists'
+import { GiftListView } from '@/components/book/GiftListView'
 import { getSession } from '@/server/session'
 import { spineFor } from '@/services/spine'
 import type { PublicBook } from '@/services/shares'
 
 export const Route = createFileRoute('/s/$token')({
   loader: async ({ params }) => {
+    // одна ссылка на всё: за токеном может стоять каталог или список
+    const kind = await publicShareKindFn({ data: { token: params.token } })
+    if (kind === 'list') {
+      const [list, session] = await Promise.all([
+        getListShareViewFn({ data: { token: params.token } }),
+        getSession(),
+      ])
+      return { kind, list, view: null, me: session?.user ?? null }
+    }
     const [view, session] = await Promise.all([
       getShareViewFn({ data: { token: params.token } }),
       getSession(),
     ])
-    return { view, me: session?.user ?? null }
+    return { kind, list: null, view, me: session?.user ?? null }
   },
   errorComponent: () => (
     <main className="grid min-h-dvh place-items-center px-6 text-center">
@@ -47,7 +63,16 @@ export const Route = createFileRoute('/s/$token')({
 })
 
 function SharePage() {
-  const { view, me } = Route.useLoaderData()
+  const data = Route.useLoaderData()
+  if (data.kind === 'list')
+    return <ListSharePage list={data.list} me={data.me} />
+  return <CatalogSharePage />
+}
+
+function CatalogSharePage() {
+  const data = Route.useLoaderData()
+  const view = data.view!
+  const me = data.me
   const router = useRouter()
   const [asking, setAsking] = useState<PublicBook | null>(null)
   const [saved, setSaved] = useState(false)
@@ -306,5 +331,33 @@ function AskDialog({
         )}
       </DrawerContent>
     </Drawer>
+  )
+}
+
+/** Витрина списка: вишлист с бронью подарка или подборка. */
+function ListSharePage({
+  list,
+  me,
+}: {
+  list: NonNullable<ReturnType<typeof Route.useLoaderData>['list']>
+  me: { id: string } | null
+}) {
+  return (
+    <GiftListView
+      initial={list}
+      canSave={me !== null}
+      onSave={() => saveShareFn({ data: { token: list.token } })}
+      onHold={(itemId, guestName, holderKey) =>
+        holdGiftFn({
+          data: { token: list.token, itemId, guestName, holderKey },
+        })
+      }
+      onRelease={(itemId, holderKey) =>
+        releaseGiftFn({ data: { token: list.token, itemId, holderKey } })
+      }
+      onReload={(holderKey) =>
+        getListShareViewFn({ data: { token: list.token, holderKey } })
+      }
+    />
   )
 }

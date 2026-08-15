@@ -360,6 +360,70 @@ export const refBookAuthor = sqliteTable(
   ],
 )
 
+/* ── Списки книг (M17): вишлисты и подборки ──
+   Одна сущность, два вида. Элемент ссылается на мою книгу ИЛИ на эталон:
+   подборка «Китайская классика» состоит из книг, которых дома нет. */
+
+export const bookList = sqliteTable(
+  'book_list',
+  {
+    id: id(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** wishlist — «что хочу почитать», collection — «что почитать по теме». */
+    kind: text('kind', { enum: ['wishlist', 'collection'] }).notNull(),
+    title: text('title').notNull(),
+    description: text('description'),
+    position: integer('position').notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index('book_list_owner_idx').on(t.ownerId, t.kind, t.position)],
+)
+
+export const bookListItem = sqliteTable(
+  'book_list_item',
+  {
+    id: id(),
+    listId: text('list_id')
+      .notNull()
+      .references(() => bookList.id, { onDelete: 'cascade' }),
+    bookId: text('book_id').references(() => book.id, { onDelete: 'cascade' }),
+    refWorkId: text('ref_work_id').references(() => refWork.id, {
+      onDelete: 'cascade',
+    }),
+    refBookId: text('ref_book_id').references(() => refBook.id, {
+      onDelete: 'cascade',
+    }),
+    /** «Зачем эта книга здесь» — необязательная заметка составителя. */
+    note: text('note'),
+    position: integer('position').notNull().default(0),
+    addedBy: text('added_by')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('book_list_item_list_idx').on(t.listId, t.position),
+    uniqueIndex('book_list_item_book_unique')
+      .on(t.listId, t.bookId)
+      .where(sql`${t.bookId} is not null`),
+    uniqueIndex('book_list_item_work_unique')
+      .on(t.listId, t.refWorkId)
+      .where(sql`${t.refWorkId} is not null`),
+    uniqueIndex('book_list_item_edition_unique')
+      .on(t.listId, t.refBookId)
+      .where(sql`${t.refBookId} is not null`),
+    check(
+      'book_list_item_single_target',
+      sql`(${t.bookId} is not null) + (${t.refWorkId} is not null) + (${t.refBookId} is not null) = 1`,
+    ),
+  ],
+)
+
 export const bookPersonal = sqliteTable(
   'book_personal',
   {

@@ -1,15 +1,13 @@
 import { useState } from 'react'
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
-import { toast } from 'sonner'
+import { Link, createFileRoute } from '@tanstack/react-router'
 
+import { AddToListButton } from '@/components/book/AddToListButton'
 import { SectionLabel } from '@/components/layout/SectionLabel'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { dateRu } from '@/lib/dates'
 import { workTypeRu } from '@/lib/work-types'
 import { plural } from '@/lib/plural'
 import { getAuthorPageFn } from '@/server/authors'
-import { createBookFn } from '@/server/books'
 import { spineFor, textToneFor } from '@/services/spine'
 
 export const Route = createFileRoute('/_app/authors/$authorId')({
@@ -75,29 +73,7 @@ const STATUS_NOTE: Record<string, string> = {
 
 function AuthorPage() {
   const author = Route.useLoaderData()
-  const router = useRouter()
   const [bioOpen, setBioOpen] = useState(false)
-  const [wishBusy, setWishBusy] = useState<string | null>(null)
-
-  async function addToWishlist(workId: string, title: string) {
-    setWishBusy(workId)
-    try {
-      await createBookFn({
-        data: {
-          title,
-          authors: author.name,
-          wishlist: true,
-          refWorkId: workId,
-        },
-      })
-      toast.success(`«${title}» — в списке «Хочу»`)
-      void router.invalidate()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Не получилось')
-    } finally {
-      setWishBusy(null)
-    }
-  }
 
   const years =
     author.birthYear || author.deathYear
@@ -279,20 +255,12 @@ function AuthorPage() {
                       <span className="flex-none rounded-[3px] border-[1.5px] border-primary px-1.5 font-mono text-[10px] tracking-[0.08em] text-accent-foreground uppercase">
                         есть
                       </span>
-                    ) : w.wished ? (
-                      <span className="flex-none rounded-[3px] border-[1.5px] border-stamp px-1.5 font-mono text-[10px] tracking-[0.08em] text-stamp uppercase">
-                        в хочу
-                      </span>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-none text-accent-foreground"
-                        loading={wishBusy === w.id}
-                        onClick={() => void addToWishlist(w.id, w.title)}
-                      >
-                        В Хочу
-                      </Button>
+                      <AddToListButton
+                        target={{ refWorkId: w.id }}
+                        title={w.title}
+                        subtitle={author.name}
+                      />
                     )}
                     <span
                       aria-hidden

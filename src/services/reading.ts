@@ -3,8 +3,10 @@ import { and, desc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { book, bookPersonal } from '@/db/schema/catalog'
 import { listLoans } from './loans'
+import { listMyLists } from './lists'
 import { memberLibraryIds } from './members'
 import type { LoanListRow } from './loans'
+import type { ListRow } from './lists'
 
 export interface ReadingNowBook {
   id: string
@@ -22,6 +24,8 @@ export interface ReadingHub {
   loans: Array<LoanListRow>
   wishlistTotal: number
   wishlistHead: Array<{ id: string; title: string; authors: string }>
+  /** Вишлисты и подборки — вход в списки (M17). */
+  lists: Array<ListRow>
   year: number
   yearCount: number
   yearAvgRating: number | null
@@ -90,6 +94,7 @@ export async function getReadingHub(userId: string): Promise<ReadingHub> {
     loans,
     wishlistTotal: wishRows.length,
     wishlistHead,
+    lists: await listMyLists(userId),
     year,
     yearCount: yearRow?.count ?? 0,
     yearAvgRating: yearRow?.avg ?? null,

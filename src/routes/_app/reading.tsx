@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { dateHuman, dateShort } from '@/lib/dates'
 import { plural } from '@/lib/plural'
 import { getReadingHubFn } from '@/server/reading'
+import { NewListButton } from '@/components/book/NewListButton'
 import { returnLoanFn } from '@/server/loans'
 import { spineFor } from '@/services/spine'
 
@@ -40,6 +41,7 @@ function ReadingPage() {
     hub.reading.length === 0 &&
     hub.loans.length === 0 &&
     hub.wishlistTotal === 0 &&
+    hub.lists.length === 0 &&
     hub.yearCount === 0
 
   return (
@@ -206,39 +208,7 @@ function ReadingPage() {
         </section>
       )}
 
-      {hub.wishlistTotal > 0 && (
-        <section className="mt-7">
-          <SectionLabel
-            trailing={
-              <Link
-                to="/wishlist"
-                className="font-sans text-[12.5px] font-medium tracking-normal normal-case text-accent-foreground"
-              >
-                Весь список →
-              </Link>
-            }
-          >
-            Хочу <span className="text-stamp">· {hub.wishlistTotal}</span>
-          </SectionLabel>
-          <div>
-            {hub.wishlistHead.map((b) => (
-              <Link
-                key={b.id}
-                to="/books/$bookId"
-                params={{ bookId: b.id }}
-                className="flex items-baseline gap-2 border-t py-2 first:border-t-0"
-              >
-                <span className="truncate text-sm font-semibold">
-                  {b.title}
-                </span>
-                <span className="min-w-0 truncate text-[12.5px] text-muted-foreground">
-                  {b.authors}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {!empty && <ListsSections lists={hub.lists} />}
 
       {hub.yearCount > 0 && (
         <section className="mt-7">
@@ -274,5 +244,93 @@ function ReadingPage() {
         </section>
       )}
     </div>
+  )
+}
+
+/** Вишлисты и подборки: вход в списки со страницы «Чтение». */
+function ListsSections({
+  lists,
+}: {
+  lists: Array<{
+    id: string
+    kind: 'wishlist' | 'collection'
+    title: string
+    description: string | null
+    itemCount: number
+    covers: Array<string>
+    shared: boolean
+  }>
+}) {
+  const groups = [
+    { kind: 'wishlist' as const, label: 'Вишлисты' },
+    { kind: 'collection' as const, label: 'Подборки' },
+  ]
+  return (
+    <>
+      {groups.map((group) => {
+        const own = lists.filter((l) => l.kind === group.kind)
+        return (
+          <section key={group.kind} className="mt-7">
+            <SectionLabel>
+              {group.label}
+              {own.length > 0 && <span className="text-stamp"> · {own.length}</span>}
+            </SectionLabel>
+            <div className="grid gap-2.5">
+              {own.map((list) => (
+                <Link
+                  key={list.id}
+                  to="/lists/$listId"
+                  params={{ listId: list.id }}
+                  className="flex items-center gap-3.5 rounded-2xl border bg-card px-3.5 py-3"
+                >
+                  <span
+                    aria-hidden
+                    className="relative h-14 w-[62px] flex-none"
+                  >
+                    {list.covers.map((color, i) => (
+                      <span
+                        key={i}
+                        className="absolute top-1 h-11 w-[30px] rounded-[3px]"
+                        style={{
+                          left: i * 12,
+                          background: color,
+                          transform:
+                            i === 0
+                              ? 'rotate(-6deg)'
+                              : i === 2
+                                ? 'rotate(5deg)'
+                                : undefined,
+                          boxShadow:
+                            'inset 2px 0 0 rgba(255,255,255,.28), 0 4px 8px -4px rgba(35,43,56,.45)',
+                        }}
+                      />
+                    ))}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15.5px] font-semibold">
+                      {list.title}
+                    </span>
+                    {list.description && (
+                      <span className="block truncate text-[12.5px] text-muted-foreground">
+                        {list.description}
+                      </span>
+                    )}
+                    <span className="block font-mono text-[11px] text-muted-foreground">
+                      {list.itemCount}{' '}
+                      {plural(list.itemCount, 'книга', 'книги', 'книг')}
+                      {list.shared && ' · ссылка открыта'}
+                    </span>
+                  </span>
+                  <span aria-hidden className="text-muted-foreground">
+                    ›
+                  </span>
+                </Link>
+              ))}
+              <NewListButton kind={group.kind} />
+            </div>
+          </section>
+        )
+      })}
+    </>
   )
 }

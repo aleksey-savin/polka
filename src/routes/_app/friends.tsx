@@ -169,6 +169,11 @@ function FriendsPage() {
                   <b className="min-w-0 truncate text-base">
                     {s.title} — у {s.ownerNames}
                   </b>
+                  {s.kind !== 'catalog' && (
+                    <span className="flex-none rounded-[3px] border-[1.5px] border-stamp px-1.5 font-mono text-[9.5px] tracking-[0.07em] text-stamp uppercase">
+                      {s.kind === 'wishlist' ? 'вишлист' : 'подборка'}
+                    </span>
+                  )}
                   <span className="flex-none font-mono text-[11.5px] text-muted-foreground">
                     {s.bookCount}{' '}
                     {plural(s.bookCount, 'книга', 'книги', 'книг')}

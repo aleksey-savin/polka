@@ -33,6 +33,10 @@ if (existsSync(migrationsFolder)) {
   void import('@/services/authors')
     .then((m) => m.backfillAuthors())
     .catch(() => {})
+  // переезд старого виш-листа в список «Хочу почитать» (M17)
+  void import('@/services/lists')
+    .then((m) => m.backfillWishlists())
+    .catch(() => {})
   // фоновое наполнение эталона (M15) — медленный воркер, CRAWL_ENABLED=0 выключает
   void import('@/services/crawl')
     .then((m) => m.startCrawlWorker())

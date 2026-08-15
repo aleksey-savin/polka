@@ -1,9 +1,7 @@
-import { useState } from 'react'
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
-import { toast } from 'sonner'
+import { Link, createFileRoute } from '@tanstack/react-router'
 
+import { AddToListButton } from '@/components/book/AddToListButton'
 import { Button } from '@/components/ui/button'
-import { createBookFn } from '@/server/books'
 import { getRefBookViewFn } from '@/server/reference'
 import { spineFor } from '@/services/spine'
 
@@ -16,36 +14,8 @@ export const Route = createFileRoute('/_app/editions/$refBookId')({
 
 function EditionPage() {
   const view = Route.useLoaderData()
-  const router = useRouter()
-  const [busy, setBusy] = useState(false)
 
   const authorName = view.authors
-
-  async function wish() {
-    setBusy(true)
-    try {
-      await createBookFn({
-        data: {
-          title: view.title,
-          authors: authorName,
-          publisher: view.publisher ?? undefined,
-          year: view.year,
-          pages: view.pages,
-          isbn13: view.isbn13 ?? undefined,
-          seriesName: view.seriesName ?? undefined,
-          coverType: view.coverType,
-          wishlist: true,
-          refWorkId: view.works[0]?.id ?? null,
-        },
-      })
-      toast.success(`«${view.title}» — в списке «Хочу»`)
-      void router.invalidate()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Не получилось')
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const look = spineFor(view.title, view.pages)
 
@@ -146,9 +116,12 @@ function EditionPage() {
             </Link>
           </Button>
         ) : (
-          <Button className="h-12 w-full" loading={busy} onClick={() => void wish()}>
-            В «Хочу» это издание
-          </Button>
+          <AddToListButton
+            target={{ refBookId: view.id }}
+            title={view.title}
+            subtitle={authorName}
+            variant="wide"
+          />
         )}
       </div>
     </div>

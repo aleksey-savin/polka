@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { user } from '@/db/schema/auth'
@@ -80,7 +80,7 @@ export async function listMyShares(userId: string): Promise<Array<MyShareRow>> {
         eq(borrowRequest.status, 'pending'),
       ),
     )
-    .where(isNull(share.revokedAt))
+    .where(and(isNull(share.revokedAt), inArray(share.scope, ['library', 'shelf'])))
     .groupBy(share.id)
     .orderBy(asc(share.createdAt))
   const memberLibs = new Set(
@@ -99,7 +99,7 @@ export async function listMyShares(userId: string): Promise<Array<MyShareRow>> {
     .map((r) => ({
       id: r.id,
       token: r.token,
-      scope: r.scope,
+      scope: r.scope as 'library' | 'shelf',
       targetName:
         r.scope === 'library' ? (r.libraryName ?? '?') : (r.shelfName ?? '?'),
       libraryName: r.libraryName ?? '',
@@ -285,7 +285,7 @@ export async function getShareView(token: string): Promise<ShareView> {
   return {
     shareId: row.id,
     token,
-    scope: row.scope,
+    scope: row.scope as 'library' | 'shelf',
     title: shelfName ?? libRow?.name ?? 'Полка',
     ownerNames: owners.map((o) => o.name).join(' и '),
     bookCount: books.length,

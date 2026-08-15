@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner'
 import type { ReactNode } from 'react'
 
+import { AddToListButton } from '@/components/book/AddToListButton'
 import { MoveDialog } from '@/components/book/MoveDialog'
 import { CycleRow, CycleSheet } from '@/components/book/CycleSheet'
 import { SectionLabel } from '@/components/layout/SectionLabel'
@@ -513,6 +514,11 @@ function BookCardPage() {
             Переместить
           </Button>
         )}
+        <AddToListButton
+          target={{ bookId: book.id }}
+          title={book.title}
+          subtitle={book.authors}
+        />
         <ActionMenu
           caption={book.title}
           trigger={

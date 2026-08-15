@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
-import { toast } from 'sonner'
+import { Link, createFileRoute } from '@tanstack/react-router'
 
+import { AddToListButton } from '@/components/book/AddToListButton'
 import { SectionLabel } from '@/components/layout/SectionLabel'
-import { Button } from '@/components/ui/button'
-import { createBookFn } from '@/server/books'
 import { fetchWorkEditionsFn, getWorkViewFn } from '@/server/reference'
 import { spineFor } from '@/services/spine'
 import { workTypeRu } from '@/lib/work-types'
@@ -19,10 +17,8 @@ export const Route = createFileRoute('/_app/works/$workId')({
 
 function WorkPage() {
   const loaded = Route.useLoaderData()
-  const router = useRouter()
   const [view, setView] = useState<WorkView>(loaded)
   const [fetching, setFetching] = useState(false)
-  const [busyId, setBusyId] = useState<string | null>(null)
 
   // издания подтягиваются лениво при первом заходе
   useEffect(() => {
@@ -41,37 +37,6 @@ function WorkPage() {
       alive.current = false
     }
   }, [loaded])
-
-  async function wish(edition?: WorkView['editions'][number]) {
-    setBusyId(edition?.refBookId ?? 'work')
-    try {
-      await createBookFn({
-        data: edition
-          ? {
-              title: edition.title,
-              authors: view.authorName,
-              publisher: edition.publisher ?? undefined,
-              year: edition.year,
-              pages: edition.pages,
-              isbn13: edition.isbn13 ?? undefined,
-              wishlist: true,
-              refWorkId: view.id,
-            }
-          : {
-              title: view.title,
-              authors: view.authorName,
-              wishlist: true,
-              refWorkId: view.id,
-            },
-      })
-      toast.success(`«${edition?.title ?? view.title}» — в списке «Хочу»`)
-      void router.invalidate()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Не получилось')
-    } finally {
-      setBusyId(null)
-    }
-  }
 
   const meta = [workTypeRu(view.workType), view.year, view.authorName]
     .filter(Boolean)
@@ -98,14 +63,12 @@ function WorkPage() {
       )}
 
       <div className="mt-6">
-        <Button
-          variant="outline"
-          className="h-11 w-full"
-          loading={busyId === 'work'}
-          onClick={() => void wish()}
-        >
-          В «Хочу» без выбора издания
-        </Button>
+        <AddToListButton
+          target={{ refWorkId: view.id }}
+          title={view.title}
+          subtitle={view.authorName}
+          variant="wide"
+        />
       </div>
 
       <section className="mt-7">
@@ -183,15 +146,11 @@ function WorkPage() {
                     есть
                   </span>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-none text-accent-foreground"
-                    loading={busyId === e.refBookId}
-                    onClick={() => void wish(e)}
-                  >
-                    В Хочу
-                  </Button>
+                  <AddToListButton
+                    target={{ refBookId: e.refBookId }}
+                    title={e.title}
+                    subtitle={view.authorName}
+                  />
                 )}
                 <span aria-hidden className="flex-none text-muted-foreground">
                   ›

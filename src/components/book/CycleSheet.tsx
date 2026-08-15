@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button'
+import { AddToListButton } from '@/components/book/AddToListButton'
 import {
   Drawer,
   DrawerContent,
@@ -10,7 +8,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-import { createBookFn } from '@/server/books'
 import type { CycleMember, CycleView } from '@/services/cycles'
 
 /**
@@ -47,29 +44,6 @@ export function CycleRow({
   onNavigate?: () => void
   onChanged: () => void
 }) {
-  const [busy, setBusy] = useState(false)
-
-  async function wish() {
-    setBusy(true)
-    try {
-      await createBookFn({
-        data: {
-          title: member.title,
-          authors: authorName ?? '',
-          year: member.year,
-          wishlist: true,
-          refWorkId: member.workId,
-        },
-      })
-      toast.success(`«${member.title}» — в списке «Хочу»`)
-      onChanged()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Не получилось')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   const target = member.bookId
     ? ({ to: '/books/$bookId', params: { bookId: member.bookId } } as const)
     : ({ to: '/works/$workId', params: { workId: member.workId } } as const)
@@ -105,16 +79,13 @@ export function CycleRow({
         </span>
       </Link>
       {member.reading && <ReadingStamp value={member.reading} />}
-      {!member.owned && !member.wished && (
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-none text-accent-foreground"
-          loading={busy}
-          onClick={() => void wish()}
-        >
-          В Хочу
-        </Button>
+      {!member.owned && (
+        <AddToListButton
+          target={{ refWorkId: member.workId }}
+          title={member.title}
+          subtitle={authorName ?? undefined}
+          onChanged={onChanged}
+        />
       )}
       <span aria-hidden className="flex-none text-muted-foreground">
         ›

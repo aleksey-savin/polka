@@ -29,6 +29,7 @@ import { Route as AppBooksNewRouteImport } from './routes/_app/books.new'
 import { Route as AppEditionsRefBookIdRouteImport } from './routes/_app/editions.$refBookId'
 import { Route as AppInviteTokenRouteImport } from './routes/_app/invite.$token'
 import { Route as AppLibrariesIndexRouteImport } from './routes/_app/libraries.index'
+import { Route as AppListsListIdRouteImport } from './routes/_app/lists.$listId'
 import { Route as AppSeriesIndexRouteImport } from './routes/_app/series.index'
 import { Route as AppSeriesSeriesIdRouteImport } from './routes/_app/series.$seriesId'
 import { Route as AppShelvesShelfIdRouteImport } from './routes/_app/shelves.$shelfId'
@@ -37,6 +38,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as ApiCoversBookIdRouteImport } from './routes/api/covers.$bookId'
 import { Route as ApiRefCoversRefBookIdRouteImport } from './routes/api/ref-covers.$refBookId'
 import { Route as AppBooksBookIdEditRouteImport } from './routes/_app/books_.$bookId.edit'
+import { Route as AppListsListIdEditRouteImport } from './routes/_app/lists_.$listId.edit'
 import { Route as ApiAuthorsAuthorIdPhotoRouteImport } from './routes/api/authors.$authorId.photo'
 
 const IndexRoute = IndexRouteImport.update({
@@ -138,6 +140,11 @@ const AppLibrariesIndexRoute = AppLibrariesIndexRouteImport.update({
   path: '/libraries/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppListsListIdRoute = AppListsListIdRouteImport.update({
+  id: '/lists/$listId',
+  path: '/lists/$listId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSeriesIndexRoute = AppSeriesIndexRouteImport.update({
   id: '/series/',
   path: '/series/',
@@ -178,6 +185,11 @@ const AppBooksBookIdEditRoute = AppBooksBookIdEditRouteImport.update({
   path: '/books/$bookId/edit',
   getParentRoute: () => AppRoute,
 } as any)
+const AppListsListIdEditRoute = AppListsListIdEditRouteImport.update({
+  id: '/lists_/$listId/edit',
+  path: '/lists/$listId/edit',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiAuthorsAuthorIdPhotoRoute = ApiAuthorsAuthorIdPhotoRouteImport.update({
   id: '/api/authors/$authorId/photo',
   path: '/api/authors/$authorId/photo',
@@ -202,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/books/new': typeof AppBooksNewRoute
   '/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/invite/$token': typeof AppInviteTokenRoute
+  '/lists/$listId': typeof AppListsListIdRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/works/$workId': typeof AppWorksWorkIdRoute
@@ -212,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/libraries/': typeof AppLibrariesIndexRoute
   '/series/': typeof AppSeriesIndexRoute
   '/books/$bookId/edit': typeof AppBooksBookIdEditRoute
+  '/lists/$listId/edit': typeof AppListsListIdEditRoute
   '/api/authors/$authorId/photo': typeof ApiAuthorsAuthorIdPhotoRoute
 }
 export interface FileRoutesByTo {
@@ -232,6 +246,7 @@ export interface FileRoutesByTo {
   '/books/new': typeof AppBooksNewRoute
   '/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/invite/$token': typeof AppInviteTokenRoute
+  '/lists/$listId': typeof AppListsListIdRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/works/$workId': typeof AppWorksWorkIdRoute
@@ -242,6 +257,7 @@ export interface FileRoutesByTo {
   '/libraries': typeof AppLibrariesIndexRoute
   '/series': typeof AppSeriesIndexRoute
   '/books/$bookId/edit': typeof AppBooksBookIdEditRoute
+  '/lists/$listId/edit': typeof AppListsListIdEditRoute
   '/api/authors/$authorId/photo': typeof ApiAuthorsAuthorIdPhotoRoute
 }
 export interface FileRoutesById {
@@ -264,6 +280,7 @@ export interface FileRoutesById {
   '/_app/books/new': typeof AppBooksNewRoute
   '/_app/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/_app/invite/$token': typeof AppInviteTokenRoute
+  '/_app/lists/$listId': typeof AppListsListIdRoute
   '/_app/series/$seriesId': typeof AppSeriesSeriesIdRoute
   '/_app/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/_app/works/$workId': typeof AppWorksWorkIdRoute
@@ -274,6 +291,7 @@ export interface FileRoutesById {
   '/_app/libraries/': typeof AppLibrariesIndexRoute
   '/_app/series/': typeof AppSeriesIndexRoute
   '/_app/books_/$bookId/edit': typeof AppBooksBookIdEditRoute
+  '/_app/lists_/$listId/edit': typeof AppListsListIdEditRoute
   '/api/authors/$authorId/photo': typeof ApiAuthorsAuthorIdPhotoRoute
 }
 export interface FileRouteTypes {
@@ -296,6 +314,7 @@ export interface FileRouteTypes {
     | '/books/new'
     | '/editions/$refBookId'
     | '/invite/$token'
+    | '/lists/$listId'
     | '/series/$seriesId'
     | '/shelves/$shelfId'
     | '/works/$workId'
@@ -306,6 +325,7 @@ export interface FileRouteTypes {
     | '/libraries/'
     | '/series/'
     | '/books/$bookId/edit'
+    | '/lists/$listId/edit'
     | '/api/authors/$authorId/photo'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -326,6 +346,7 @@ export interface FileRouteTypes {
     | '/books/new'
     | '/editions/$refBookId'
     | '/invite/$token'
+    | '/lists/$listId'
     | '/series/$seriesId'
     | '/shelves/$shelfId'
     | '/works/$workId'
@@ -336,6 +357,7 @@ export interface FileRouteTypes {
     | '/libraries'
     | '/series'
     | '/books/$bookId/edit'
+    | '/lists/$listId/edit'
     | '/api/authors/$authorId/photo'
   id:
     | '__root__'
@@ -357,6 +379,7 @@ export interface FileRouteTypes {
     | '/_app/books/new'
     | '/_app/editions/$refBookId'
     | '/_app/invite/$token'
+    | '/_app/lists/$listId'
     | '/_app/series/$seriesId'
     | '/_app/shelves/$shelfId'
     | '/_app/works/$workId'
@@ -367,6 +390,7 @@ export interface FileRouteTypes {
     | '/_app/libraries/'
     | '/_app/series/'
     | '/_app/books_/$bookId/edit'
+    | '/_app/lists_/$listId/edit'
     | '/api/authors/$authorId/photo'
   fileRoutesById: FileRoutesById
 }
@@ -525,6 +549,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLibrariesIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/lists/$listId': {
+      id: '/_app/lists/$listId'
+      path: '/lists/$listId'
+      fullPath: '/lists/$listId'
+      preLoaderRoute: typeof AppListsListIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/series/': {
       id: '/_app/series/'
       path: '/series'
@@ -581,6 +612,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBooksBookIdEditRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/lists_/$listId/edit': {
+      id: '/_app/lists_/$listId/edit'
+      path: '/lists/$listId/edit'
+      fullPath: '/lists/$listId/edit'
+      preLoaderRoute: typeof AppListsListIdEditRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/authors/$authorId/photo': {
       id: '/api/authors/$authorId/photo'
       path: '/api/authors/$authorId/photo'
@@ -604,6 +642,7 @@ interface AppRouteChildren {
   AppBooksNewRoute: typeof AppBooksNewRoute
   AppEditionsRefBookIdRoute: typeof AppEditionsRefBookIdRoute
   AppInviteTokenRoute: typeof AppInviteTokenRoute
+  AppListsListIdRoute: typeof AppListsListIdRoute
   AppSeriesSeriesIdRoute: typeof AppSeriesSeriesIdRoute
   AppShelvesShelfIdRoute: typeof AppShelvesShelfIdRoute
   AppWorksWorkIdRoute: typeof AppWorksWorkIdRoute
@@ -611,6 +650,7 @@ interface AppRouteChildren {
   AppLibrariesIndexRoute: typeof AppLibrariesIndexRoute
   AppSeriesIndexRoute: typeof AppSeriesIndexRoute
   AppBooksBookIdEditRoute: typeof AppBooksBookIdEditRoute
+  AppListsListIdEditRoute: typeof AppListsListIdEditRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -626,6 +666,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppBooksNewRoute: AppBooksNewRoute,
   AppEditionsRefBookIdRoute: AppEditionsRefBookIdRoute,
   AppInviteTokenRoute: AppInviteTokenRoute,
+  AppListsListIdRoute: AppListsListIdRoute,
   AppSeriesSeriesIdRoute: AppSeriesSeriesIdRoute,
   AppShelvesShelfIdRoute: AppShelvesShelfIdRoute,
   AppWorksWorkIdRoute: AppWorksWorkIdRoute,
@@ -633,6 +674,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLibrariesIndexRoute: AppLibrariesIndexRoute,
   AppSeriesIndexRoute: AppSeriesIndexRoute,
   AppBooksBookIdEditRoute: AppBooksBookIdEditRoute,
+  AppListsListIdEditRoute: AppListsListIdEditRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

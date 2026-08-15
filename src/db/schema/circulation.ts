@@ -10,7 +10,7 @@ import {
 } from 'drizzle-orm/sqlite-core'
 
 import { user } from './auth'
-import { book, library, shelf } from './catalog'
+import { book, bookList, bookListItem, library, shelf } from './catalog'
 
 const id = () =>
   text('id')
@@ -78,11 +78,14 @@ export const share = sqliteTable(
       .notNull()
       .references(() => user.id),
     token: text('token').notNull().unique(),
-    scope: text('scope', { enum: ['library', 'shelf'] }).notNull(),
+    scope: text('scope', { enum: ['library', 'shelf', 'list'] }).notNull(),
     libraryId: text('library_id').references(() => library.id, {
       onDelete: 'cascade',
     }),
     shelfId: text('shelf_id').references(() => shelf.id, {
+      onDelete: 'cascade',
+    }),
+    listId: text('list_id').references(() => bookList.id, {
       onDelete: 'cascade',
     }),
     allowRequests: integer('allow_requests', { mode: 'boolean' })
@@ -94,7 +97,7 @@ export const share = sqliteTable(
   (t) => [
     check(
       'share_scope_target',
-      sql`(${t.scope} = 'library' AND ${t.libraryId} IS NOT NULL AND ${t.shelfId} IS NULL) OR (${t.scope} = 'shelf' AND ${t.shelfId} IS NOT NULL AND ${t.libraryId} IS NULL)`,
+      sql`(${t.scope} = 'library' AND ${t.libraryId} IS NOT NULL AND ${t.shelfId} IS NULL AND ${t.listId} IS NULL) OR (${t.scope} = 'shelf' AND ${t.shelfId} IS NOT NULL AND ${t.libraryId} IS NULL AND ${t.listId} IS NULL) OR (${t.scope} = 'list' AND ${t.listId} IS NOT NULL AND ${t.libraryId} IS NULL AND ${t.shelfId} IS NULL)`,
     ),
   ],
 )
@@ -140,3 +143,29 @@ export const signupInvite = sqliteTable('signup_invite', {
   usedAt: integer('used_at', { mode: 'timestamp' }),
   usedBy: text('used_by').references(() => user.id, { onDelete: 'set null' }),
 })
+
+/** Бронь подарка (M17): гость отмечает, что дарит книгу из вишлиста.
+    Владельцу не показывается — сюрприз; гость снимает свою бронь по holderKey. */
+export const giftHold = sqliteTable(
+  'gift_hold',
+  {
+    id: id(),
+    itemId: text('item_id')
+      .notNull()
+      .references(() => bookListItem.id, { onDelete: 'cascade' }),
+    shareId: text('share_id')
+      .notNull()
+      .references(() => share.id, { onDelete: 'cascade' }),
+    guestName: text('guest_name').notNull(),
+    /** Случайный ключ гостя из localStorage — чтобы он мог снять свою бронь. */
+    holderKey: text('holder_key').notNull(),
+    createdAt: createdAt(),
+    canceledAt: integer('canceled_at', { mode: 'timestamp' }),
+  },
+  (t) => [
+    index('gift_hold_item_idx').on(t.itemId),
+    uniqueIndex('gift_hold_active_unique')
+      .on(t.itemId)
+      .where(sql`${t.canceledAt} is null`),
+  ],
+)
