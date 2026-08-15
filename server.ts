@@ -3,9 +3,17 @@
 import { existsSync } from 'node:fs'
 import { join, normalize } from 'node:path'
 
+// журнал ставим первым делом — до импорта приложения, чтобы поймать
+// в том числе ошибки инициализации (миграции, бэкфиллы, воркер)
+import { installLogging, log, startHeartbeat } from './src/lib/logger'
+
+installLogging()
+const bootStarted = performance.now()
+
 // Появляется после `bun run build`; в типах проекта его нет.
 // @ts-ignore build artifact
-import handler from './dist/server/server.js'
+const { default: handler } = await import('./dist/server/server.js')
+
 
 const clientDir = join(import.meta.dir, 'dist', 'client')
 const port = Number(process.env.PORT ?? 3000)
@@ -14,9 +22,9 @@ const port = Number(process.env.PORT ?? 3000)
 const GZIP_TYPES = /\.(js|css|html|svg|json|webmanifest|txt|xml)$/
 const gzipCache = new Map<string, Uint8Array>()
 
-Bun.serve({
-  port,
-  async fetch(request) {
+/** Ошибки статики и SSR не должны молча превращаться в белый экран. */
+async function handleRequest(request: Request): Promise<Response> {
+  {
     if (request.method === 'GET' || request.method === 'HEAD') {
       const pathname = decodeURIComponent(new URL(request.url).pathname)
       const filePath = normalize(join(clientDir, pathname))
@@ -55,8 +63,47 @@ Bun.serve({
         }
       }
     }
-    return handler.fetch(request)
+  }
+  return handler.fetch(request)
+}
+
+Bun.serve({
+  port,
+  async fetch(request) {
+    const started = performance.now()
+    const { pathname, search } = new URL(request.url)
+    const isAsset = pathname.startsWith('/assets/') || pathname.startsWith('/fonts/')
+    try {
+      const response = await handleRequest(request)
+      const ms = Math.round(performance.now() - started)
+      // статику пишем только в debug, остальное — всегда
+      const level =
+        response.status >= 500
+          ? 'error'
+          : response.status >= 400 || ms > 2000
+            ? 'warn'
+            : isAsset
+              ? 'debug'
+              : 'info'
+      log[level]('http', `${request.method} ${pathname}${search}`, {
+        status: response.status,
+        ms,
+      })
+      return response
+    } catch (error) {
+      log.error('http', `${request.method} ${pathname}${search} упал`, {
+        error: error instanceof Error ? error : new Error(String(error)),
+        ms: Math.round(performance.now() - started),
+      })
+      return new Response('Внутренняя ошибка', { status: 500 })
+    }
   },
 })
 
-console.log(`Polka слушает на http://0.0.0.0:${port}`)
+log.info('lifecycle', 'сервер запущен', {
+  port,
+  version: process.env.GIT_SHA?.slice(0, 7) ?? 'dev',
+  bootMs: Math.round(performance.now() - bootStarted),
+  bun: Bun.version,
+})
+startHeartbeat()

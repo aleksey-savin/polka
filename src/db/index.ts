@@ -6,6 +6,7 @@ import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
 
 import { env } from '@/lib/env'
+import { log } from '@/lib/logger'
 import * as authSchema from './schema/auth'
 import * as catalog from './schema/catalog'
 import * as circulation from './schema/circulation'
@@ -24,21 +25,54 @@ export const db = drizzle({ client: sqlite, schema })
 // Миграции применяются на старте процесса (dev-сервер или прод-контейнер).
 const migrationsFolder = join(process.cwd(), 'drizzle')
 if (existsSync(migrationsFolder)) {
-  migrate(db, { migrationsFolder })
-  // фоновой бэкфилл акцентных цветов старых обложек (динамический импорт — от цикла)
-  void import('@/services/coverColors')
-    .then((m) => m.backfillCoverColors())
-    .catch(() => {})
-  // бэкфилл авторов из денормализованных строк (M13)
-  void import('@/services/authors')
-    .then((m) => m.backfillAuthors())
-    .catch(() => {})
+  const started = performance.now()
+  try {
+    migrate(db, { migrationsFolder })
+    log.info('db', 'миграции применены', {
+      ms: Math.round(performance.now() - started),
+      file: join(env.DATA_DIR, 'polka.db'),
+    })
+  } catch (error) {
+    log.error('db', 'МИГРАЦИИ НЕ ПРИМЕНИЛИСЬ — приложение не поднимется', {
+      error: error instanceof Error ? error : new Error(String(error)),
+    })
+    throw error
+  }
+
+  /** Фоновые задачи старта: падение одной не должно ронять процесс молча. */
+  const background = (
+    name: string,
+    run: () => Promise<unknown>,
+  ): void => {
+    const from = performance.now()
+    void run()
+      .then(() =>
+        log.info('startup', `${name}: готово`, {
+          ms: Math.round(performance.now() - from),
+        }),
+      )
+      .catch((error: unknown) =>
+        log.error('startup', `${name}: не выполнилось`, {
+          error: error instanceof Error ? error : new Error(String(error)),
+          ms: Math.round(performance.now() - from),
+        }),
+      )
+  }
+
+  // акцентные цвета старых обложек (динамический импорт — от цикла)
+  background('бэкфилл цветов обложек', () =>
+    import('@/services/coverColors').then((m) => m.backfillCoverColors()),
+  )
+  // авторы из денормализованных строк (M13)
+  background('бэкфилл авторов', () =>
+    import('@/services/authors').then((m) => m.backfillAuthors()),
+  )
   // переезд старого виш-листа в список «Хочу почитать» (M17)
-  void import('@/services/lists')
-    .then((m) => m.backfillWishlists())
-    .catch(() => {})
+  background('переезд виш-листа', () =>
+    import('@/services/lists').then((m) => m.backfillWishlists()),
+  )
   // фоновое наполнение эталона (M15) — медленный воркер, CRAWL_ENABLED=0 выключает
-  void import('@/services/crawl')
-    .then((m) => m.startCrawlWorker())
-    .catch(() => {})
+  background('запуск краулера', () =>
+    import('@/services/crawl').then((m) => m.startCrawlWorker()),
+  )
 }

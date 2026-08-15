@@ -13,8 +13,23 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?задайте в .env}
       APP_URL: ${APP_URL:?задайте в .env, например https://polka.example.ru}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      # debug добавляет статику и каждую серверную функцию
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - polka-data:/data
+    # журнал приложения живёт в /data/logs; здесь — страховка от разрастания
+    # логов самого docker (их всё равно уносит пересоздание контейнера)
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    healthcheck:
+      test: ['CMD', 'bun', '-e', "await fetch('http://127.0.0.1:3000/login')"]
+      interval: 60s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
 
   watchtower:
     image: containrrr/watchtower

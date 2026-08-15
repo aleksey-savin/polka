@@ -3,6 +3,7 @@ import { and, asc, eq, isNotNull, isNull, lte, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { author, crawlTask, refWorkAuthor } from '@/db/schema/catalog'
 import { env } from '@/lib/env'
+import { log } from '@/lib/logger'
 import { saveAuthorPhotoFromUrl } from './covers'
 import { linkCycleChild } from './cycles'
 import { stripBb } from './metadata/fantlab'
@@ -25,16 +26,34 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const pause = () => sleep(4000 + Math.random() * 2500)
 
 async function fetchJson(url: string): Promise<unknown | null> {
+  const started = performance.now()
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': POLKA_USER_AGENT },
       signal: AbortSignal.timeout(12_000),
     })
-    if (!res.ok) return null
+    const ms = Math.round(performance.now() - started)
+    if (!res.ok) {
+      log.warn('crawl', 'источник ответил ошибкой', {
+        url,
+        status: res.status,
+        ms,
+      })
+      return null
+    }
     const text = await res.text()
-    if (!text.trim()) return null
+    if (!text.trim()) {
+      log.warn('crawl', 'источник ответил пустотой', { url, ms })
+      return null
+    }
+    log.debug('crawl', 'ответ получен', { url, ms, bytes: text.length })
     return JSON.parse(text) as unknown
-  } catch {
+  } catch (error) {
+    log.warn('crawl', 'запрос не удался', {
+      url,
+      error: error instanceof Error ? error : new Error(String(error)),
+      ms: Math.round(performance.now() - started),
+    })
     return null
   }
 }
@@ -295,6 +314,12 @@ async function runNextTask(): Promise<void> {
     return
   }
 
+  const started = performance.now()
+  log.info('crawl', 'задача взята', {
+    source: task.source,
+    author: authorRow.name,
+    attempt: task.attempts + 1,
+  })
   try {
     if (task.source === 'fantlab') await crawlFantlabAuthor(authorRow)
     else await crawlOpenlibraryAuthor(authorRow)
@@ -302,6 +327,11 @@ async function runNextTask(): Promise<void> {
       .update(crawlTask)
       .set({ status: 'done', doneAt: new Date(), error: null })
       .where(eq(crawlTask.id, task.id))
+    log.info('crawl', 'задача выполнена', {
+      source: task.source,
+      author: authorRow.name,
+      ms: Math.round(performance.now() - started),
+    })
   } catch (e) {
     const attempts = task.attempts + 1
     await db
@@ -314,6 +344,13 @@ async function runNextTask(): Promise<void> {
         error: e instanceof Error ? e.message : String(e),
       })
       .where(eq(crawlTask.id, task.id))
+    log.error('crawl', 'задача упала', {
+      source: task.source,
+      author: authorRow.name,
+      attempt: attempts,
+      error: e instanceof Error ? e : new Error(String(e)),
+      ms: Math.round(performance.now() - started),
+    })
   }
 }
 
@@ -323,16 +360,23 @@ declare global {
 
 /** Запуск воркера (одна инстанция на процесс, guard от dev-перезагрузок). */
 export function startCrawlWorker(): void {
-  if (env.CRAWL_ENABLED !== '1') return
+  if (env.CRAWL_ENABLED !== '1') {
+    log.info('crawl', 'воркер выключен (CRAWL_ENABLED != 1)')
+    return
+  }
   if (globalThis.__polkaCrawlStarted) return
   globalThis.__polkaCrawlStarted = true
+  log.info('crawl', 'воркер запущен', { tickMs: TICK_MS })
 
   const tick = async () => {
     try {
       await ensureCrawlTasks()
       await runNextTask()
-    } catch {
-      // воркер не должен ронять процесс
+    } catch (error) {
+      // воркер не должен ронять процесс, но и молчать ему нельзя
+      log.error('crawl', 'тик воркера упал', {
+        error: error instanceof Error ? error : new Error(String(error)),
+      })
     }
   }
   // первый тик с задержкой — не мешаем старту приложения
