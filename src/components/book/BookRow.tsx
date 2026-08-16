@@ -77,24 +77,40 @@ export function BookRow({
       } ${onPress ? 'cursor-pointer select-none' : ''}`}
     >
       {before && <div className="self-center">{before}</div>}
-      {book.coverPath ? (
-        <img
-          src={`/api/covers/${book.id}`}
-          alt=""
-          loading="lazy"
-          className="h-16 w-[42px] flex-none self-center rounded-[3px] object-cover shadow-sm"
-        />
-      ) : (
-        <div
-          aria-hidden
-          className="h-16 w-[26px] flex-none self-center rounded-[3px]"
-          style={{
-            background: book.coverColor ?? look.color,
-            boxShadow:
-              'inset -1px 0 0 rgba(35,43,56,.1), inset 1px 0 0 rgba(255,255,255,.35)',
-          }}
-        />
-      )}
+      {/* вне режима выбора обложка — тоже вход в книгу: попасть пальцем
+          в одно название на телефоне неудобно */}
+      {(() => {
+        const cover = book.coverPath ? (
+          <img
+            src={`/api/covers/${book.id}`}
+            alt=""
+            loading="lazy"
+            className="h-16 w-[42px] flex-none rounded-[3px] object-cover shadow-sm"
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="block h-16 w-[26px] flex-none rounded-[3px]"
+            style={{
+              background: book.coverColor ?? look.color,
+              boxShadow:
+                'inset -1px 0 0 rgba(35,43,56,.1), inset 1px 0 0 rgba(255,255,255,.35)',
+            }}
+          />
+        )
+        return onPress ? (
+          <span className="flex-none self-center">{cover}</span>
+        ) : (
+          <Link
+            to="/books/$bookId"
+            params={{ bookId: book.id }}
+            aria-label={`Открыть «${book.title}»`}
+            className="flex-none self-center"
+          >
+            {cover}
+          </Link>
+        )
+      })()}
       <div className="min-w-0 flex-1">
         {onPress ? (
           <span className="block text-base leading-snug font-semibold">

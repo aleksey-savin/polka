@@ -37,6 +37,7 @@ function UnsortedPage() {
     )
 
   // Дефолт для шторки — библиотека выбранных книг
+  const selecting = selected.length > 0
   const selectedRows = rows.filter((r) => selected.includes(r.id))
   const libIds = new Set(
     selectedRows
@@ -52,11 +53,25 @@ function UnsortedPage() {
     <div className="mx-auto max-w-[640px]">
       <h1 className="text-3xl font-semibold">Разбор книг</h1>
       {rows.length > 0 && (
-        <p className="mt-1 text-[13.5px] text-muted-foreground">
-          <span className="font-mono text-[12.5px]">{rows.length}</span>{' '}
-          {plural(rows.length, 'книга ждёт', 'книги ждут', 'книг ждут')} своей
-          полки — тапайте по карточкам и раскладывайте.
-        </p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+          <p className="text-[13.5px] text-muted-foreground">
+            <span className="font-mono text-[12.5px]">{rows.length}</span>{' '}
+            {plural(rows.length, 'книга ждёт', 'книги ждут', 'книг ждут')} своей
+            полки — тапайте по обложке, чтобы открыть, по галочке — чтобы
+            выбрать.
+          </p>
+          <button
+            type="button"
+            className="text-[13px] font-semibold text-accent-foreground"
+            onClick={() =>
+              setSelected(
+                selected.length === rows.length ? [] : rows.map((r) => r.id),
+              )
+            }
+          >
+            {selected.length === rows.length ? 'Снять все' : 'Выбрать все'}
+          </button>
+        </div>
       )}
 
       {unrecognized > 0 && (
@@ -91,19 +106,37 @@ function UnsortedPage() {
                 key={b.id}
                 book={b}
                 selected={checked}
-                onPress={() => toggle(b.id)}
+                // пока ничего не выбрано, карточка — ссылка в книгу;
+                // как только выбор начат, вся карточка переключает отметку
+                onPress={selecting ? () => toggle(b.id) : undefined}
                 place={b.libraryName}
                 before={
-                  <span
-                    aria-hidden
-                    className={`grid size-6 place-items-center rounded-[7px] border-[1.5px] text-[13px] ${
-                      checked
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-input bg-card text-transparent'
-                    }`}
+                  <button
+                    type="button"
+                    aria-label={
+                      checked ? `Снять «${b.title}»` : `Выбрать «${b.title}»`
+                    }
+                    aria-pressed={checked}
+                    className="-m-2 p-2"
+                    onClick={(e) => {
+                      // в режиме выбора клик обрабатывает карточка целиком
+                      if (selecting) return
+                      e.preventDefault()
+                      e.stopPropagation()
+                      toggle(b.id)
+                    }}
                   >
-                    ✓
-                  </span>
+                    <span
+                      aria-hidden
+                      className={`grid size-6 place-items-center rounded-[7px] border-[1.5px] text-[13px] ${
+                        checked
+                          ? 'border-primary bg-primary text-white'
+                          : 'border-input bg-card text-transparent'
+                      }`}
+                    >
+                      ✓
+                    </span>
+                  </button>
                 }
               />
             )
