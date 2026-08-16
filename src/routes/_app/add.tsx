@@ -15,6 +15,9 @@ import { createBookFn } from '@/server/books'
 import { getLibraryOverviewFn, listMyLibrariesFn } from '@/server/libraries'
 import { lookupIsbnFn } from '@/server/lookup'
 import { countUnrecognizedFn } from '@/server/unrecognized'
+import { getPrefsFn } from '@/server/prefs'
+import { SkipChoiceSheet } from '@/components/book/SkipChoiceSheet'
+import type { SkipAction } from '@/services/prefs'
 import { SOURCE_LABEL } from '@/services/metadata/types'
 import type { LookupResult } from '@/services/metadata/lookup'
 
@@ -41,9 +44,12 @@ function AddPage() {
   const [lookup, setLookup] = useState<LookupResult | null>(null)
   const [draft, setDraft] = useState<BookFormValue | null>(null)
   const [unrecognized, setUnrecognized] = useState(0)
+  const [skipAction, setSkipAction] = useState<SkipAction>('ask')
+  const [skipOpen, setSkipOpen] = useState(false)
   // сколько болванок уже накопилось всего — не только за этот заход
   useEffect(() => {
     void countUnrecognizedFn().then(setUnrecognized)
+    void getPrefsFn().then((p) => setSkipAction(p.skipAction))
   }, [])
   const [error, setError] = useState<string | null>(null)
   const [savedCount, setSavedCount] = useState(0)
@@ -114,8 +120,19 @@ function AddPage() {
     [dest],
   )
 
-  /** «Пропустить»: сохраняем по одному ISBN и возвращаемся к сканеру. */
-  async function skip() {
+  function backToScanner() {
+    setDraft(null)
+    setLookup(null)
+    setIsbnInput('')
+    setMode('scan')
+  }
+
+  /** Пропуск по выбранному разу или по настройке. */
+  async function runSkip(action: 'save-isbn' | 'discard') {
+    if (action === 'discard') {
+      backToScanner()
+      return
+    }
     if (!draft) return
     setBusy(true)
     setError(null)
@@ -128,15 +145,21 @@ function AddPage() {
         },
       })
       setUnrecognized((n) => n + 1)
-      setDraft(null)
-      setLookup(null)
-      setIsbnInput('')
-      setMode('scan')
+      backToScanner()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не получилось сохранить книгу')
     } finally {
       setBusy(false)
     }
+  }
+
+  /** «Пропустить»: спрашиваем, если пользователь не решил раз и навсегда. */
+  function skip() {
+    if (skipAction === 'ask') {
+      setSkipOpen(true)
+      return
+    }
+    void runSkip(skipAction)
   }
 
   async function save(openCard: boolean) {
@@ -209,12 +232,23 @@ function AddPage() {
             . Второй экземпляр сохранить можно.
           </p>
         )}
+        <SkipChoiceSheet
+          open={skipOpen}
+          isbn={draft.isbn13}
+          busy={busy}
+          onClose={() => setSkipOpen(false)}
+          onChoose={(action, remember) => {
+            setSkipOpen(false)
+            if (remember) setSkipAction(action)
+            void runSkip(action)
+          }}
+        />
         <BookForm
           value={draft}
           onChange={setDraft}
           onSubmit={() => void save(false)}
           submitLabel="Сохранить и добавить ещё"
-          onSkip={() => void skip()}
+          onSkip={skip}
           busy={busy}
           error={error}
           secondaryActions={[

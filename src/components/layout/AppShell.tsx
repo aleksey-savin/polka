@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useRouter, useRouterState } from '@tanstack/react-router'
-import { Bookmark, Library, LogOut, Plus, Search, Users } from 'lucide-react'
+import {
+  Bookmark,
+  Library,
+  LogOut,
+  Plus,
+  Search,
+  Settings,
+  Users,
+} from 'lucide-react'
 
 import { LogoLink } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
@@ -80,6 +88,12 @@ export function AppShell({
               </Button>
             }
             entries={[
+              {
+                key: 'settings',
+                label: 'Настройки',
+                icon: <Settings />,
+                onSelect: () => void router.navigate({ to: '/settings' }),
+              },
               {
                 key: 'signout',
                 label: 'Выйти',

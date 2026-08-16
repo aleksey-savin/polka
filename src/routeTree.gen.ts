@@ -17,6 +17,7 @@ import { Route as AppFriendsRouteImport } from './routes/_app/friends'
 import { Route as AppLoansRouteImport } from './routes/_app/loans'
 import { Route as AppReadingRouteImport } from './routes/_app/reading'
 import { Route as AppRequestsRouteImport } from './routes/_app/requests'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppUnrecognizedRouteImport } from './routes/_app/unrecognized'
 import { Route as AppUnsortedRouteImport } from './routes/_app/unsorted'
 import { Route as AppWishlistRouteImport } from './routes/_app/wishlist'
@@ -79,6 +80,11 @@ const AppReadingRoute = AppReadingRouteImport.update({
 const AppRequestsRoute = AppRequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppUnrecognizedRoute = AppUnrecognizedRouteImport.update({
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/loans': typeof AppLoansRoute
   '/reading': typeof AppReadingRoute
   '/requests': typeof AppRequestsRoute
+  '/settings': typeof AppSettingsRoute
   '/unrecognized': typeof AppUnrecognizedRoute
   '/unsorted': typeof AppUnsortedRoute
   '/wishlist': typeof AppWishlistRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/loans': typeof AppLoansRoute
   '/reading': typeof AppReadingRoute
   '/requests': typeof AppRequestsRoute
+  '/settings': typeof AppSettingsRoute
   '/unrecognized': typeof AppUnrecognizedRoute
   '/unsorted': typeof AppUnsortedRoute
   '/wishlist': typeof AppWishlistRoute
@@ -278,6 +286,7 @@ export interface FileRoutesById {
   '/_app/loans': typeof AppLoansRoute
   '/_app/reading': typeof AppReadingRoute
   '/_app/requests': typeof AppRequestsRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/unrecognized': typeof AppUnrecognizedRoute
   '/_app/unsorted': typeof AppUnsortedRoute
   '/_app/wishlist': typeof AppWishlistRoute
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | '/loans'
     | '/reading'
     | '/requests'
+    | '/settings'
     | '/unrecognized'
     | '/unsorted'
     | '/wishlist'
@@ -346,6 +356,7 @@ export interface FileRouteTypes {
     | '/loans'
     | '/reading'
     | '/requests'
+    | '/settings'
     | '/unrecognized'
     | '/unsorted'
     | '/wishlist'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/_app/loans'
     | '/_app/reading'
     | '/_app/requests'
+    | '/_app/settings'
     | '/_app/unrecognized'
     | '/_app/unsorted'
     | '/_app/wishlist'
@@ -475,6 +487,13 @@ declare module '@tanstack/react-router' {
       path: '/requests'
       fullPath: '/requests'
       preLoaderRoute: typeof AppRequestsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/unrecognized': {
@@ -654,6 +673,7 @@ interface AppRouteChildren {
   AppLoansRoute: typeof AppLoansRoute
   AppReadingRoute: typeof AppReadingRoute
   AppRequestsRoute: typeof AppRequestsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppUnrecognizedRoute: typeof AppUnrecognizedRoute
   AppUnsortedRoute: typeof AppUnsortedRoute
   AppWishlistRoute: typeof AppWishlistRoute
@@ -679,6 +699,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLoansRoute: AppLoansRoute,
   AppReadingRoute: AppReadingRoute,
   AppRequestsRoute: AppRequestsRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppUnrecognizedRoute: AppUnrecognizedRoute,
   AppUnsortedRoute: AppUnsortedRoute,
   AppWishlistRoute: AppWishlistRoute,
