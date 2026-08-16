@@ -60,17 +60,27 @@ function UnsortedPage() {
             полки — тапайте по обложке, чтобы открыть, по галочке — чтобы
             выбрать.
           </p>
-          <button
-            type="button"
-            className="text-[13px] font-semibold text-accent-foreground"
-            onClick={() =>
-              setSelected(
-                selected.length === rows.length ? [] : rows.map((r) => r.id),
-              )
-            }
-          >
-            {selected.length === rows.length ? 'Снять все' : 'Выбрать все'}
-          </button>
+          {selected.length < rows.length && (
+            <button
+              type="button"
+              className="text-[13px] font-semibold text-accent-foreground"
+              onClick={() => setSelected(rows.map((r) => r.id))}
+            >
+              Выбрать все
+            </button>
+          )}
+          {selecting && (
+            <button
+              type="button"
+              className="text-[13px] font-semibold text-muted-foreground"
+              onClick={() => setSelected([])}
+            >
+              Снять выбор
+              {selected.length < rows.length && (
+                <span className="font-mono"> · {selected.length}</span>
+              )}
+            </button>
+          )}
         </div>
       )}
 
