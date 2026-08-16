@@ -94,11 +94,45 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 | `saved_share`    | userId→user (cascade), shareId→share (cascade), savedAt                                                                                                                                           | PK (userId, shareId) — «полки друзей»: сохранённые чужие ссылки                                          |
 | `lookup_cache`   | isbn13 PK, source, rawJson, fetchedAt                                                                                                                                                             | кэш ответов метаданных                                                                                   |
 
+**Эталонный каталог (M14–M16)** — общий для всех пользователей, правки живут в копиях-книгах:
+
+| Таблица           | Колонки                                                                                                              | Смысл                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `author`          | id, name, nameNorm unique, fantlabId?, openlibraryId?, bio?, birthYear?, deathYear?, country?, photoPath?             | дедуп по nameNorm; био заполняет фоновый воркер                             |
+| `book_author`     | bookId (cascade), authorId (cascade), position                                                                        | PK (bookId, authorId)                                                        |
+| `ref_work`        | id, source, sourceId, title, titleNorm, year?, workType?, annotation?, editionsFetchedAt?                            | произведение; unique (source, sourceId). `workType='cycle'` — это цикл       |
+| `ref_book`        | id, source, sourceRef, isbn13?, isbn10?, title, publisher?, year?, pages?, heightMm?, coverType?, coverPath?, rawJson | издание; unique (source, sourceRef)                                          |
+| `ref_book_work`   | refBookId (cascade), workId (cascade)                                                                                 | сборник покрывает несколько произведений                                     |
+| `ref_work_link`   | parentId→ref_work, childId→ref_work, position                                                                         | состав цикла по порядку чтения (M16)                                         |
+| `ref_work_author` | workId, authorId, position                                                                                            | PK (workId, authorId)                                                        |
+| `crawl_task`      | id, kind, source, authorId, status, attempts, scheduledAt, doneAt?, error?                                            | очередь фонового наполнения; unique (kind, source, authorId)                |
+
+**Списки — вишлисты и подборки (M17)**:
+
+| Таблица          | Колонки                                                                                                      | Ограничения                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `book_list`      | id, ownerId→user (cascade), kind ('wishlist'\|'collection'), title, description?, position, createdAt, updatedAt | idx (ownerId, kind, position)                                                          |
+| `book_list_item` | id, listId (cascade), bookId?/refWorkId?/refBookId?, note?, position, addedBy, createdAt                     | CHECK: ровно одна ссылка; частичные unique по каждой форме — дублей в списке нет      |
+| `gift_hold`      | id, itemId (cascade), shareId (cascade), guestName, holderKey, createdAt, canceledAt?                        | частичный unique (itemId) WHERE canceledAt IS NULL — одна активная бронь на книгу      |
+
+**Роли, модерация и почта (M21–M22)** — `schema/moderation.ts`:
+
+| Таблица             | Колонки                                                                                                             | Смысл                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `user_account`      | userId PK→user (cascade), role ('user'\|'moderator'\|'admin'), publishBannedAt?, publishBanReason?, blockedAt?, blockedReason? | глобальная роль; роль в библиотеке — отдельная история                  |
+| `moderation_item`   | id, kind ('book_cover'\|'share'\|'ref_work'\|'ref_book'), targetId, status, ownerId?, reportCount, reason?, reviewedBy?, reviewedAt? | очередь; idx (status, reportCount)                                      |
+| `moderation_report` | id, itemId (cascade), reason, note?, reporterId?                                                                    | жалоба, в том числе от гостя без аккаунта                              |
+| `moderation_log`    | id, actorId?, action, kind?, targetId?, subjectId?, reason?, createdAt                                              | журнал решений — без него спор не разобрать                            |
+| `mail_setting`      | id='default', host?, port?, secure, username?, passwordEnc?, fromName?, fromEmail?, флаги видов писем, lastResult?  | пароль SMTP шифруется AES-GCM ключом из `BETTER_AUTH_SECRET`           |
+
 Инварианты, которые следит сервисный слой:
 
 - `book.status='wishlist'` ⇔ `libraryId IS NULL` (личный виш, доступ по `addedBy`); при остальных статусах `libraryId NOT NULL`.
 - `shelfId` принадлежит той же `libraryId` (проверка при записи).
 - «На руках» — вычислимо: существует loan с `returnedAt IS NULL`.
+- `book.unrecognized=1` ⇔ названием служит ISBN (M18); флаг снимается, как только появилось настоящее название.
+- Членство книги в списке резолвится **сквозь формы**: моя книга ↔ произведение ↔ издание связываются через `refBookId`/`refWorkId`/`ref_book_work`/совпадение названия (M17).
+- Публикация не ждёт модерации: `share` работает сразу, а объект встаёт в `moderation_item` со статусом `pending`.
 
 **Авторизация каталога — только через членство.** Единый хелпер `assertMember(libraryId, userId)` (join `library_member`) во всех сервисах: доступ к книге/полке/выдаче/заявке определяется членством в её библиотеке, а не `addedBy`. Wishlist-книги (без библиотеки) — только их `addedBy`. Действия «owner»: удаление библиотеки, управление участниками и инвайтами. Личный слой (`book_personal`) пишет только его `userId`; читают участники библиотеки книги (карточка показывает оценки всех участников).
 
@@ -169,7 +203,31 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 | `APP_URL`              | да                   | Внешний URL (для better-auth)            |
 | `REGISTRATION_OPEN`    | нет (default `true`) | `false` — скрыть и запретить регистрацию |
 | `GOOGLE_BOOKS_API_KEY` | нет                  | Поднимает лимиты Google Books            |
+| `CRAWL_ENABLED`        | нет (default `1`)    | `0` — выключить фоновый краулер эталона  |
+| `LOG_LEVEL`            | нет (default `info`) | `debug` добавляет статику и серверные функции |
+| `GIT_SHA`              | ставится сборкой     | Версия образа, видна в журнале при старте |
+
+Почта (SMTP) в окружении не живёт — настраивается в приложении, «Сервис» → «Почта»; пароль хранится в базе зашифрованным.
+
+## Журнал приложения
+
+Winston пишет в stdout (`docker compose logs`) и в файлы `/data/logs` — контейнер пересоздаётся каждой выкаткой и уносит свои логи, том остаётся. Посуточная ротация, 14 дней, симлинк `polka.log` на текущий. Ловим всё: любой вывод через `console` (в том числе библиотечный), неперехваченные исключения и отказы промисов, сигналы остановки, каждый HTTP-запрос со статусом и длительностью, старт с версией и временем миграций, работу краулера, heartbeat с памятью раз в пять минут. Подробности и команды — в README.
+
+## Подводные камни, на которые уже наступили
+
+Список не для истории, а чтобы не наступить снова:
+
+1. **Миграции и внешние ключи.** Drizzle выполняет файл миграции в транзакции, а SQLite внутри транзакции игнорирует `PRAGMA foreign_keys=OFF` — тот самый, который Drizzle сам пишет в файл при пересоздании таблицы. Наш `foreign_keys=ON` при этом действует, и `DROP TABLE` уносит каскадом строки зависимых таблиц. Так при переезде на списки (M17) пропали `saved_share` и `borrow_request`. Ключи выключаются **вокруг** `migrate()` в `db/index.ts`, после прогона проверяется `pragma_foreign_key_check`; регрессию сторожит `src/db/migrations.test.ts`.
+2. **Генератор миграций врёт при пересоздании таблицы.** Добавляя колонку через rebuild, drizzle-kit пишет её в `INSERT ... SELECT` из старой таблицы, где колонки ещё нет. SQL надо читать глазами перед выкаткой.
+3. **Lightning CSS молча ест `@mixin`.** Это синтаксис Sass; тёмная тема, написанная через миксин, собиралась без ошибок и не появлялась. Блоки токенов дублируются намеренно.
+4. **`PRAGMA foreign_keys` и SELinux при монтировании тома.** На Fedora хост-каталог без `:Z` даёт EACCES внутри контейнера; журнал из-за этого ронял приложение, пока файловый транспорт не сделали необязательным.
+5. **FantLab: `lang_id` у произведения — язык оригинала**, а не издания. Фильтр по нему выкидывал библиографию переводных авторов (Несбё: 2 книги вместо 36). Русскоязычность отбирается на уровне изданий.
+6. **У классики сотни изданий.** «Братья Карамазовы» — 230 русских; тянуть их обложки пачкой это полторы минуты ожидания и 230 файлов. Обложек качаем 12, остальные — при открытии карточки издания.
+7. **Пайп маскирует код возврата.** `bun run typecheck | tail` возвращает статус `tail`, и красный тайпчек уезжает в прод. Проверки — строго через `&&`.
+8. **Radix Dialog — не шторка.** Мобильные шторки на нём приходилось дописывать руками (свайп, грип ломал сетку). Взяли стоковый shadcn Drawer (vaul) и не трогаем его поведение.
 
 ## Тестирование
 
-`bun test` для чистых модулей: `services/isbn.ts` (чек-цифры, 10↔13, EAN→ISBN), `services/metadata/merge.ts` (на записанных фикстурах реальных ответов), `services/shelfTint.ts`, `services/search.ts` (нормализация «Ё»). Серверные функции и роуты в MVP проверяются сквозными сценариями по чек-листам этапов (см. roadmap.md).
+`bun test` — 105 тестов в 17 файлах. Чистые модули: `isbn` (чек-цифры, 10↔13, EAN→ISBN), `metadata/merge` (на записанных фикстурах), `shelfTint`, `search`, `spine`, `userAgent`. Сервисы гоняются на временной SQLite (`DATA_DIR` в `mkdtemp` до импорта `@/db`): каталог, обращение, шэринг, циклы, списки, нераспознанные, поиск по названию, модерация, почта (через фиктивный SMTP на localhost), миграции (апгрейд боевой базы с потерей данных).
+
+Что проверяется руками: экраны на телефоне и сквозные сценарии по чек-листам этапов (см. roadmap.md). Перед выкаткой рискованных изменений — прогон продового образа в Docker на **копии** боевой базы: так нашлись и потеря данных при миграции, и 230 обложек.
