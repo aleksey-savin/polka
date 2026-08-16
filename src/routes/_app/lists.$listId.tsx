@@ -186,6 +186,11 @@ function ListPage() {
                     {item.title}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
+                    {item.form !== 'book' && (
+                      <span className="mr-1.5 inline-block rounded-[3px] border-[1.5px] border-muted-foreground/55 px-1 align-[1px] font-mono text-[9.5px] tracking-[0.07em] uppercase">
+                        {item.form === 'work' ? 'произведение' : 'издание'}
+                      </span>
+                    )}
                     {item.authors}
                     {item.year && (
                       <>

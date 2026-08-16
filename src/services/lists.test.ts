@@ -8,6 +8,8 @@ process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-lists-'))
 
 const { db } = await import('@/db')
 const { user } = await import('@/db/schema/auth')
+const { refBook, refBookWork } = await import('@/db/schema/catalog')
+const { normalizeForSearch } = await import('./search')
 const { createLibrary } = await import('./libraries')
 const { createShelf } = await import('./shelves')
 const { createBook } = await import('./books')
@@ -156,6 +158,115 @@ describe('вишлисты и подборки', () => {
 
     const lists = await listMyLists(ALEX)
     expect(lists.filter((l) => l.kind === 'wishlist').length).toBeGreaterThan(0)
+  })
+})
+
+describe('сквозная индикация', () => {
+  test('кейс «Пентаграммы»: элемент-книга виден со страницы произведения', async () => {
+    // произведение + издание, покрывающее его
+    const workId = await ensureRefWork('fantlab', 'w-p1', 'Пентаграмма', 2003)
+    const [edition] = await db
+      .insert(refBook)
+      .values({
+        source: 'fantlab',
+        sourceRef: 'ed-p1',
+        isbn13: '9785389999991',
+        title: 'Пентаграмма',
+        titleNorm: normalizeForSearch('Пентаграмма'),
+        authors: 'Ю Несбё',
+        year: 2017,
+      })
+      .returning({ id: refBook.id })
+    await db
+      .insert(refBookWork)
+      .values({ refBookId: edition!.id, workId })
+
+    // мигрированный «Хочу»: книга каталога со ссылкой на произведение
+    const migrated = await createBook(ALEX, {
+      title: 'Пентаграмма',
+      authors: 'Ю Несбё',
+      wishlist: true,
+      refWorkId: workId,
+    })
+    const { id: listId } = await createList(ALEX, {
+      kind: 'wishlist',
+      title: 'Сквозной вишлист',
+    })
+    await addToList(ALEX, listId, { bookId: migrated.id })
+
+    // страница произведения видит членство книги
+    expect(await listsForOne(ALEX, { refWorkId: workId })).toMatchObject([
+      { id: listId },
+    ])
+    // страница издания — тоже (через произведение)
+    expect(await listsForOne(ALEX, { refBookId: edition!.id })).toMatchObject([
+      { id: listId },
+    ])
+
+    // шторка: галочка с формой и без конфликта у той же книги
+    const picks = await listsForTarget(ALEX, { refWorkId: workId })
+    const pick = picks.find((x) => x.id === listId)
+    expect(pick).toMatchObject({ contains: true, conflict: null })
+    expect(pick?.match?.form).toBe('book')
+  })
+
+  test('конфликты форм: издание поверх произведения и наоборот', async () => {
+    const workId = await ensureRefWork('fantlab', 'w-c1', 'Нетопырь', 1997)
+    const [edition] = await db
+      .insert(refBook)
+      .values({
+        source: 'fantlab',
+        sourceRef: 'ed-c1',
+        isbn13: '9785389999992',
+        title: 'Нетопырь',
+        titleNorm: normalizeForSearch('Нетопырь'),
+        authors: 'Ю Несбё',
+        year: 2017,
+      })
+      .returning({ id: refBook.id })
+    await db.insert(refBookWork).values({ refBookId: edition!.id, workId })
+
+    // в списке лежит произведение → цель-издание получает конфликт «заменить»
+    const { id: withWork } = await createList(ALEX, {
+      kind: 'wishlist',
+      title: 'С произведением',
+    })
+    await addToList(ALEX, withWork, { refWorkId: workId })
+    const pickEdition = (
+      await listsForTarget(ALEX, { refBookId: edition!.id })
+    ).find((x) => x.id === withWork)
+    expect(pickEdition).toMatchObject({
+      contains: true,
+      conflict: 'work-behind',
+    })
+    expect(pickEdition?.match?.formLabel).toBe('как произведение')
+
+    // в списке лежит издание → цель-произведение получает «можно не добавлять»
+    const { id: withEdition } = await createList(ALEX, {
+      kind: 'collection',
+      title: 'С изданием',
+    })
+    await addToList(ALEX, withEdition, { refBookId: edition!.id })
+    const pickWork = (await listsForTarget(ALEX, { refWorkId: workId })).find(
+      (x) => x.id === withEdition,
+    )
+    expect(pickWork).toMatchObject({
+      contains: true,
+      conflict: 'edition-behind',
+    })
+    expect(pickWork?.match?.formLabel).toBe('издание 2017 года')
+    expect(pickWork?.match?.refBookId).toBe(edition!.id)
+
+    // точная форма на месте → конфликта нет, тап убирает её
+    const samePick = (
+      await listsForTarget(ALEX, { refWorkId: workId })
+    ).find((x) => x.id === withWork)
+    expect(samePick).toMatchObject({ contains: true, conflict: null })
+    expect(samePick?.match?.form).toBe('work')
+
+    // формы в самом списке
+    const view = await getList(ALEX, withEdition)
+    expect(view.items[0]!.form).toBe('edition')
   })
 })
 

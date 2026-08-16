@@ -11,7 +11,7 @@ import {
   refWorkAuthor,
 } from '@/db/schema/catalog'
 import { ensureAuthor, parseAuthors } from './authors'
-import { listsForOne, listsForTargets } from './lists'
+import { editionsInLists, listsForOne, listsForTargets } from './lists'
 import { memberLibraryIds } from './members'
 import { normalizeForSearch } from './search'
 import type {
@@ -329,6 +329,8 @@ export interface WorkView {
     coverPath: string | null
     coverColor: string | null
     have: boolean
+    /** Это издание лежит в списке само по себе. */
+    inLists: Array<ListBadge>
   }>
 }
 
@@ -388,10 +390,17 @@ export async function getWorkView(
     annotation: work.annotation,
     authorName: authorRow?.name ?? '',
     editionsFetched: work.editionsFetchedAt !== null,
-    editions: editions.map((e) => ({
-      ...e,
-      have: Boolean(e.isbn13 && mineIsbns.has(e.isbn13)),
-    })),
+    editions: await (async () => {
+      const inLists = await editionsInLists(
+        userId,
+        editions.map((e) => e.refBookId),
+      )
+      return editions.map((e) => ({
+        ...e,
+        have: Boolean(e.isbn13 && mineIsbns.has(e.isbn13)),
+        inLists: inLists.get(e.refBookId) ?? [],
+      }))
+    })(),
   }
 }
 

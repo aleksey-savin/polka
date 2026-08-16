@@ -128,7 +128,7 @@ function WorkPage() {
                     <span className="block truncate text-[13.5px] font-semibold">
                       {e.title}
                     </span>
-                    <span className="block text-xs text-muted-foreground">
+                    <span className="block truncate text-xs text-muted-foreground">
                       {e.publisher && `${e.publisher} · `}
                       {e.year && (
                         <span className="font-mono text-[11.5px]">{e.year}</span>
@@ -142,6 +142,13 @@ function WorkPage() {
                           с.
                         </>
                       )}
+                      {e.inLists.length > 0 && (
+                        <b className="font-medium text-accent-foreground">
+                          {' · в «'}
+                          {e.inLists[0]!.title}
+                          {'»'}
+                        </b>
+                      )}
                     </span>
                   </span>
                 </Link>
@@ -154,6 +161,7 @@ function WorkPage() {
                     target={{ refBookId: e.refBookId }}
                     title={e.title}
                     subtitle={view.authorName}
+                    active={e.inLists.length > 0}
                   />
                 )}
                 <span aria-hidden className="flex-none text-muted-foreground">

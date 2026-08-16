@@ -107,6 +107,8 @@ export async function listMyLists(userId: string): Promise<Array<ListRow>> {
 
 export interface ListItemView {
   id: string
+  /** Форма элемента: моя книга, произведение или издание эталона. */
+  form: 'book' | 'work' | 'edition'
   title: string
   authors: string
   year: number | null
@@ -229,6 +231,7 @@ export async function listItems(
           : (PLACE_BY_STATUS[r.bookStatus ?? ''] ?? null)
       return {
         id: r.id,
+        form: 'book' as const,
         title: r.bookTitle ?? '',
         authors: r.bookAuthors ?? '',
         year: r.bookYear,
@@ -247,6 +250,7 @@ export async function listItems(
       | undefined
     return {
       id: r.id,
+      form: r.refWorkId ? ('work' as const) : ('edition' as const),
       title: r.workTitle ?? r.editionTitle ?? '',
       authors: r.refWorkId
         ? (workAuthors.get(r.refWorkId) ?? '')
@@ -441,16 +445,402 @@ export async function setItemNote(
     .where(eq(bookListItem.id, itemId))
 }
 
+export interface ListMatch {
+  itemId: string
+  form: 'book' | 'work' | 'edition'
+  /** «как произведение» / «издание 2017 года» / «книга с полки». */
+  formLabel: string
+  /** Для ссылки «к изданию →» при конфликте форм. */
+  refBookId: string | null
+}
+
 export interface ListPick {
   id: string
   kind: ListKind
   title: string
   itemCount: number
-  /** Книга уже в этом списке. */
+  /** Книга уже в этом списке (в любой форме). */
   contains: boolean
+  /** Какой именно элемент там лежит — тап убирает его. */
+  match: ListMatch | null
+  /** Конфликт форм: цель-издание поверх произведения или наоборот. */
+  conflict: 'work-behind' | 'edition-behind' | null
 }
 
-/** Шторка «+»: все мои списки с отметкой, где книга уже есть. */
+export interface ListBadge {
+  id: string
+  kind: ListKind
+  title: string
+}
+
+/** Ключ элемента для батч-запроса членства в списках. */
+export const targetKey = (target: ItemTarget): string =>
+  'bookId' in target
+    ? `book:${target.bookId}`
+    : 'refWorkId' in target
+      ? `work:${target.refWorkId}`
+      : `edition:${target.refBookId}`
+
+/** Связанные сущности цели: та же книга во всех трёх формах. */
+interface TargetLinks {
+  books: Set<string>
+  works: Set<string>
+  editions: Set<string>
+}
+
+/**
+ * Сквозной резолв «это одна и та же книга»: моя книга ↔ произведение ↔
+ * издание связываются через book.refBookId / book.refWorkId / ref_book_work
+ * и совпадение названий — тот же механизм, что «есть» в библиографии.
+ */
+async function expandTargets(
+  userId: string,
+  targets: Array<ItemTarget>,
+): Promise<Map<string, TargetLinks>> {
+  const out = new Map<string, TargetLinks>()
+  const targetBookIds = targets.flatMap((t) => ('bookId' in t ? [t.bookId] : []))
+  const targetWorkIds = targets.flatMap((t) =>
+    'refWorkId' in t ? [t.refWorkId] : [],
+  )
+  const targetEditionIds = targets.flatMap((t) =>
+    'refBookId' in t ? [t.refBookId] : [],
+  )
+
+  // мои книги-цели: их связи с эталоном
+  const targetBooks =
+    targetBookIds.length > 0
+      ? await db
+          .select({
+            id: book.id,
+            refBookId: book.refBookId,
+            refWorkId: book.refWorkId,
+            titleNorm: book.titleNorm,
+          })
+          .from(book)
+          .where(inArray(book.id, targetBookIds))
+      : []
+
+  // произведения книг без прямой связи — по названию (fallback, как в циклах)
+  const orphanNorms = targetBooks
+    .filter((b) => !b.refBookId && !b.refWorkId)
+    .map((b) => b.titleNorm)
+  const worksByNorm =
+    orphanNorms.length > 0
+      ? await db
+          .select({ id: refWork.id, titleNorm: refWork.titleNorm })
+          .from(refWork)
+          .where(inArray(refWork.titleNorm, orphanNorms))
+      : []
+
+  // все затронутые издания и произведения (цели + связи книг)
+  const editionPool = new Set([
+    ...targetEditionIds,
+    ...targetBooks.flatMap((b) => (b.refBookId ? [b.refBookId] : [])),
+  ])
+  const workPool = new Set([
+    ...targetWorkIds,
+    ...targetBooks.flatMap((b) => (b.refWorkId ? [b.refWorkId] : [])),
+    ...worksByNorm.map((w) => w.id),
+  ])
+
+  // связка изданий и произведений — в обе стороны
+  const coverRows =
+    editionPool.size > 0 || workPool.size > 0
+      ? await db
+          .select({
+            refBookId: refBookWork.refBookId,
+            workId: refBookWork.workId,
+          })
+          .from(refBookWork)
+          .where(
+            or(
+              editionPool.size > 0
+                ? inArray(refBookWork.refBookId, [...editionPool])
+                : undefined,
+              workPool.size > 0
+                ? inArray(refBookWork.workId, [...workPool])
+                : undefined,
+            ),
+          )
+      : []
+  const worksOfEdition = new Map<string, Array<string>>()
+  const editionsOfWork = new Map<string, Array<string>>()
+  for (const c of coverRows) {
+    worksOfEdition.set(c.refBookId, [
+      ...(worksOfEdition.get(c.refBookId) ?? []),
+      c.workId,
+    ])
+    editionsOfWork.set(c.workId, [
+      ...(editionsOfWork.get(c.workId) ?? []),
+      c.refBookId,
+    ])
+  }
+
+  // названия произведений — для поиска моих книг по совпадению
+  const allWorkIds = new Set([
+    ...workPool,
+    ...coverRows.map((c) => c.workId),
+  ])
+  const workRows =
+    allWorkIds.size > 0
+      ? await db
+          .select({ id: refWork.id, titleNorm: refWork.titleNorm })
+          .from(refWork)
+          .where(inArray(refWork.id, [...allWorkIds]))
+      : []
+  const normOfWork = new Map(workRows.map((w) => [w.id, w.titleNorm]))
+
+  // мои книги, связанные с затронутыми произведениями и изданиями
+  const allEditionIds = new Set([
+    ...editionPool,
+    ...coverRows.map((c) => c.refBookId),
+  ])
+  const norms = new Set(workRows.map((w) => w.titleNorm))
+  const libIds = await memberLibraryIds(userId)
+  const accessible = or(
+    libIds.length > 0 ? inArray(book.libraryId, libIds) : undefined,
+    eq(book.addedBy, userId),
+  )
+  const myBooks =
+    allWorkIds.size > 0 || allEditionIds.size > 0
+      ? await db
+          .select({
+            id: book.id,
+            refBookId: book.refBookId,
+            refWorkId: book.refWorkId,
+            titleNorm: book.titleNorm,
+          })
+          .from(book)
+          .where(
+            and(
+              accessible,
+              or(
+                allWorkIds.size > 0
+                  ? inArray(book.refWorkId, [...allWorkIds])
+                  : undefined,
+                allEditionIds.size > 0
+                  ? inArray(book.refBookId, [...allEditionIds])
+                  : undefined,
+                norms.size > 0
+                  ? inArray(book.titleNorm, [...norms])
+                  : undefined,
+              ),
+            ),
+          )
+      : []
+
+  const booksOfWork = (workId: string): Array<string> => {
+    const norm = normOfWork.get(workId)
+    const editions = new Set(editionsOfWork.get(workId) ?? [])
+    return myBooks
+      .filter(
+        (b) =>
+          b.refWorkId === workId ||
+          (b.refBookId !== null && editions.has(b.refBookId)) ||
+          (norm !== undefined && b.titleNorm === norm),
+      )
+      .map((b) => b.id)
+  }
+
+  for (const target of targets) {
+    const links: TargetLinks = {
+      books: new Set(),
+      works: new Set(),
+      editions: new Set(),
+    }
+    if ('bookId' in target) {
+      links.books.add(target.bookId)
+      const row = targetBooks.find((b) => b.id === target.bookId)
+      if (row) {
+        if (row.refWorkId) links.works.add(row.refWorkId)
+        if (row.refBookId) {
+          links.editions.add(row.refBookId)
+          for (const w of worksOfEdition.get(row.refBookId) ?? [])
+            links.works.add(w)
+        }
+        if (!row.refBookId && !row.refWorkId) {
+          for (const w of worksByNorm.filter(
+            (x) => x.titleNorm === row.titleNorm,
+          ))
+            links.works.add(w.id)
+        }
+        // другие издания тех же произведений — та же книга по смыслу
+        for (const w of links.works)
+          for (const e of editionsOfWork.get(w) ?? []) links.editions.add(e)
+      }
+    } else if ('refWorkId' in target) {
+      links.works.add(target.refWorkId)
+      for (const e of editionsOfWork.get(target.refWorkId) ?? [])
+        links.editions.add(e)
+      for (const b of booksOfWork(target.refWorkId)) links.books.add(b)
+    } else {
+      links.editions.add(target.refBookId)
+      for (const w of worksOfEdition.get(target.refBookId) ?? []) {
+        links.works.add(w)
+        for (const b of booksOfWork(w)) links.books.add(b)
+      }
+      for (const b of myBooks.filter((x) => x.refBookId === target.refBookId))
+        links.books.add(b.id)
+    }
+    out.set(targetKey(target), links)
+  }
+  return out
+}
+
+interface FoundItem {
+  itemId: string
+  listId: string
+  kind: ListKind
+  listTitle: string
+  form: 'book' | 'work' | 'edition'
+  bookId: string | null
+  refWorkId: string | null
+  refBookId: string | null
+  editionYear: number | null
+}
+
+/** Элементы всех моих списков, задевающие связанные сущности целей. */
+async function findRelatedItems(
+  userId: string,
+  linksByKey: Map<string, TargetLinks>,
+): Promise<Array<FoundItem>> {
+  const allBooks = new Set<string>()
+  const allWorks = new Set<string>()
+  const allEditions = new Set<string>()
+  for (const links of linksByKey.values()) {
+    for (const b of links.books) allBooks.add(b)
+    for (const w of links.works) allWorks.add(w)
+    for (const e of links.editions) allEditions.add(e)
+  }
+  if (allBooks.size + allWorks.size + allEditions.size === 0) return []
+
+  const rows = await db
+    .select({
+      itemId: bookListItem.id,
+      listId: bookList.id,
+      kind: bookList.kind,
+      listTitle: bookList.title,
+      bookId: bookListItem.bookId,
+      refWorkId: bookListItem.refWorkId,
+      refBookId: bookListItem.refBookId,
+      editionYear: refBook.year,
+    })
+    .from(bookListItem)
+    .innerJoin(bookList, eq(bookList.id, bookListItem.listId))
+    .leftJoin(refBook, eq(refBook.id, bookListItem.refBookId))
+    .where(
+      and(
+        eq(bookList.ownerId, userId),
+        or(
+          allBooks.size > 0
+            ? inArray(bookListItem.bookId, [...allBooks])
+            : undefined,
+          allWorks.size > 0
+            ? inArray(bookListItem.refWorkId, [...allWorks])
+            : undefined,
+          allEditions.size > 0
+            ? inArray(bookListItem.refBookId, [...allEditions])
+            : undefined,
+        ),
+      ),
+    )
+    .orderBy(asc(bookList.title))
+
+  return rows.map((r) => ({
+    itemId: r.itemId,
+    listId: r.listId,
+    kind: r.kind,
+    listTitle: r.listTitle,
+    form: r.bookId ? 'book' : r.refWorkId ? 'work' : 'edition',
+    bookId: r.bookId,
+    refWorkId: r.refWorkId,
+    refBookId: r.refBookId,
+    editionYear: r.editionYear,
+  }))
+}
+
+const itemMatchesLinks = (item: FoundItem, links: TargetLinks): boolean =>
+  (item.bookId !== null && links.books.has(item.bookId)) ||
+  (item.refWorkId !== null && links.works.has(item.refWorkId)) ||
+  (item.refBookId !== null && links.editions.has(item.refBookId))
+
+const formLabelOf = (item: FoundItem): string =>
+  item.form === 'work'
+    ? 'как произведение'
+    : item.form === 'edition'
+      ? item.editionYear
+        ? `издание ${item.editionYear} года`
+        : 'как издание'
+      : 'книга из каталога'
+
+/**
+ * В каких списках состоят указанные книги — сквозно по всем формам.
+ * Одна пачка запросов на весь набор целей (карточка, библиография, цикл).
+ */
+export async function listsForTargets(
+  userId: string,
+  targets: Array<ItemTarget>,
+): Promise<Map<string, Array<ListBadge>>> {
+  const out = new Map<string, Array<ListBadge>>()
+  if (targets.length === 0) return out
+  const linksByKey = await expandTargets(userId, targets)
+  const items = await findRelatedItems(userId, linksByKey)
+
+  for (const [key, links] of linksByKey) {
+    const seen = new Set<string>()
+    const badges: Array<ListBadge> = []
+    for (const item of items) {
+      if (seen.has(item.listId) || !itemMatchesLinks(item, links)) continue
+      seen.add(item.listId)
+      badges.push({ id: item.listId, kind: item.kind, title: item.listTitle })
+    }
+    if (badges.length > 0) out.set(key, badges)
+  }
+  return out
+}
+
+/** Списки одной книги — для чипов на карточке и страницах эталона. */
+export async function listsForOne(
+  userId: string,
+  target: ItemTarget,
+): Promise<Array<ListBadge>> {
+  const found = await listsForTargets(userId, [target])
+  return found.get(targetKey(target)) ?? []
+}
+
+/** Прямое членство изданий (без сквозного резолва) — отметки в строках изданий. */
+export async function editionsInLists(
+  userId: string,
+  editionIds: Array<string>,
+): Promise<Map<string, Array<ListBadge>>> {
+  const out = new Map<string, Array<ListBadge>>()
+  if (editionIds.length === 0) return out
+  const rows = await db
+    .select({
+      listId: bookList.id,
+      kind: bookList.kind,
+      title: bookList.title,
+      refBookId: bookListItem.refBookId,
+    })
+    .from(bookListItem)
+    .innerJoin(bookList, eq(bookList.id, bookListItem.listId))
+    .where(
+      and(
+        eq(bookList.ownerId, userId),
+        inArray(bookListItem.refBookId, editionIds),
+      ),
+    )
+    .orderBy(asc(bookList.title))
+  for (const r of rows) {
+    if (!r.refBookId) continue
+    const list = out.get(r.refBookId) ?? []
+    list.push({ id: r.listId, kind: r.kind, title: r.title })
+    out.set(r.refBookId, list)
+  }
+  return out
+}
+
+/** Шторка «+»: все мои списки, членство сквозное, с конфликтами форм. */
 export async function listsForTarget(
   userId: string,
   target: ItemTarget,
@@ -476,110 +866,48 @@ export async function listsForTarget(
     .groupBy(bookListItem.listId)
   const countByList = new Map(counts.map((c) => [c.listId, c.total]))
 
-  const hits = await db
-    .select({ listId: bookListItem.listId })
-    .from(bookListItem)
-    .where(
-      and(
-        inArray(
-          bookListItem.listId,
-          lists.map((l) => l.id),
-        ),
-        targetCondition(target),
-      ),
+  const linksByKey = await expandTargets(userId, [target])
+  const links = linksByKey.get(targetKey(target))
+  const items = links ? await findRelatedItems(userId, linksByKey) : []
+
+  return lists.map((l) => {
+    const related = items.filter(
+      (i) => i.listId === l.id && links && itemMatchesLinks(i, links),
     )
-  const hitIds = new Set(hits.map((h) => h.listId))
-
-  return lists.map((l) => ({
-    id: l.id,
-    kind: l.kind,
-    title: l.title,
-    itemCount: countByList.get(l.id) ?? 0,
-    contains: hitIds.has(l.id),
-  }))
-}
-
-export interface ListBadge {
-  id: string
-  kind: ListKind
-  title: string
-}
-
-/** Ключ элемента для батч-запроса членства в списках. */
-export const targetKey = (target: ItemTarget): string =>
-  'bookId' in target
-    ? `book:${target.bookId}`
-    : 'refWorkId' in target
-      ? `work:${target.refWorkId}`
-      : `edition:${target.refBookId}`
-
-/**
- * В каких списках состоят указанные книги — одним запросом.
- * Нужно для индикации: на карточке, у произведения, в библиографии.
- */
-export async function listsForTargets(
-  userId: string,
-  targets: Array<ItemTarget>,
-): Promise<Map<string, Array<ListBadge>>> {
-  const out = new Map<string, Array<ListBadge>>()
-  if (targets.length === 0) return out
-
-  const bookIds = targets.flatMap((t) => ('bookId' in t ? [t.bookId] : []))
-  const workIds = targets.flatMap((t) => ('refWorkId' in t ? [t.refWorkId] : []))
-  const editionIds = targets.flatMap((t) =>
-    'refBookId' in t ? [t.refBookId] : [],
-  )
-
-  const rows = await db
-    .select({
-      listId: bookList.id,
-      kind: bookList.kind,
-      title: bookList.title,
-      bookId: bookListItem.bookId,
-      refWorkId: bookListItem.refWorkId,
-      refBookId: bookListItem.refBookId,
-    })
-    .from(bookListItem)
-    .innerJoin(bookList, eq(bookList.id, bookListItem.listId))
-    .where(
-      and(
-        eq(bookList.ownerId, userId),
-        or(
-          bookIds.length > 0
-            ? inArray(bookListItem.bookId, bookIds)
-            : undefined,
-          workIds.length > 0
-            ? inArray(bookListItem.refWorkId, workIds)
-            : undefined,
-          editionIds.length > 0
-            ? inArray(bookListItem.refBookId, editionIds)
-            : undefined,
-        ),
-      ),
+    // точная форма цели важнее связанной: тап убирает именно её
+    const exact = related.find(
+      (i) =>
+        ('bookId' in target && i.bookId === target.bookId) ||
+        ('refWorkId' in target && i.refWorkId === target.refWorkId) ||
+        ('refBookId' in target && i.refBookId === target.refBookId),
     )
-    .orderBy(asc(bookList.title))
-
-  for (const row of rows) {
-    const key = row.bookId
-      ? `book:${row.bookId}`
-      : row.refWorkId
-        ? `work:${row.refWorkId}`
-        : `edition:${row.refBookId}`
-    const badge = { id: row.listId, kind: row.kind, title: row.title }
-    const list = out.get(key) ?? []
-    list.push(badge)
-    out.set(key, list)
-  }
-  return out
-}
-
-/** Списки одной книги — для карточки и страниц эталона. */
-export async function listsForOne(
-  userId: string,
-  target: ItemTarget,
-): Promise<Array<ListBadge>> {
-  const found = await listsForTargets(userId, [target])
-  return found.get(targetKey(target)) ?? []
+    const match = exact ?? related[0] ?? null
+    // конфликт только когда точной формы нет, а связанная — есть
+    const conflict =
+      exact || !match
+        ? null
+        : 'refBookId' in target && match.form === 'work'
+          ? ('work-behind' as const)
+          : 'refWorkId' in target && match.form === 'edition'
+            ? ('edition-behind' as const)
+            : null
+    return {
+      id: l.id,
+      kind: l.kind,
+      title: l.title,
+      itemCount: countByList.get(l.id) ?? 0,
+      contains: match !== null,
+      match: match
+        ? {
+            itemId: match.itemId,
+            form: match.form,
+            formLabel: formLabelOf(match),
+            refBookId: match.refBookId,
+          }
+        : null,
+      conflict,
+    }
+  })
 }
 
 /** Переезд старого виш-листа: книги со статусом wishlist → список «Хочу почитать». */
