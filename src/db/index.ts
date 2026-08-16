@@ -17,7 +17,6 @@ mkdirSync(env.DATA_DIR, { recursive: true })
 
 const sqlite = new Database(join(env.DATA_DIR, 'polka.db'))
 sqlite.run('PRAGMA journal_mode = WAL;')
-sqlite.run('PRAGMA foreign_keys = ON;')
 sqlite.run('PRAGMA busy_timeout = 5000;')
 
 export const db = drizzle({ client: sqlite, schema })
@@ -27,7 +26,20 @@ const migrationsFolder = join(process.cwd(), 'drizzle')
 if (existsSync(migrationsFolder)) {
   const started = performance.now()
   try {
+    // ВАЖНО: внешние ключи выключаем ДО миграций и включаем после.
+    // Drizzle гоняет файл миграции в транзакции, а внутри транзакции SQLite
+    // игнорирует PRAGMA foreign_keys — поэтому «OFF» в самом файле не
+    // срабатывает, и пересоздание таблицы (DROP TABLE + RENAME) уносит
+    // каскадом строки зависимых таблиц. Так уже потерялись сохранённые
+    // ссылки друзей и заявки при переезде на списки (M17).
+    sqlite.run('PRAGMA foreign_keys = OFF;')
     migrate(db, { migrationsFolder })
+    const [broken] = sqlite
+      .query<{ n: number }, []>('SELECT count(*) AS n FROM pragma_foreign_key_check')
+      .all()
+    if (broken && broken.n > 0) {
+      log.error('db', 'после миграций битые внешние ключи', { rows: broken.n })
+    }
     log.info('db', 'миграции применены', {
       ms: Math.round(performance.now() - started),
       file: join(env.DATA_DIR, 'polka.db'),
@@ -37,6 +49,8 @@ if (existsSync(migrationsFolder)) {
       error: error instanceof Error ? error : new Error(String(error)),
     })
     throw error
+  } finally {
+    sqlite.run('PRAGMA foreign_keys = ON;')
   }
 
   /** Фоновые задачи старта: падение одной не должно ронять процесс молча. */
