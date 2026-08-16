@@ -11,14 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetRouteImport } from './routes/reset'
 import { Route as RulesRouteImport } from './routes/rules'
 import { Route as AppAddRouteImport } from './routes/_app/add'
 import { Route as AppFriendsRouteImport } from './routes/_app/friends'
 import { Route as AppLoansRouteImport } from './routes/_app/loans'
-import { Route as AppModerationRouteImport } from './routes/_app/moderation'
 import { Route as AppReadingRouteImport } from './routes/_app/reading'
 import { Route as AppRequestsRouteImport } from './routes/_app/requests'
+import { Route as AppServiceRouteImport } from './routes/_app/service'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppUnrecognizedRouteImport } from './routes/_app/unrecognized'
 import { Route as AppUnsortedRouteImport } from './routes/_app/unsorted'
@@ -34,10 +36,11 @@ import { Route as AppEditionsRefBookIdRouteImport } from './routes/_app/editions
 import { Route as AppInviteTokenRouteImport } from './routes/_app/invite.$token'
 import { Route as AppLibrariesIndexRouteImport } from './routes/_app/libraries.index'
 import { Route as AppListsListIdRouteImport } from './routes/_app/lists.$listId'
-import { Route as AppModerationLogRouteImport } from './routes/_app/moderation_.log'
-import { Route as AppModerationUsersRouteImport } from './routes/_app/moderation_.users'
 import { Route as AppSeriesIndexRouteImport } from './routes/_app/series.index'
 import { Route as AppSeriesSeriesIdRouteImport } from './routes/_app/series.$seriesId'
+import { Route as AppServiceLogRouteImport } from './routes/_app/service_.log'
+import { Route as AppServiceMailRouteImport } from './routes/_app/service_.mail'
+import { Route as AppServiceUsersRouteImport } from './routes/_app/service_.users'
 import { Route as AppShelvesShelfIdRouteImport } from './routes/_app/shelves.$shelfId'
 import { Route as AppWorksWorkIdRouteImport } from './routes/_app/works.$workId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
@@ -56,9 +59,19 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotRoute = ForgotRouteImport.update({
+  id: '/forgot',
+  path: '/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetRoute = ResetRouteImport.update({
+  id: '/reset',
+  path: '/reset',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RulesRoute = RulesRouteImport.update({
@@ -81,11 +94,6 @@ const AppLoansRoute = AppLoansRouteImport.update({
   path: '/loans',
   getParentRoute: () => AppRoute,
 } as any)
-const AppModerationRoute = AppModerationRouteImport.update({
-  id: '/moderation',
-  path: '/moderation',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppReadingRoute = AppReadingRouteImport.update({
   id: '/reading',
   path: '/reading',
@@ -94,6 +102,11 @@ const AppReadingRoute = AppReadingRouteImport.update({
 const AppRequestsRoute = AppRequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppServiceRoute = AppServiceRouteImport.update({
+  id: '/service',
+  path: '/service',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
@@ -171,16 +184,6 @@ const AppListsListIdRoute = AppListsListIdRouteImport.update({
   path: '/lists/$listId',
   getParentRoute: () => AppRoute,
 } as any)
-const AppModerationLogRoute = AppModerationLogRouteImport.update({
-  id: '/moderation_/log',
-  path: '/moderation/log',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppModerationUsersRoute = AppModerationUsersRouteImport.update({
-  id: '/moderation_/users',
-  path: '/moderation/users',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppSeriesIndexRoute = AppSeriesIndexRouteImport.update({
   id: '/series/',
   path: '/series/',
@@ -189,6 +192,21 @@ const AppSeriesIndexRoute = AppSeriesIndexRouteImport.update({
 const AppSeriesSeriesIdRoute = AppSeriesSeriesIdRouteImport.update({
   id: '/series/$seriesId',
   path: '/series/$seriesId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppServiceLogRoute = AppServiceLogRouteImport.update({
+  id: '/service_/log',
+  path: '/service/log',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppServiceMailRoute = AppServiceMailRouteImport.update({
+  id: '/service_/mail',
+  path: '/service/mail',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppServiceUsersRoute = AppServiceUsersRouteImport.update({
+  id: '/service_/users',
+  path: '/service/users',
   getParentRoute: () => AppRoute,
 } as any)
 const AppShelvesShelfIdRoute = AppShelvesShelfIdRouteImport.update({
@@ -234,14 +252,16 @@ const ApiAuthorsAuthorIdPhotoRoute = ApiAuthorsAuthorIdPhotoRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
+  '/reset': typeof ResetRoute
   '/rules': typeof RulesRoute
   '/add': typeof AppAddRoute
   '/friends': typeof AppFriendsRoute
   '/loans': typeof AppLoansRoute
-  '/moderation': typeof AppModerationRoute
   '/reading': typeof AppReadingRoute
   '/requests': typeof AppRequestsRoute
+  '/service': typeof AppServiceRoute
   '/settings': typeof AppSettingsRoute
   '/unrecognized': typeof AppUnrecognizedRoute
   '/unsorted': typeof AppUnsortedRoute
@@ -255,9 +275,10 @@ export interface FileRoutesByFullPath {
   '/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/invite/$token': typeof AppInviteTokenRoute
   '/lists/$listId': typeof AppListsListIdRoute
-  '/moderation/log': typeof AppModerationLogRoute
-  '/moderation/users': typeof AppModerationUsersRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
+  '/service/log': typeof AppServiceLogRoute
+  '/service/mail': typeof AppServiceMailRoute
+  '/service/users': typeof AppServiceUsersRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/works/$workId': typeof AppWorksWorkIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -272,14 +293,16 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
+  '/reset': typeof ResetRoute
   '/rules': typeof RulesRoute
   '/add': typeof AppAddRoute
   '/friends': typeof AppFriendsRoute
   '/loans': typeof AppLoansRoute
-  '/moderation': typeof AppModerationRoute
   '/reading': typeof AppReadingRoute
   '/requests': typeof AppRequestsRoute
+  '/service': typeof AppServiceRoute
   '/settings': typeof AppSettingsRoute
   '/unrecognized': typeof AppUnrecognizedRoute
   '/unsorted': typeof AppUnsortedRoute
@@ -293,9 +316,10 @@ export interface FileRoutesByTo {
   '/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/invite/$token': typeof AppInviteTokenRoute
   '/lists/$listId': typeof AppListsListIdRoute
-  '/moderation/log': typeof AppModerationLogRoute
-  '/moderation/users': typeof AppModerationUsersRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
+  '/service/log': typeof AppServiceLogRoute
+  '/service/mail': typeof AppServiceMailRoute
+  '/service/users': typeof AppServiceUsersRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/works/$workId': typeof AppWorksWorkIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -312,14 +336,16 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
+  '/reset': typeof ResetRoute
   '/rules': typeof RulesRoute
   '/_app/add': typeof AppAddRoute
   '/_app/friends': typeof AppFriendsRoute
   '/_app/loans': typeof AppLoansRoute
-  '/_app/moderation': typeof AppModerationRoute
   '/_app/reading': typeof AppReadingRoute
   '/_app/requests': typeof AppRequestsRoute
+  '/_app/service': typeof AppServiceRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/unrecognized': typeof AppUnrecognizedRoute
   '/_app/unsorted': typeof AppUnsortedRoute
@@ -333,9 +359,10 @@ export interface FileRoutesById {
   '/_app/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/_app/invite/$token': typeof AppInviteTokenRoute
   '/_app/lists/$listId': typeof AppListsListIdRoute
-  '/_app/moderation_/log': typeof AppModerationLogRoute
-  '/_app/moderation_/users': typeof AppModerationUsersRoute
   '/_app/series/$seriesId': typeof AppSeriesSeriesIdRoute
+  '/_app/service_/log': typeof AppServiceLogRoute
+  '/_app/service_/mail': typeof AppServiceMailRoute
+  '/_app/service_/users': typeof AppServiceUsersRoute
   '/_app/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/_app/works/$workId': typeof AppWorksWorkIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -352,14 +379,16 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/forgot'
     | '/login'
+    | '/reset'
     | '/rules'
     | '/add'
     | '/friends'
     | '/loans'
-    | '/moderation'
     | '/reading'
     | '/requests'
+    | '/service'
     | '/settings'
     | '/unrecognized'
     | '/unsorted'
@@ -373,9 +402,10 @@ export interface FileRouteTypes {
     | '/editions/$refBookId'
     | '/invite/$token'
     | '/lists/$listId'
-    | '/moderation/log'
-    | '/moderation/users'
     | '/series/$seriesId'
+    | '/service/log'
+    | '/service/mail'
+    | '/service/users'
     | '/shelves/$shelfId'
     | '/works/$workId'
     | '/api/auth/$'
@@ -390,14 +420,16 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/forgot'
     | '/login'
+    | '/reset'
     | '/rules'
     | '/add'
     | '/friends'
     | '/loans'
-    | '/moderation'
     | '/reading'
     | '/requests'
+    | '/service'
     | '/settings'
     | '/unrecognized'
     | '/unsorted'
@@ -411,9 +443,10 @@ export interface FileRouteTypes {
     | '/editions/$refBookId'
     | '/invite/$token'
     | '/lists/$listId'
-    | '/moderation/log'
-    | '/moderation/users'
     | '/series/$seriesId'
+    | '/service/log'
+    | '/service/mail'
+    | '/service/users'
     | '/shelves/$shelfId'
     | '/works/$workId'
     | '/api/auth/$'
@@ -429,14 +462,16 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/forgot'
     | '/login'
+    | '/reset'
     | '/rules'
     | '/_app/add'
     | '/_app/friends'
     | '/_app/loans'
-    | '/_app/moderation'
     | '/_app/reading'
     | '/_app/requests'
+    | '/_app/service'
     | '/_app/settings'
     | '/_app/unrecognized'
     | '/_app/unsorted'
@@ -450,9 +485,10 @@ export interface FileRouteTypes {
     | '/_app/editions/$refBookId'
     | '/_app/invite/$token'
     | '/_app/lists/$listId'
-    | '/_app/moderation_/log'
-    | '/_app/moderation_/users'
     | '/_app/series/$seriesId'
+    | '/_app/service_/log'
+    | '/_app/service_/mail'
+    | '/_app/service_/users'
     | '/_app/shelves/$shelfId'
     | '/_app/works/$workId'
     | '/api/auth/$'
@@ -469,7 +505,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  ForgotRoute: typeof ForgotRoute
   LoginRoute: typeof LoginRoute
+  ResetRoute: typeof ResetRoute
   RulesRoute: typeof RulesRoute
   ApiHealthRoute: typeof ApiHealthRoute
   JoinTokenRoute: typeof JoinTokenRoute
@@ -496,11 +534,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot': {
+      id: '/forgot'
+      path: '/forgot'
+      fullPath: '/forgot'
+      preLoaderRoute: typeof ForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset': {
+      id: '/reset'
+      path: '/reset'
+      fullPath: '/reset'
+      preLoaderRoute: typeof ResetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rules': {
@@ -531,13 +583,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLoansRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/moderation': {
-      id: '/_app/moderation'
-      path: '/moderation'
-      fullPath: '/moderation'
-      preLoaderRoute: typeof AppModerationRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/reading': {
       id: '/_app/reading'
       path: '/reading'
@@ -550,6 +595,13 @@ declare module '@tanstack/react-router' {
       path: '/requests'
       fullPath: '/requests'
       preLoaderRoute: typeof AppRequestsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/service': {
+      id: '/_app/service'
+      path: '/service'
+      fullPath: '/service'
+      preLoaderRoute: typeof AppServiceRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/settings': {
@@ -657,20 +709,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppListsListIdRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/moderation_/log': {
-      id: '/_app/moderation_/log'
-      path: '/moderation/log'
-      fullPath: '/moderation/log'
-      preLoaderRoute: typeof AppModerationLogRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/moderation_/users': {
-      id: '/_app/moderation_/users'
-      path: '/moderation/users'
-      fullPath: '/moderation/users'
-      preLoaderRoute: typeof AppModerationUsersRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/series/': {
       id: '/_app/series/'
       path: '/series'
@@ -683,6 +721,27 @@ declare module '@tanstack/react-router' {
       path: '/series/$seriesId'
       fullPath: '/series/$seriesId'
       preLoaderRoute: typeof AppSeriesSeriesIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/service_/log': {
+      id: '/_app/service_/log'
+      path: '/service/log'
+      fullPath: '/service/log'
+      preLoaderRoute: typeof AppServiceLogRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/service_/mail': {
+      id: '/_app/service_/mail'
+      path: '/service/mail'
+      fullPath: '/service/mail'
+      preLoaderRoute: typeof AppServiceMailRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/service_/users': {
+      id: '/_app/service_/users'
+      path: '/service/users'
+      fullPath: '/service/users'
+      preLoaderRoute: typeof AppServiceUsersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/shelves/$shelfId': {
@@ -748,9 +807,9 @@ interface AppRouteChildren {
   AppAddRoute: typeof AppAddRoute
   AppFriendsRoute: typeof AppFriendsRoute
   AppLoansRoute: typeof AppLoansRoute
-  AppModerationRoute: typeof AppModerationRoute
   AppReadingRoute: typeof AppReadingRoute
   AppRequestsRoute: typeof AppRequestsRoute
+  AppServiceRoute: typeof AppServiceRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppUnrecognizedRoute: typeof AppUnrecognizedRoute
   AppUnsortedRoute: typeof AppUnsortedRoute
@@ -761,9 +820,10 @@ interface AppRouteChildren {
   AppEditionsRefBookIdRoute: typeof AppEditionsRefBookIdRoute
   AppInviteTokenRoute: typeof AppInviteTokenRoute
   AppListsListIdRoute: typeof AppListsListIdRoute
-  AppModerationLogRoute: typeof AppModerationLogRoute
-  AppModerationUsersRoute: typeof AppModerationUsersRoute
   AppSeriesSeriesIdRoute: typeof AppSeriesSeriesIdRoute
+  AppServiceLogRoute: typeof AppServiceLogRoute
+  AppServiceMailRoute: typeof AppServiceMailRoute
+  AppServiceUsersRoute: typeof AppServiceUsersRoute
   AppShelvesShelfIdRoute: typeof AppShelvesShelfIdRoute
   AppWorksWorkIdRoute: typeof AppWorksWorkIdRoute
   AppBooksIndexRoute: typeof AppBooksIndexRoute
@@ -777,9 +837,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppAddRoute: AppAddRoute,
   AppFriendsRoute: AppFriendsRoute,
   AppLoansRoute: AppLoansRoute,
-  AppModerationRoute: AppModerationRoute,
   AppReadingRoute: AppReadingRoute,
   AppRequestsRoute: AppRequestsRoute,
+  AppServiceRoute: AppServiceRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppUnrecognizedRoute: AppUnrecognizedRoute,
   AppUnsortedRoute: AppUnsortedRoute,
@@ -790,9 +850,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppEditionsRefBookIdRoute: AppEditionsRefBookIdRoute,
   AppInviteTokenRoute: AppInviteTokenRoute,
   AppListsListIdRoute: AppListsListIdRoute,
-  AppModerationLogRoute: AppModerationLogRoute,
-  AppModerationUsersRoute: AppModerationUsersRoute,
   AppSeriesSeriesIdRoute: AppSeriesSeriesIdRoute,
+  AppServiceLogRoute: AppServiceLogRoute,
+  AppServiceMailRoute: AppServiceMailRoute,
+  AppServiceUsersRoute: AppServiceUsersRoute,
   AppShelvesShelfIdRoute: AppShelvesShelfIdRoute,
   AppWorksWorkIdRoute: AppWorksWorkIdRoute,
   AppBooksIndexRoute: AppBooksIndexRoute,
@@ -807,7 +868,9 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  ForgotRoute: ForgotRoute,
   LoginRoute: LoginRoute,
+  ResetRoute: ResetRoute,
   RulesRoute: RulesRoute,
   ApiHealthRoute: ApiHealthRoute,
   JoinTokenRoute: JoinTokenRoute,

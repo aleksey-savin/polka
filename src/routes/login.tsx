@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
+import {
+  Link,
+  createFileRoute,
+  redirect,
+  useRouter,
+} from '@tanstack/react-router'
 import { z } from 'zod'
 
 import { Logo } from '@/components/layout/Logo'
@@ -8,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth-client'
+import { resetAvailableFn } from '@/server/mail'
 import { getPublicConfig, getSession } from '@/server/session'
 
 export const Route = createFileRoute('/login')({
@@ -18,12 +24,18 @@ export const Route = createFileRoute('/login')({
       throw redirect({ href: search.redirect ?? '/libraries' })
     }
   },
-  loader: () => getPublicConfig(),
+  loader: async () => {
+    const [config, resetAvailable] = await Promise.all([
+      getPublicConfig(),
+      resetAvailableFn(),
+    ])
+    return { ...config, resetAvailable }
+  },
   component: LoginPage,
 })
 
 function LoginPage() {
-  const { selfSignupOpen } = Route.useLoaderData()
+  const { selfSignupOpen, resetAvailable } = Route.useLoaderData()
   const { redirect: redirectTo } = Route.useSearch()
   const router = useRouter()
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn')
@@ -118,6 +130,14 @@ function LoginPage() {
               <Button type="submit" size="lg" loading={busy}>
                 {mode === 'signIn' ? 'Войти' : 'Создать аккаунт'}
               </Button>
+              {mode === 'signIn' && resetAvailable && (
+                <Link
+                  to="/forgot"
+                  className="text-center text-[13px] font-semibold text-accent-foreground"
+                >
+                  Забыли пароль?
+                </Link>
+              )}
             </form>
           </CardContent>
         </Card>

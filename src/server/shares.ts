@@ -127,6 +127,32 @@ export const declineRequestFn = createServerFn({ method: 'POST' })
 
 // ── Приглашение в Полку (регистрация) ──────────────────────────────────
 
+/** Приглашение письмом (M22): ссылка та же, просто уходит на адрес. */
+export const inviteByEmailFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ email: z.email() }))
+  .handler(async ({ context, data }) => {
+    const invite = await createSignupInvite(context.user.id)
+    const { sendMail, layout, button, appUrl } = await import('@/services/mail')
+    const url = appUrl(`/join/${invite.token}`)
+    const sent = await sendMail(
+      'invite',
+      data.email,
+      `${context.user.name} приглашает вас в Полку`,
+      {
+        text: `${context.user.name} зовёт вас в Полку — сервис домашней библиотеки. Ссылка на регистрацию:\n${url}`,
+        html: layout(
+          'Приглашение в Полку',
+          `<p><b>${context.user.name}</b> зовёт вас в Полку — это сервис для учёта домашней библиотеки бумажных книг.</p>
+           ${button(url, 'Создать аккаунт')}
+           <p style="font-size:12.5px;color:#5C6472">Ссылка одноразовая и действует неделю.</p>`,
+        ),
+      },
+    )
+    // письмо не ушло — отдаём ссылку, её всегда можно передать руками
+    return { sent, url }
+  })
+
 export const createSignupInviteFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context }) => createSignupInvite(context.user.id))

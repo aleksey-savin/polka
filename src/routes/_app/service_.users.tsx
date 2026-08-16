@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { ActionMenu } from '@/components/ui/action-menu'
+import { ServiceTabs } from '@/components/layout/ServiceTabs'
 import { Button } from '@/components/ui/button'
 import { plural } from '@/lib/plural'
 import {
@@ -14,7 +15,7 @@ import {
 import type { UserRow } from '@/services/moderation'
 
 /** Управление аккаунтами — только для админа (M21). */
-export const Route = createFileRoute('/_app/moderation_/users')({
+export const Route = createFileRoute('/_app/service_/users')({
   loader: () => listUsersFn(),
   component: UsersPage,
 })
@@ -54,13 +55,8 @@ function UsersPage() {
 
   return (
     <div className="mx-auto max-w-[640px] pb-6">
-      <p className="mb-4 text-[13px] text-muted-foreground">
-        <Link to="/moderation" search={{}} className="hover:text-foreground">
-          Модерация
-        </Link>{' '}
-        / Пользователи
-      </p>
-      <h1 className="text-[25px] leading-tight font-semibold">Пользователи</h1>
+      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
+      <ServiceTabs isAdmin />
 
       <div className="mt-4">
         {rows.map((row) => (

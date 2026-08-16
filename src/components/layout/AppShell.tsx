@@ -104,26 +104,15 @@ export function AppShell({
               ...(account && account.role !== 'user'
                 ? ([
                     {
-                      key: 'moderation',
-                      label: 'Модерация',
-                      sub: pendingModeration > 0 ? `${pendingModeration} в очереди` : undefined,
+                      key: 'service',
+                      label: 'Сервис',
+                      sub:
+                        pendingModeration > 0
+                          ? `${pendingModeration} в очереди`
+                          : undefined,
                       icon: <ShieldCheck />,
                       onSelect: () =>
-                        void router.navigate({
-                          to: '/moderation',
-                          search: {},
-                        }),
-                    },
-                  ] as const)
-                : []),
-              ...(account?.role === 'admin'
-                ? ([
-                    {
-                      key: 'users',
-                      label: 'Пользователи',
-                      icon: <Users />,
-                      onSelect: () =>
-                        void router.navigate({ to: '/moderation/users' }),
+                        void router.navigate({ to: '/service', search: {} }),
                     },
                   ] as const)
                 : []),

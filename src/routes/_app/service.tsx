@@ -1,22 +1,32 @@
 import { useState } from 'react'
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 import { toast } from 'sonner'
 
+import { ServiceTabs } from '@/components/layout/ServiceTabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { dateHuman } from '@/lib/dates'
-import { moderationQueueFn, resolveModerationFn } from '@/server/moderation'
+import {
+  moderationQueueFn,
+  myAccountFn,
+  resolveModerationFn,
+} from '@/server/moderation'
 import type { QueueRow } from '@/services/moderation'
 
 /** Очередь модератора (M21): публикация не ждёт, разбираем потом. */
-export const Route = createFileRoute('/_app/moderation')({
+export const Route = createFileRoute('/_app/service')({
   validateSearch: z.object({
     filter: z.enum(['reported', 'pending', 'resolved']).optional(),
   }),
   loaderDeps: ({ search }) => search,
-  loader: ({ deps }) =>
-    moderationQueueFn({ data: { filter: deps.filter ?? 'reported' } }),
+  loader: async ({ deps }) => {
+    const [rows, account] = await Promise.all([
+      moderationQueueFn({ data: { filter: deps.filter ?? 'reported' } }),
+      myAccountFn(),
+    ])
+    return { rows, isAdmin: account.role === 'admin' }
+  },
   component: ModerationPage,
 })
 
@@ -37,7 +47,7 @@ const REASONS = [
 ]
 
 function ModerationPage() {
-  const rows = Route.useLoaderData()
+  const { rows, isAdmin } = Route.useLoaderData()
   const search = Route.useSearch()
   const router = useRouter()
   const navigate = Route.useNavigate()
@@ -80,17 +90,10 @@ function ModerationPage() {
 
   return (
     <div className="mx-auto max-w-[640px] pb-6">
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-[25px] leading-tight font-semibold">Модерация</h1>
-        <Link
-          to="/moderation/log"
-          className="text-[13px] font-medium text-accent-foreground"
-        >
-          Журнал →
-        </Link>
-      </div>
+      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
+      <ServiceTabs isAdmin={isAdmin} pending={rows.length} />
 
-      <div className="mt-4 flex gap-1 rounded-full border bg-card p-1">
+      <div className="flex gap-1 rounded-full border bg-card p-1">
         {(
           [
             ['reported', 'Жалобы'],

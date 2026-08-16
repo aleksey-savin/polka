@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { Link2Off, Mail, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -17,6 +17,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
+import { inviteMailReadyFn } from '@/server/mail'
 import { dateRu } from '@/lib/dates'
 import { plural } from '@/lib/plural'
 import { listMyLibrariesFn } from '@/server/libraries'
@@ -24,6 +25,7 @@ import { listMyShelvesFn } from '@/server/shelves'
 import {
   createShareFn,
   createSignupInviteFn,
+  inviteByEmailFn,
   listMySharesFn,
   listPendingRequestsFn,
   listSavedSharesFn,
@@ -504,6 +506,32 @@ function InvitePolkaDialog() {
   const [link, setLink] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [email, setEmail] = useState('')
+  const [mailReady, setMailReady] = useState(false)
+
+  // «отправить письмом» показываем, только когда почта настроена
+  useEffect(() => {
+    void inviteMailReadyFn()
+      .then(setMailReady)
+      .catch(() => {})
+  }, [])
+
+  async function sendInvite() {
+    setBusy(true)
+    try {
+      const result = await inviteByEmailFn({ data: { email: email.trim() } })
+      setLink(result.url)
+      toast[result.sent ? 'success' : 'error'](
+        result.sent
+          ? `Приглашение отправлено на ${email.trim()}`
+          : 'Письмо не ушло — передайте ссылку сами',
+      )
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function generate() {
     setBusy(true)
@@ -529,6 +557,28 @@ function InvitePolkaDialog() {
             после регистрации пришлите ему ещё инвайт из шапки библиотеки.
           </DrawerDescription>
         </DrawerHeader>
+        {!link && mailReady && (
+          <div className="mb-3 grid gap-2">
+            <Input
+              type="email"
+              placeholder="почта человека"
+              className="h-12 rounded-xl text-[16px]"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Button
+              variant="outline"
+              loading={busy}
+              disabled={!email.trim()}
+              onClick={() => void sendInvite()}
+            >
+              Отправить письмом
+            </Button>
+            <p className="text-center text-[12.5px] text-muted-foreground">
+              или получите ссылку и передайте сами
+            </p>
+          </div>
+        )}
         {link ? (
           <div className="grid gap-2">
             <Input

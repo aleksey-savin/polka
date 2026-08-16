@@ -107,3 +107,34 @@ export const moderationLog = sqliteTable(
   },
   (t) => [index('moderation_log_created_idx').on(sql`${t.createdAt} desc`)],
 )
+
+/** Настройки SMTP (M22): одна строка, пароль хранится зашифрованным. */
+export const mailSetting = sqliteTable('mail_setting', {
+  id: text('id').primaryKey().default('default'),
+  host: text('host'),
+  port: integer('port'),
+  secure: text('secure', { enum: ['none', 'starttls', 'tls'] })
+    .notNull()
+    .default('tls'),
+  username: text('username'),
+  /** AES-GCM, ключ выводится из BETTER_AUTH_SECRET; наружу не отдаём. */
+  passwordEnc: text('password_enc'),
+  fromName: text('from_name'),
+  fromEmail: text('from_email'),
+  sendReset: integer('send_reset', { mode: 'boolean' }).notNull().default(true),
+  sendInvites: integer('send_invites', { mode: 'boolean' })
+    .notNull()
+    .default(true),
+  sendEmailChange: integer('send_email_change', { mode: 'boolean' })
+    .notNull()
+    .default(true),
+  sendNotifications: integer('send_notifications', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  /** Итог последней отправки — показываем прямо в настройках. */
+  lastResult: text('last_result'),
+  lastResultAt: integer('last_result_at', { mode: 'timestamp' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+})
