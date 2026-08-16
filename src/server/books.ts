@@ -20,7 +20,8 @@ import { listMyTags } from '@/services/tags'
 import { authMiddleware } from './middleware'
 
 const bookInput = z.object({
-  title: z.string().trim().min(1, 'Название обязательно'),
+  // пустое имя допустимо только для болванок из сканера — проверяет сервис
+  title: z.string().trim(),
   authors: z.string().optional(),
   isbn10: z.string().optional(),
   isbn13: z.string().optional(),
@@ -43,6 +44,10 @@ const bookInput = z.object({
     .optional(),
   refWorkId: z.string().nullable().optional(),
   heightMm: z.number().int().min(60).max(500).nullable().optional(),
+  /** Куда положить, если книги нет дома (M17). */
+  listId: z.string().nullable().optional(),
+  /** Болванка из сканера: только ISBN (M18). */
+  unrecognized: z.boolean().optional(),
 })
 
 export const createBookFn = createServerFn({ method: 'POST' })

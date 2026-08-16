@@ -49,6 +49,10 @@ export interface BookInput {
   fantlabAuthors?: Array<{ name: string; id: number }>
   /** Желание уровня произведения («Хочу» из библиографии). */
   refWorkId?: string | null
+  /** Книги нет дома — кладём сразу в этот список (M17). */
+  listId?: string | null
+  /** Болванка из сканера: только ISBN, название заполним потом (M18). */
+  unrecognized?: boolean
 }
 
 async function assertShelfInLibrary(
@@ -90,6 +94,12 @@ export async function createBook(
   input: BookInput,
 ): Promise<{ id: string }> {
   const placement = await placementFor(userId, input)
+  // болванка: названия ещё нет, временно им служит сам номер —
+  // так книга находится поиском по ISBN и не выглядит пустой строкой
+  const title =
+    input.title.trim() ||
+    (input.unrecognized ? (input.isbn13?.trim() ?? '') : '')
+  if (!title) throw new AppError('Нужно название книги', 'invalid')
   const seriesId = input.seriesName
     ? await resolveSeriesByName(userId, input.seriesName)
     : null
@@ -105,7 +115,7 @@ export async function createBook(
       libraryId: placement.libraryId,
       shelfId: placement.shelfId,
       status: placement.status,
-      title: input.title.trim(),
+      title,
       authors: input.authors?.trim() ?? '',
       isbn10: input.isbn10?.trim() || null,
       isbn13: input.isbn13?.trim() || null,
@@ -119,12 +129,18 @@ export async function createBook(
       coverType: input.coverType ?? null,
       giftEdition: input.giftEdition ?? false,
       heightMm: input.heightMm ?? null,
-      titleNorm: normalizeForSearch(input.title),
+      unrecognized: input.unrecognized ?? false,
+      titleNorm: normalizeForSearch(title),
       authorsNorm: normalizeForSearch(input.authors ?? ''),
     })
     .returning({ id: book.id })
   if (!created) throw new AppError('Не удалось сохранить книгу')
   await syncBookAuthors(created.id, input.authors ?? '', input.fantlabAuthors)
+  // «книги нет дома» — сразу в выбранный список, без ожидания бэкфилла
+  if (input.listId) {
+    const { addToList } = await import('./lists')
+    await addToList(userId, input.listId, { bookId: created.id })
+  }
   if (input.tags) await setBookTags(userId, created.id, input.tags)
   if (input.coverUrl) {
     try {
@@ -208,6 +224,10 @@ export async function updateBook(
       heightMm: input.heightMm ?? null,
       titleNorm: normalizeForSearch(input.title),
       authorsNorm: normalizeForSearch(input.authors ?? ''),
+      unrecognized:
+        current.unrecognized && input.title.trim() !== current.title
+          ? false
+          : current.unrecognized,
       updatedAt: new Date(),
     })
     .where(eq(book.id, bookId))
@@ -369,6 +389,8 @@ export interface CatalogRow {
   shelfId: string | null
   shelfName: string | null
   hidden: boolean
+  /** Болванка из сканера: показываем номер и штамп вместо названия. */
+  unrecognized: boolean
 }
 
 const CATALOG_LIMIT = 500
@@ -448,6 +470,7 @@ export async function listBooks(
       shelfId: book.shelfId,
       shelfName: shelf.name,
       hidden: book.hidden,
+      unrecognized: book.unrecognized,
     })
     .from(book)
     .leftJoin(series, eq(series.id, book.seriesId))

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { getBookFormMetaFn } from '@/server/books'
 import { getLibraryOverviewFn } from '@/server/libraries'
+import { createListFn, listMyListsFn } from '@/server/lists'
 
 export interface BookFormValue {
   title: string
@@ -25,7 +26,10 @@ export interface BookFormValue {
   tags: Array<string>
   libraryId: string
   shelfId: string
-  wishlist: boolean
+  /** Куда кладём: на полку библиотеки или в список (книги ещё нет дома). */
+  placement: 'shelf' | 'list'
+  /** Выбранный список, когда placement = 'list'. */
+  listId: string
   /** Обложка из найденных метаданных — скачается при сохранении. */
   coverUrl: string
   coverType: '' | 'soft' | 'hard'
@@ -52,7 +56,8 @@ export const EMPTY_BOOK_FORM: BookFormValue = {
   tags: [],
   libraryId: '',
   shelfId: '',
-  wishlist: false,
+  placement: 'shelf',
+  listId: '',
   coverUrl: '',
   coverType: '',
   giftEdition: false,
@@ -75,14 +80,16 @@ export function toBookInput(v: BookFormValue) {
     seriesName: v.seriesName || undefined,
     seriesNumber: v.seriesNumber || undefined,
     tags: v.tags,
-    libraryId: v.wishlist ? null : v.libraryId || null,
-    shelfId: v.wishlist ? null : v.shelfId || null,
-    wishlist: v.wishlist,
+    libraryId: v.placement === 'list' ? null : v.libraryId || null,
+    shelfId: v.placement === 'list' ? null : v.shelfId || null,
+    wishlist: v.placement === 'list',
+    listId: v.placement === 'list' ? v.listId || null : null,
     coverUrl: v.coverUrl || undefined,
     coverType: v.coverType || null,
     giftEdition: v.giftEdition,
     heightMm: v.heightMm ? Number(v.heightMm) : null,
     fantlabAuthors: v.fantlabAuthors.length > 0 ? v.fantlabAuthors : undefined,
+    unrecognized: false as boolean,
   }
 }
 
@@ -133,6 +140,7 @@ export function BookForm({
   onChange,
   onSubmit,
   submitLabel,
+  onSkip,
   secondaryActions = [],
   busy,
   error,
@@ -141,6 +149,8 @@ export function BookForm({
   onChange: (value: BookFormValue) => void
   onSubmit: () => void
   submitLabel: string
+  /** Поток сканирования: сохранить по одному ISBN и вернуться к сканеру. */
+  onSkip?: () => void
   secondaryActions?: Array<FormSecondaryAction>
   busy?: boolean
   error?: string | null
@@ -152,11 +162,39 @@ export function BookForm({
     [],
   )
   const [tagSuggestions, setTagSuggestions] = useState<Array<string>>([])
+  const [lists, setLists] = useState<
+    Array<{ id: string; kind: 'wishlist' | 'collection'; title: string }>
+  >([])
+  const [newListTitle, setNewListTitle] = useState('')
+  const [creatingList, setCreatingList] = useState(false)
 
   const set = <TKey extends keyof BookFormValue>(
     key: TKey,
     val: BookFormValue[TKey],
   ) => onChange({ ...value, [key]: val })
+
+  // списки нужны только для варианта «в список» — грузим один раз
+  useEffect(() => {
+    void listMyListsFn().then((rows) => {
+      const own = rows.map((r) => ({ id: r.id, kind: r.kind, title: r.title }))
+      setLists(own)
+      if (!value.listId && own.length > 0) set('listId', own[0]!.id)
+    })
+  }, [])
+
+  async function createList() {
+    const title = newListTitle.trim()
+    if (!title) return
+    setCreatingList(true)
+    try {
+      const created = await createListFn({ data: { kind: 'wishlist', title } })
+      setLists((cur) => [...cur, { id: created.id, kind: 'wishlist', title }])
+      onChange({ ...value, listId: created.id, placement: 'list' })
+      setNewListTitle('')
+    } finally {
+      setCreatingList(false)
+    }
+  }
 
   useEffect(() => {
     void getBookFormMetaFn().then((meta) => {
@@ -343,13 +381,86 @@ export function BookForm({
         />
       </div>
 
-      <SwitchRow
-        label="«Хочу» — книги ещё нет, это виш-лист"
-        checked={value.wishlist}
-        onChange={(v) => set('wishlist', v)}
-      />
+      <div className="grid gap-1.5">
+        <Label>Куда положить</Label>
+        <div className="grid grid-cols-2 gap-1.5 rounded-2xl border bg-card p-1">
+          {(
+            [
+              { value: 'shelf' as const, label: 'На полку' },
+              { value: 'list' as const, label: 'В список' },
+            ] satisfies Array<{ value: 'shelf' | 'list'; label: string }>
+          ).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              className={`min-h-11 rounded-xl text-[14.5px] font-semibold ${
+                value.placement === opt.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground'
+              }`}
+              onClick={() => set('placement', opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {!value.wishlist && (
+      {value.placement === 'list' && (
+        <div className="grid gap-1.5">
+          <Label>Список</Label>
+          {lists.length > 0 && (
+            <select
+              className="h-12 rounded-xl border bg-card px-3 text-[16px]"
+              value={value.listId}
+              onChange={(e) => set('listId', e.target.value)}
+            >
+              {['wishlist', 'collection'].map((kind) => {
+                const own = lists.filter((l) => l.kind === kind)
+                if (own.length === 0) return null
+                return (
+                  <optgroup
+                    key={kind}
+                    label={kind === 'wishlist' ? 'Вишлисты' : 'Подборки'}
+                  >
+                    {own.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                )
+              })}
+            </select>
+          )}
+          <div className="flex gap-2">
+            <Input
+              className={FIELD}
+              placeholder={
+                lists.length > 0 ? 'Или новый список…' : 'Название списка'
+              }
+              value={newListTitle}
+              onChange={(e) => setNewListTitle(e.target.value)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 flex-none"
+              loading={creatingList}
+              disabled={!newListTitle.trim()}
+              onClick={() => void createList()}
+            >
+              Создать
+            </Button>
+          </div>
+          <p className="text-[12.5px] text-muted-foreground">
+            Книги нет дома: полка не назначается, в каталоге она найдётся
+            фильтром «Где книга: Хочу».
+          </p>
+        </div>
+      )}
+
+      {value.placement === 'shelf' && (
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-1.5">
             <Label>Библиотека</Label>
@@ -393,10 +504,24 @@ export function BookForm({
           type="submit"
           className="h-12 flex-1 sm:flex-none sm:px-6"
           loading={busy}
-          disabled={!value.title.trim()}
+          disabled={
+            !value.title.trim() ||
+            (value.placement === 'list' && !value.listId)
+          }
         >
           {submitLabel}
         </Button>
+        {onSkip && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 flex-none px-4"
+            disabled={busy}
+            onClick={onSkip}
+          >
+            Пропустить
+          </Button>
+        )}
         {secondaryActions.length > 0 && (
           <>
             <div className="hidden gap-2 sm:flex">

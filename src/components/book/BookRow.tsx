@@ -35,6 +35,8 @@ export function BookRow({
     lentTo?: string | null
     coverColor?: string | null
     hidden?: boolean
+    /** Болванка из сканера: название — сам ISBN (M18). */
+    unrecognized?: boolean
   }
   place?: string | null
   before?: ReactNode
@@ -52,6 +54,7 @@ export function BookRow({
     after ||
     book.lentTo ||
     book.hidden ||
+    book.unrecognized ||
     (book.status && STATUS_LABEL[book.status]),
   )
   return (
@@ -101,7 +104,9 @@ export function BookRow({
           <Link
             to="/books/$bookId"
             params={{ bookId: book.id }}
-            className="block text-base leading-snug font-semibold hover:underline"
+            className={`block leading-snug font-semibold hover:underline ${
+              book.unrecognized ? 'font-mono text-[15px]' : 'text-base'
+            }`}
           >
             {book.title}
           </Link>
@@ -123,6 +128,11 @@ export function BookRow({
             )}
             {book.status && STATUS_LABEL[book.status] && (
               <Badge variant="secondary">{STATUS_LABEL[book.status]}</Badge>
+            )}
+            {book.unrecognized && (
+              <span className="inline-block rounded-[3px] border-[1.5px] border-destructive/70 px-1 font-mono text-[9.5px] tracking-[0.07em] text-destructive uppercase">
+                не распознана
+              </span>
             )}
             {book.hidden && (
               <span

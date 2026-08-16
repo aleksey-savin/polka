@@ -8,20 +8,26 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { plural } from '@/lib/plural'
 import { listBooksFn } from '@/server/books'
+import { countUnrecognizedFn } from '@/server/unrecognized'
 
 const searchSchema = z.object({ lib: z.string().optional() })
 
 export const Route = createFileRoute('/_app/unsorted')({
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => search,
-  loader: ({ deps }) =>
-    listBooksFn({ data: { libraryId: deps.lib, shelfId: 'unsorted' } }),
+  loader: async ({ deps }) => {
+    const [books, unrecognized] = await Promise.all([
+      listBooksFn({ data: { libraryId: deps.lib, shelfId: 'unsorted' } }),
+      countUnrecognizedFn(),
+    ])
+    return { ...books, unrecognized }
+  },
   component: UnsortedPage,
 })
 
 /** Страница разбора завала: весь список сразу в режиме выбора, без фильтров. */
 function UnsortedPage() {
-  const { rows } = Route.useLoaderData()
+  const { rows, unrecognized } = Route.useLoaderData()
   const router = useRouter()
   const navigate = Route.useNavigate()
   const [selected, setSelected] = useState<Array<string>>([])
@@ -51,6 +57,16 @@ function UnsortedPage() {
           {plural(rows.length, 'книга ждёт', 'книги ждут', 'книг ждут')} своей
           полки — тапайте по карточкам и раскладывайте.
         </p>
+      )}
+
+      {unrecognized > 0 && (
+        <Link
+          to="/unrecognized"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-[12.5px] font-semibold text-destructive"
+        >
+          Не распознано{' '}
+          <span className="font-mono text-[12px]">· {unrecognized}</span>
+        </Link>
       )}
 
       {rows.length === 0 ? (

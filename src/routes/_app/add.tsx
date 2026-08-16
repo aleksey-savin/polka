@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { createBookFn } from '@/server/books'
 import { getLibraryOverviewFn, listMyLibrariesFn } from '@/server/libraries'
 import { lookupIsbnFn } from '@/server/lookup'
+import { countUnrecognizedFn } from '@/server/unrecognized'
 import { SOURCE_LABEL } from '@/services/metadata/types'
 import type { LookupResult } from '@/services/metadata/lookup'
 
@@ -39,6 +40,11 @@ function AddPage() {
   const [busy, setBusy] = useState(false)
   const [lookup, setLookup] = useState<LookupResult | null>(null)
   const [draft, setDraft] = useState<BookFormValue | null>(null)
+  const [unrecognized, setUnrecognized] = useState(0)
+  // сколько болванок уже накопилось всего — не только за этот заход
+  useEffect(() => {
+    void countUnrecognizedFn().then(setUnrecognized)
+  }, [])
   const [error, setError] = useState<string | null>(null)
   const [savedCount, setSavedCount] = useState(0)
   const [lastSaved, setLastSaved] = useState<{
@@ -107,6 +113,31 @@ function AddPage() {
     },
     [dest],
   )
+
+  /** «Пропустить»: сохраняем по одному ISBN и возвращаемся к сканеру. */
+  async function skip() {
+    if (!draft) return
+    setBusy(true)
+    setError(null)
+    try {
+      await createBookFn({
+        data: {
+          ...toBookInput({ ...draft, title: draft.title || '' }),
+          title: '',
+          unrecognized: true,
+        },
+      })
+      setUnrecognized((n) => n + 1)
+      setDraft(null)
+      setLookup(null)
+      setIsbnInput('')
+      setMode('scan')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не получилось сохранить книгу')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function save(openCard: boolean) {
     if (!draft) return
@@ -183,6 +214,7 @@ function AddPage() {
           onChange={setDraft}
           onSubmit={() => void save(false)}
           submitLabel="Сохранить и добавить ещё"
+          onSkip={() => void skip()}
           busy={busy}
           error={error}
           secondaryActions={[
@@ -256,6 +288,16 @@ function AddPage() {
           </button>
         ))}
       </div>
+
+      {unrecognized > 0 && (
+        <Link
+          to="/unrecognized"
+          className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-[12.5px] font-semibold text-destructive"
+        >
+          Не распознано{' '}
+          <span className="font-mono text-[12px]">· {unrecognized}</span>
+        </Link>
+      )}
 
       {/* Куда складываем */}
       <div className="mb-4 flex flex-wrap items-center gap-2 text-[13.5px] text-muted-foreground">

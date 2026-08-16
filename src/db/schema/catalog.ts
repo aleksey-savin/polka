@@ -127,6 +127,10 @@ export const book = sqliteTable(
     coverColor: text('cover_color'), // акцентный цвет обложки (hex), извлекается при сохранении
     /** Скрыта от гостей: не попадает на витрины, в поиск у друзей и заявки. */
     hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+    /** Болванка из сканера: есть только ISBN, названия ещё нет (M18). */
+    unrecognized: integer('unrecognized', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     /** Переплёт: мягкая обложка / твёрдый — влияет на вид корешка. */
     coverType: text('cover_type', { enum: ['soft', 'hard'] }),
     /** Подарочное издание (тип издания): по умолчанию крупнее габариты. */

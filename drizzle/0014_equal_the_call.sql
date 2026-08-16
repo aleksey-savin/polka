@@ -1,0 +1,1 @@
+ALTER TABLE `book` ADD `unrecognized` integer DEFAULT false NOT NULL;
