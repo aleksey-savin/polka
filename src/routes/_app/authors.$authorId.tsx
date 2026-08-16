@@ -260,6 +260,7 @@ function AuthorPage() {
                         target={{ refWorkId: w.id }}
                         title={w.title}
                         subtitle={author.name}
+                        active={w.listed}
                       />
                     )}
                     <span

@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 
 import { AddToListButton } from '@/components/book/AddToListButton'
+import { ListBadges } from '@/components/book/ListBadges'
 import { Button } from '@/components/ui/button'
 import { getRefBookViewFn } from '@/server/reference'
 import { spineFor } from '@/services/spine'
@@ -108,7 +109,9 @@ function EditionPage() {
         </p>
       )}
 
-      <div className="mt-6">
+      <ListBadges lists={view.lists} className="mt-4" />
+
+      <div className="mt-5">
         {view.myBookId ? (
           <Button asChild className="h-12 w-full" variant="outline">
             <Link to="/books/$bookId" params={{ bookId: view.myBookId }}>
@@ -121,6 +124,7 @@ function EditionPage() {
             title={view.title}
             subtitle={authorName}
             variant="wide"
+            active={view.lists.length > 0}
           />
         )}
       </div>

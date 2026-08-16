@@ -113,34 +113,34 @@ describe('циклы', () => {
 
     expect(members[0]).toMatchObject({
       owned: true,
-      wished: false,
+      listed: false,
       reading: 'read',
       place: 'Детективы',
     })
     // прочитана, книги нет, но она уже в «Хочу» — кнопку не показываем
     expect(members[1]).toMatchObject({
       owned: false,
-      wished: true,
+      listed: true,
       reading: 'read',
       place: 'в «Хочу»',
     })
     // прочитана и подарена — наличия нет, значит «В Хочу» доступно
     expect(members[2]).toMatchObject({
       owned: false,
-      wished: false,
+      listed: false,
       reading: 'read',
       place: 'подарена',
     })
     expect(members[3]).toMatchObject({
       owned: false,
-      wished: false,
+      listed: false,
       reading: null,
       bookId: null,
     })
 
     expect(view!.readCount).toBe(3)
     expect(view!.ownedCount).toBe(1)
-    expect(view!.wishedCount).toBe(1)
+    expect(view!.listedCount).toBe(1)
   })
 
   test('книга находит цикл через издание сборника', async () => {

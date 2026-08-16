@@ -499,6 +499,89 @@ export async function listsForTarget(
   }))
 }
 
+export interface ListBadge {
+  id: string
+  kind: ListKind
+  title: string
+}
+
+/** Ключ элемента для батч-запроса членства в списках. */
+export const targetKey = (target: ItemTarget): string =>
+  'bookId' in target
+    ? `book:${target.bookId}`
+    : 'refWorkId' in target
+      ? `work:${target.refWorkId}`
+      : `edition:${target.refBookId}`
+
+/**
+ * В каких списках состоят указанные книги — одним запросом.
+ * Нужно для индикации: на карточке, у произведения, в библиографии.
+ */
+export async function listsForTargets(
+  userId: string,
+  targets: Array<ItemTarget>,
+): Promise<Map<string, Array<ListBadge>>> {
+  const out = new Map<string, Array<ListBadge>>()
+  if (targets.length === 0) return out
+
+  const bookIds = targets.flatMap((t) => ('bookId' in t ? [t.bookId] : []))
+  const workIds = targets.flatMap((t) => ('refWorkId' in t ? [t.refWorkId] : []))
+  const editionIds = targets.flatMap((t) =>
+    'refBookId' in t ? [t.refBookId] : [],
+  )
+
+  const rows = await db
+    .select({
+      listId: bookList.id,
+      kind: bookList.kind,
+      title: bookList.title,
+      bookId: bookListItem.bookId,
+      refWorkId: bookListItem.refWorkId,
+      refBookId: bookListItem.refBookId,
+    })
+    .from(bookListItem)
+    .innerJoin(bookList, eq(bookList.id, bookListItem.listId))
+    .where(
+      and(
+        eq(bookList.ownerId, userId),
+        or(
+          bookIds.length > 0
+            ? inArray(bookListItem.bookId, bookIds)
+            : undefined,
+          workIds.length > 0
+            ? inArray(bookListItem.refWorkId, workIds)
+            : undefined,
+          editionIds.length > 0
+            ? inArray(bookListItem.refBookId, editionIds)
+            : undefined,
+        ),
+      ),
+    )
+    .orderBy(asc(bookList.title))
+
+  for (const row of rows) {
+    const key = row.bookId
+      ? `book:${row.bookId}`
+      : row.refWorkId
+        ? `work:${row.refWorkId}`
+        : `edition:${row.refBookId}`
+    const badge = { id: row.listId, kind: row.kind, title: row.title }
+    const list = out.get(key) ?? []
+    list.push(badge)
+    out.set(key, list)
+  }
+  return out
+}
+
+/** Списки одной книги — для карточки и страниц эталона. */
+export async function listsForOne(
+  userId: string,
+  target: ItemTarget,
+): Promise<Array<ListBadge>> {
+  const found = await listsForTargets(userId, [target])
+  return found.get(targetKey(target)) ?? []
+}
+
 /** Переезд старого виш-листа: книги со статусом wishlist → список «Хочу почитать». */
 export async function backfillWishlists(): Promise<void> {
   const owners = await db

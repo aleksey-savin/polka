@@ -16,6 +16,8 @@ import 'winston-daily-rotate-file'
 const DATA_DIR = process.env.DATA_DIR ?? './data'
 const LOG_DIR = join(DATA_DIR, 'logs')
 const LEVEL = process.env.LOG_LEVEL ?? 'info'
+/** В тестах журнал молчит: он бы забивал вывод bun test. */
+const SILENT = process.env.NODE_ENV === 'test'
 
 const errorText = (value: Error): string =>
   value.stack ?? `${value.name}: ${value.message}`
@@ -55,6 +57,7 @@ const humanLine = winston.format.printf((info) => {
 /** Журнал не имеет права ронять приложение: если каталог недоступен
     (права, SELinux, нет тома) — остаёмся с одним stdout. */
 function makeFileTransport(): winston.transport | null {
+  if (SILENT) return null
   try {
     const transport = new winston.transports.DailyRotateFile({
       dirname: LOG_DIR,
@@ -95,6 +98,7 @@ export const logger = (globalThis.__polkaLogger ??= winston.createLogger({
     winston.format.errors({ stack: true }),
     humanLine,
   ),
+  silent: SILENT,
   transports: [
     new winston.transports.Console(),
     ...(fileRotate ? [fileRotate] : []),

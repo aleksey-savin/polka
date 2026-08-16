@@ -11,6 +11,7 @@ import {
   refWorkAuthor,
 } from '@/db/schema/catalog'
 import { ensureAuthor, parseAuthors } from './authors'
+import { listsForOne, listsForTargets } from './lists'
 import { memberLibraryIds } from './members'
 import { normalizeForSearch } from './search'
 import type {
@@ -18,6 +19,7 @@ import type {
   MetadataSource,
   SourceResult,
 } from './metadata/types'
+import type { ListBadge } from './lists'
 
 /**
  * Эталонный каталог: неизменяемые справочные записи со своими ID;
@@ -196,7 +198,8 @@ export interface BibliographyRow {
   year: number | null
   workType: string | null
   have: boolean
-  wished: boolean
+  /** Уже в каком-нибудь моём списке — «+» показывается отмеченным. */
+  listed: boolean
 }
 
 /** Библиография автора из эталона: произведения + покрытие моими книгами. */
@@ -260,6 +263,11 @@ export async function authorBibliography(
       .map((b) => b.refWorkId),
   )
 
+  const listed = await listsForTargets(
+    userId,
+    works.map((w) => ({ refWorkId: w.id })),
+  )
+
   return works.map((w) => {
     const have = coveredIds.has(w.id) || haveTitles.has(w.titleNorm)
     return {
@@ -268,7 +276,10 @@ export async function authorBibliography(
       year: w.year,
       workType: w.workType,
       have,
-      wished: !have && (wishWorkIds.has(w.id) || wishTitles.has(w.titleNorm)),
+      listed:
+        (listed.get(`work:${w.id}`)?.length ?? 0) > 0 ||
+        wishWorkIds.has(w.id) ||
+        wishTitles.has(w.titleNorm),
     }
   })
 }
@@ -300,6 +311,8 @@ export async function linkWorkAuthor(
 
 export interface WorkView {
   id: string
+  /** Списки, где произведение состоит. */
+  lists: Array<ListBadge>
   title: string
   year: number | null
   workType: string | null
@@ -368,6 +381,7 @@ export async function getWorkView(
 
   return {
     id: work.id,
+    lists: await listsForOne(userId, { refWorkId: workId }),
     title: work.title,
     year: work.year,
     workType: work.workType,
@@ -522,6 +536,7 @@ export async function fetchWorkEditions(
 
 export interface RefBookView {
   id: string
+  lists: Array<ListBadge>
   title: string
   authors: string
   publisher: string | null
@@ -570,6 +585,7 @@ export async function getRefBookView(
 
   return {
     id: row.id,
+    lists: await listsForOne(userId, { refBookId: refBookId }),
     title: row.title,
     authors: row.authors,
     publisher: row.publisher,

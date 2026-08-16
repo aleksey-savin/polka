@@ -18,8 +18,10 @@ import { assertMember, memberLibraryIds } from './members'
 import { normalizeForSearch } from './search'
 import { resolveSeriesByName, sanitizeLike } from './series'
 import { bookAuthorLinks, syncBookAuthors } from './authors'
+import { listsForOne } from './lists'
 import { bestRefBookIdForIsbn } from './reference'
 import { setBookTags } from './tags'
+import type { ListBadge } from './lists'
 
 export interface BookInput {
   title: string
@@ -274,6 +276,8 @@ export interface BookCard {
   giftEdition: boolean
   heightMm: number | null
   authorLinks: Array<{ id: string; name: string }>
+  /** Вишлисты и подборки, где книга состоит (M17). */
+  lists: Array<ListBadge>
 }
 
 export async function getBookCard(
@@ -300,6 +304,7 @@ export async function getBookCard(
     .where(eq(bookTag.bookId, bookId))
     .orderBy(asc(tag.name))
   const authorLinks = await bookAuthorLinks(bookId)
+  const lists = await listsForOne(userId, { bookId })
   return {
     id: row.id,
     title: row.title,
@@ -330,6 +335,7 @@ export async function getBookCard(
     giftEdition: row.giftEdition,
     heightMm: row.heightMm,
     authorLinks,
+    lists,
   }
 }
 

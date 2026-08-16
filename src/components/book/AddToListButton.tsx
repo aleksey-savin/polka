@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Check, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from '@tanstack/react-router'
 
@@ -33,6 +33,7 @@ export function AddToListButton({
   title,
   subtitle,
   variant = 'icon',
+  active = false,
   onChanged,
 }: {
   target: ItemTarget
@@ -40,6 +41,8 @@ export function AddToListButton({
   title: string
   subtitle?: string
   variant?: 'icon' | 'wide'
+  /** Книга уже в каком-то списке — кнопка отмечена галочкой. */
+  active?: boolean
   onChanged?: () => void
 }) {
   const router = useRouter()
@@ -105,18 +108,27 @@ export function AddToListButton({
   return (
     <>
       {variant === 'wide' ? (
-        <Button variant="outline" className="h-11 w-full" onClick={openSheet}>
-          <Plus aria-hidden /> В список
+        <Button
+          variant="outline"
+          className={`h-11 w-full ${active ? 'border-primary bg-accent/60 text-accent-foreground' : ''}`}
+          onClick={openSheet}
+        >
+          {active ? <Check aria-hidden /> : <Plus aria-hidden />}
+          {active ? 'В списках' : 'В список'}
         </Button>
       ) : (
         <Button
           variant="outline"
           size="icon"
-          className="flex-none text-accent-foreground"
-          aria-label={`Добавить «${title}» в список`}
+          className={`flex-none text-accent-foreground ${active ? 'border-primary bg-accent/60' : ''}`}
+          aria-label={
+            active
+              ? `«${title}» уже в списках — изменить`
+              : `Добавить «${title}» в список`
+          }
           onClick={openSheet}
         >
-          <Plus aria-hidden />
+          {active ? <Check aria-hidden /> : <Plus aria-hidden />}
         </Button>
       )}
 

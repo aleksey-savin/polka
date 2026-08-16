@@ -84,6 +84,7 @@ export function CycleRow({
           target={{ refWorkId: member.workId }}
           title={member.title}
           subtitle={authorName ?? undefined}
+          active={member.listed}
           onChanged={onChanged}
         />
       )}
@@ -109,7 +110,7 @@ export function CycleSheet({
   const stats = [
     `прочитано ${cycle.readCount} из ${cycle.total}`,
     `на полках ${cycle.ownedCount}`,
-    cycle.wishedCount > 0 ? `в «Хочу» ${cycle.wishedCount}` : null,
+    cycle.listedCount > 0 ? `в списках ${cycle.listedCount}` : null,
   ].filter(Boolean)
 
   return (

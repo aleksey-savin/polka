@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 
 import { AddToListButton } from '@/components/book/AddToListButton'
+import { ListBadges } from '@/components/book/ListBadges'
 import { SectionLabel } from '@/components/layout/SectionLabel'
 import { fetchWorkEditionsFn, getWorkViewFn } from '@/server/reference'
 import { spineFor } from '@/services/spine'
@@ -62,12 +63,15 @@ function WorkPage() {
         </p>
       )}
 
-      <div className="mt-6">
+      <ListBadges lists={view.lists} className="mt-4" />
+
+      <div className="mt-5">
         <AddToListButton
           target={{ refWorkId: view.id }}
           title={view.title}
           subtitle={view.authorName}
           variant="wide"
+          active={view.lists.length > 0}
         />
       </div>
 

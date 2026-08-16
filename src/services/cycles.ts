@@ -12,6 +12,7 @@ import {
   refWorkLink,
   shelf,
 } from '@/db/schema/catalog'
+import { listsForTargets } from './lists'
 import { memberLibraryIds } from './members'
 
 /**
@@ -51,7 +52,8 @@ export interface CycleMember {
   /** Наличие: «полка «Детективы»» / «в «Хочу»» / «подарена» / null. */
   place: string | null
   owned: boolean
-  wished: boolean
+  /** Уже в каком-нибудь моём списке (вишлист или подборка). */
+  listed: boolean
   reading: 'read' | 'reading' | null
   current: boolean
 }
@@ -63,7 +65,7 @@ export interface CycleView {
   total: number
   readCount: number
   ownedCount: number
-  wishedCount: number
+  listedCount: number
   currentWorkId: string | null
   currentPosition: number | null
   members: Array<CycleMember>
@@ -242,6 +244,11 @@ export async function getCycleView(
     if (byTitle) push(byTitle, b)
   }
 
+  const inLists = await listsForTargets(
+    userId,
+    rows.map((r) => ({ refWorkId: r.workId })),
+  )
+
   const PLACE_BY_STATUS: Record<string, string> = {
     wishlist: 'в «Хочу»',
     gifted: 'подарена',
@@ -271,7 +278,9 @@ export async function getCycleView(
       bookId: chosen?.id ?? null,
       place: place ?? null,
       owned: Boolean(owned),
-      wished: Boolean(wishRow),
+      listed:
+        (inLists.get(`work:${r.workId}`)?.length ?? 0) > 0 ||
+        Boolean(wishRow),
       reading:
         readingStatus === 'read' || readingStatus === 'reading'
           ? readingStatus
@@ -288,7 +297,7 @@ export async function getCycleView(
     total: members.length,
     readCount: members.filter((m) => m.reading === 'read').length,
     ownedCount: members.filter((m) => m.owned).length,
-    wishedCount: members.filter((m) => m.wished).length,
+    listedCount: members.filter((m) => m.listed).length,
     currentWorkId: current?.workId ?? null,
     currentPosition: current?.position ?? null,
     members,

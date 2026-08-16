@@ -19,9 +19,11 @@ const {
   defaultWishlistId,
   getList,
   listMyLists,
+  listsForOne,
   listsForTarget,
   removeFromList,
 } = await import('./lists')
+const { authorBibliography, getWorkView } = await import('./reference')
 const { createListShare, getListShareView, holdGift, listGiftHolds, releaseGift } =
   await import('./listShares')
 
@@ -156,3 +158,36 @@ describe('вишлисты и подборки', () => {
     expect(lists.filter((l) => l.kind === 'wishlist').length).toBeGreaterThan(0)
   })
 })
+
+describe('индикация списков', () => {
+  test('членство видно и по книге, и по произведению', async () => {
+    const { id: listId } = await createList(ALEX, {
+      kind: 'wishlist',
+      title: 'Исторические романы',
+    })
+    const workId = await ensureRefWork('fantlab', 'w-9', 'Вечер и утро', 2020)
+    await addToList(ALEX, listId, { refWorkId: workId })
+
+    const badges = await listsForOne(ALEX, { refWorkId: workId })
+    expect(badges).toMatchObject([
+      { id: listId, kind: 'wishlist', title: 'Исторические романы' },
+    ])
+    // чужие списки в индикацию не попадают
+    expect(await listsForOne(OLYA, { refWorkId: workId })).toEqual([])
+
+    const view = await getWorkView(ALEX, workId)
+    expect(view.lists).toHaveLength(1)
+
+    const biblio = await authorBibliography(ALEX, await ensureAuthorId())
+    expect(biblio.find((r) => r.id === workId)?.listed).toBe(true)
+  })
+})
+
+async function ensureAuthorId() {
+  const { ensureAuthor } = await import('./authors')
+  const { linkWorkAuthor } = await import('./reference')
+  const authorId = await ensureAuthor('Кен Фоллетт')
+  const workId = await ensureRefWork('fantlab', 'w-9', 'Вечер и утро', 2020)
+  await linkWorkAuthor(workId, authorId)
+  return authorId
+}

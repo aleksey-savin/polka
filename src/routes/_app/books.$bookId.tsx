@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import type { ReactNode } from 'react'
 
 import { AddToListButton } from '@/components/book/AddToListButton'
+import { ListBadges } from '@/components/book/ListBadges'
 import { MoveDialog } from '@/components/book/MoveDialog'
 import { CycleRow, CycleSheet } from '@/components/book/CycleSheet'
 import { SectionLabel } from '@/components/layout/SectionLabel'
@@ -518,6 +519,7 @@ function BookCardPage() {
           target={{ bookId: book.id }}
           title={book.title}
           subtitle={book.authors}
+          active={book.lists.length > 0}
         />
         <ActionMenu
           caption={book.title}
@@ -529,6 +531,8 @@ function BookCardPage() {
           entries={menuEntries}
         />
       </div>
+
+      <ListBadges lists={book.lists} className="mt-4" />
 
       {/* ── Аннотация и тэги ── */}
       {(book.annotation || book.tags.length > 0) && (

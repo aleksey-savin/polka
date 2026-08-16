@@ -71,8 +71,11 @@ if (existsSync(migrationsFolder)) {
   background('переезд виш-листа', () =>
     import('@/services/lists').then((m) => m.backfillWishlists()),
   )
-  // фоновое наполнение эталона (M15) — медленный воркер, CRAWL_ENABLED=0 выключает
-  background('запуск краулера', () =>
-    import('@/services/crawl').then((m) => m.startCrawlWorker()),
-  )
+  // фоновое наполнение эталона (M15) — медленный воркер, CRAWL_ENABLED=0 выключает;
+  // в тестах не поднимаем: он ходит в сеть
+  if (process.env.NODE_ENV !== 'test') {
+    background('запуск краулера', () =>
+      import('@/services/crawl').then((m) => m.startCrawlWorker()),
+    )
+  }
 }
