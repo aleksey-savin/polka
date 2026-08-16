@@ -442,6 +442,75 @@
     color: var(--ink-soft);
   }
 
+  .form-tag {
+    display: inline-block;
+    border: 1.5px solid color-mix(in oklab, var(--ink-soft) 55%, transparent);
+    border-radius: 3px;
+    padding: 0 5px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    vertical-align: 1px;
+  }
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .item-row:first-of-type {
+    border-top: 0;
+  }
+  .trash {
+    flex: none;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .conflict {
+    margin: 6px 0 10px 32px;
+    border: 1px solid color-mix(in oklab, var(--stamp) 30%, transparent);
+    border-radius: 12px;
+    background: color-mix(in oklab, var(--stamp) 6%, var(--card));
+    padding: 10px 12px;
+  }
+  .conflict p {
+    margin: 0 0 8px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .conflict .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .c-btn {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .c-btn.main {
+    border-color: transparent;
+    background: var(--lamp);
+    color: #fff;
+  }
+  .c-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--lamp-deep);
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+
   .mock-notes {
     margin-top: 32px;
     border: 1.5px dashed color-mix(in oklab, var(--ink-soft) 40%, transparent);
@@ -631,6 +700,91 @@
     </button>
   </div>
 
+  <div class="demo-label">5 · Страница списка: пометка формы</div>
+  <p class="note-inline">
+    Два «Нетопыря» со скрина больше не близнецы: у каждой строки видно, что это
+    — произведение, издание или книга с полки.
+  </p>
+  <div>
+    <div class="item-row">
+      <span class="ed-cover" style="--c: #c96f3a"></span>
+      <div class="ed-info">
+        <p class="ed-title">Нетопырь</p>
+        <p class="ed-sub">
+          <span class="form-tag">издание</span> Азбука · 2017 · 448 с.
+        </p>
+      </div>
+      <span class="trash" aria-hidden="true">🗑</span>
+    </div>
+    <div class="item-row">
+      <span class="ed-cover" style="--c: #d9cdb8"></span>
+      <div class="ed-info">
+        <p class="ed-title">Нетопырь</p>
+        <p class="ed-sub">
+          <span class="form-tag">произведение</span> Ю Несбё · 1997
+        </p>
+      </div>
+      <span class="trash" aria-hidden="true">🗑</span>
+    </div>
+    <div class="item-row">
+      <span class="ed-cover" style="--c: #2c3547"></span>
+      <div class="ed-info">
+        <p class="ed-title">Призрак</p>
+        <p class="ed-sub">Ю Несбё · 2011 · полка «Детективы»</p>
+      </div>
+      <span class="trash" aria-hidden="true">🗑</span>
+    </div>
+  </div>
+
+  <div class="demo-label">6 · Шторка: конфликт форм</div>
+  <p class="note-inline">
+    Подсказки, не запреты. Слева — добавляем издание, а в списке уже
+    произведение; справа — наоборот.
+  </p>
+  <div class="sheet-demo">
+    <p class="grp">Добавляю издание 2017 г. → в списке уже произведение</p>
+    <button class="opt on" type="button">
+      <span class="box">✓</span>
+      <span class="body">
+        Хочу почитать
+        <span class="form">уже здесь — как произведение</span>
+      </span>
+      <span class="cnt">12</span>
+    </button>
+    <div class="conflict">
+      <p>
+        «Нетопырь» уже в этом списке как произведение. Заменить его конкретным
+        изданием?
+      </p>
+      <div class="row">
+        <button class="c-btn main" type="button">Заменить</button>
+        <button class="c-btn" type="button">Оставить оба</button>
+      </div>
+    </div>
+
+    <p class="grp" style="margin-top: 18px">
+      Добавляю произведение → в списке уже издание
+    </p>
+    <button class="opt on" type="button">
+      <span class="box">✓</span>
+      <span class="body">
+        Хочу почитать
+        <span class="form">уже здесь — издание 2017 года</span>
+      </span>
+      <span class="cnt">12</span>
+    </button>
+    <div class="conflict">
+      <p>
+        В списке уже есть издание этой книги — произведение можно не добавлять.
+      </p>
+      <div class="row">
+        <button class="c-btn main" type="button">Не добавлять</button>
+        <button class="c-btn" type="button">Всё равно добавить</button>
+        <button class="c-link" type="button">к изданию →</button>
+      </div>
+    </div>
+  </div>
+
   <aside class="mock-notes">
     <h2 class="mock-notes-title">Примечания</h2>
     <p class="mock-note">
@@ -647,6 +801,10 @@
       · В строке издания на странице произведения отметка стоит только если в
       списке лежит именно это издание; членство произведения показывают чипы и
       большая кнопка выше — иначе горели бы все пять строк сразу.
+    </p>
+    <p class="mock-note">
+      · Конфликт форм — мягкая подсказка после тапа по списку, не блокировка:
+      «Оставить оба» и «Всё равно добавить» сохраняют как душе угодно.
     </p>
     <p class="mock-note">
       · В каталоге индикации нет сознательно: карточки компактные, а членство
