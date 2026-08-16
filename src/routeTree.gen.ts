@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RulesRouteImport } from './routes/rules'
 import { Route as AppAddRouteImport } from './routes/_app/add'
 import { Route as AppFriendsRouteImport } from './routes/_app/friends'
 import { Route as AppLoansRouteImport } from './routes/_app/loans'
@@ -58,6 +59,11 @@ const AppRoute = AppRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RulesRoute = RulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppAddRoute = AppAddRouteImport.update({
@@ -229,6 +235,7 @@ const ApiAuthorsAuthorIdPhotoRoute = ApiAuthorsAuthorIdPhotoRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/rules': typeof RulesRoute
   '/add': typeof AppAddRoute
   '/friends': typeof AppFriendsRoute
   '/loans': typeof AppLoansRoute
@@ -266,6 +273,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/rules': typeof RulesRoute
   '/add': typeof AppAddRoute
   '/friends': typeof AppFriendsRoute
   '/loans': typeof AppLoansRoute
@@ -305,6 +313,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/rules': typeof RulesRoute
   '/_app/add': typeof AppAddRoute
   '/_app/friends': typeof AppFriendsRoute
   '/_app/loans': typeof AppLoansRoute
@@ -344,6 +353,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/rules'
     | '/add'
     | '/friends'
     | '/loans'
@@ -381,6 +391,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/rules'
     | '/add'
     | '/friends'
     | '/loans'
@@ -419,6 +430,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/login'
+    | '/rules'
     | '/_app/add'
     | '/_app/friends'
     | '/_app/loans'
@@ -458,6 +470,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RulesRoute: typeof RulesRoute
   ApiHealthRoute: typeof ApiHealthRoute
   JoinTokenRoute: typeof JoinTokenRoute
   STokenRoute: typeof STokenRoute
@@ -488,6 +501,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rules': {
+      id: '/rules'
+      path: '/rules'
+      fullPath: '/rules'
+      preLoaderRoute: typeof RulesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/add': {
@@ -788,6 +808,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  RulesRoute: RulesRoute,
   ApiHealthRoute: ApiHealthRoute,
   JoinTokenRoute: JoinTokenRoute,
   STokenRoute: STokenRoute,

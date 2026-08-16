@@ -205,7 +205,13 @@ function CatalogSharePage() {
             </div>
           </section>
         ))}
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <a
+            href="/rules"
+            className="text-[12.5px] text-muted-foreground underline"
+          >
+            Правила
+          </a>
           <ReportButton
             kind="share"
             targetId={view.shareId}

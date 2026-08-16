@@ -209,7 +209,10 @@ export function GiftListView({
         ))}
       </div>
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex items-center justify-between gap-3">
+        <a href="/rules" className="text-[12.5px] text-muted-foreground underline">
+          Правила
+        </a>
         <ReportButton
           kind="share"
           targetId={view.shareId}

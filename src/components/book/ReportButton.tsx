@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { Flag } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -104,6 +105,13 @@ export function ReportButton({
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
+            <p className="text-[12px] text-muted-foreground">
+              Что запрещено — в{' '}
+              <Link to="/rules" className="underline">
+                правилах
+              </Link>
+              .
+            </p>
           </div>
           <DrawerFooter>
             <Button loading={busy} onClick={() => void send()}>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -193,6 +193,11 @@ function SettingsPage() {
         >
           <LogOut aria-hidden /> Выйти из аккаунта
         </Button>
+        <p className="mt-4 text-[13px] text-muted-foreground">
+          <Link to="/rules" className="underline">
+            Правила сервиса
+          </Link>
+        </p>
       </section>
     </div>
   )

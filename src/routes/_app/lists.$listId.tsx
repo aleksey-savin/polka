@@ -96,7 +96,11 @@ function ListPage() {
           <b className="block text-[14.5px]">Список снят с публикации</b>
           <p className="mt-1 text-[13px] text-muted-foreground">
             Причина: {list.removedReason}. Ссылка не работает, книги остались у
-            вас — поправьте и включите ссылку заново.
+            вас — поправьте и включите ссылку заново.{' '}
+            <Link to="/rules" className="underline">
+              Правила
+            </Link>
+            .
           </p>
         </div>
       )}
