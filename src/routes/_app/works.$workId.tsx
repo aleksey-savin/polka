@@ -21,6 +21,8 @@ function WorkPage() {
   const loaded = Route.useLoaderData()
   const [view, setView] = useState<WorkView>(loaded)
   const [fetching, setFetching] = useState(false)
+  // у классики изданий сотни — показываем первые, остальное по кнопке
+  const [allEditions, setAllEditions] = useState(false)
 
   // издания подтягиваются лениво при первом заходе
   useEffect(() => {
@@ -103,7 +105,7 @@ function WorkPage() {
             Изданий в каталоге Полки пока нет.
           </p>
         ) : (
-          view.editions.map((e) => {
+          (allEditions ? view.editions : view.editions.slice(0, EDITIONS_HEAD)).map((e) => {
             const look = spineFor(e.title, e.pages)
             return (
               <div
@@ -179,7 +181,19 @@ function WorkPage() {
             )
           })
         )}
+        {!allEditions && view.editions.length > EDITIONS_HEAD && (
+          <button
+            type="button"
+            className="mt-3 text-[13px] font-semibold text-accent-foreground"
+            onClick={() => setAllEditions(true)}
+          >
+            Показать все {view.editions.length} изданий →
+          </button>
+        )}
       </section>
     </div>
   )
 }
+
+/** Сколько изданий показываем сразу. */
+const EDITIONS_HEAD = 25

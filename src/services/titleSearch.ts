@@ -51,12 +51,21 @@ export interface TitleSearchResult {
 
 const LIMIT = 10
 
+/** Слова запроса: «карамазовы достоевский» — это название плюс автор,
+    целиком такая строка не встречается нигде. */
+const words = (query: string): Array<string> =>
+  normalizeForSearch(query)
+    .split(/\s+/)
+    .filter((w) => w.length > 1)
+    .slice(0, 5)
+
 /** Свои книги — чтобы сразу увидеть дубль и не заводить вторую. */
 async function searchMine(
   userId: string,
   query: string,
 ): Promise<Array<TitleHitMine>> {
-  const q = `%${sanitizeLike(normalizeForSearch(query))}%`
+  const parts = words(query)
+  if (parts.length === 0) return []
   const libIds = await memberLibraryIds(userId)
   const accessible = or(
     libIds.length > 0 ? inArray(book.libraryId, libIds) : undefined,
@@ -76,7 +85,13 @@ async function searchMine(
     .leftJoin(shelf, eq(shelf.id, book.shelfId))
     .leftJoin(library, eq(library.id, book.libraryId))
     .where(
-      and(accessible, or(like(book.titleNorm, q), like(book.authorsNorm, q))),
+      and(
+        accessible,
+        // каждое слово должно найтись в названии или у автора
+        ...parts.map((w) =>
+          or(like(book.titleNorm, `%${sanitizeLike(w)}%`), like(book.authorsNorm, `%${sanitizeLike(w)}%`)),
+        ),
+      ),
     )
     .limit(LIMIT)
   return rows.map((r) => ({
@@ -95,7 +110,8 @@ async function searchMine(
 
 /** Эталон Полки — мгновенно и без запросов в сеть. */
 async function searchReference(query: string): Promise<Array<TitleHitWork>> {
-  const q = `%${sanitizeLike(normalizeForSearch(query))}%`
+  const parts = words(query)
+  if (parts.length === 0) return []
   const rows = await db
     .select({
       workId: refWork.id,
@@ -109,7 +125,11 @@ async function searchReference(query: string): Promise<Array<TitleHitWork>> {
     .leftJoin(authorTable, eq(authorTable.id, refWorkAuthor.authorId))
     .where(
       and(
-        like(refWork.titleNorm, q),
+        // слово ищем и в названии произведения, и в имени автора
+        ...parts.map(
+          (w) =>
+            sql`(${refWork.titleNorm} like ${`%${sanitizeLike(w)}%`} or ${authorTable.nameNorm} like ${`%${sanitizeLike(w)}%`})`,
+        ),
         sql`(${refWork.workType} is null or ${refWork.workType} != 'cycle')`,
       ),
     )

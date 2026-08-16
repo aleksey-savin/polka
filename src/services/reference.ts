@@ -406,6 +406,9 @@ export async function getWorkView(
 
 const sleepMs = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/** Сколько обложек тянем при первом открытии произведения. */
+const COVER_BUDGET = 12
+
 /**
  * Ленивая загрузка изданий произведения (FantLab): один запрос extended,
  * русскоязычные бумажные издания + обложки сразу в эталон.
@@ -471,6 +474,10 @@ export async function fetchWorkEditions(
         .set({ annotation: stripHtml(data.work_description) })
         .where(eq(refWork.id, workId))
     }
+    // у классики изданий сотни («Братья Карамазовы» — 230 русских):
+    // записи заводим все, а обложки тянем порциями, иначе первое открытие
+    // произведения встаёт на минуты и забивает диск
+    let coverBudget = COVER_BUDGET
     for (const block of Object.values(data.editions_blocks ?? {})) {
       for (const e of block.list ?? []) {
         if (!e.edition_id || !e.name) continue
@@ -517,8 +524,10 @@ export async function fetchWorkEditions(
           .insert(refBookWork)
           .values({ refBookId, workId })
           .onConflictDoNothing()
-        // обложка — сразу в эталон (щадяще, с паузой)
-        if (!existing?.coverPath && (e.pic_num ?? 0) > 0) {
+        // обложка — сразу в эталон (щадяще, с паузой); остальные подтянутся
+        // по требованию, когда откроют карточку издания
+        if (!existing?.coverPath && (e.pic_num ?? 0) > 0 && coverBudget > 0) {
+          coverBudget--
           const { saveRefCoverFromUrl } = await import('./covers')
           const saved = await saveRefCoverFromUrl(
             refBookId,
@@ -568,8 +577,24 @@ export async function getRefBookView(
   userId: string,
   refBookId: string,
 ): Promise<RefBookView> {
-  const [row] = await db.select().from(refBook).where(eq(refBook.id, refBookId))
-  if (!row) throw new Error('Издание не найдено')
+  const [found] = await db
+    .select()
+    .from(refBook)
+    .where(eq(refBook.id, refBookId))
+  if (!found) throw new Error('Издание не найдено')
+  let row = found
+  // обложку могли не успеть скачать при импорте пачки — берём сейчас
+  if (!row.coverPath && row.coverUrl) {
+    const { saveRefCoverFromUrl } = await import('./covers')
+    const saved = await saveRefCoverFromUrl(row.id, row.coverUrl)
+    if (saved) {
+      await db
+        .update(refBook)
+        .set({ coverPath: saved.path, coverColor: saved.color })
+        .where(eq(refBook.id, row.id))
+      row = { ...row, coverPath: saved.path, coverColor: saved.color }
+    }
+  }
 
   const works = await db
     .select({ id: refWork.id, title: refWork.title })
