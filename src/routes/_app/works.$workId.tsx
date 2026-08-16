@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 
 import { AddToListButton } from '@/components/book/AddToListButton'
+import { AddToShelfButton } from '@/components/book/AddToShelfButton'
 import { ListBadges } from '@/components/book/ListBadges'
 import { SectionLabel } from '@/components/layout/SectionLabel'
 import { fetchWorkEditionsFn, getWorkViewFn } from '@/server/reference'
@@ -65,7 +66,14 @@ function WorkPage() {
 
       <ListBadges lists={view.lists} className="mt-4" />
 
-      <div className="mt-5">
+      <div className="mt-5 grid gap-2">
+        <AddToShelfButton
+          className="h-11 w-full"
+          title={view.title}
+          authors={view.authorName}
+          year={view.year}
+          refWorkId={view.id}
+        />
         <AddToListButton
           target={{ refWorkId: view.id }}
           title={view.title}

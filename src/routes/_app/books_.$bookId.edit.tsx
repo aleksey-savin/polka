@@ -35,6 +35,7 @@ function EditBookPage() {
     giftEdition: book.giftEdition,
     heightMm: book.heightMm?.toString() ?? '',
     fantlabAuthors: [],
+    refWorkId: '',
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)

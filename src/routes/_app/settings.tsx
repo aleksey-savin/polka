@@ -8,45 +8,21 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth-client'
-import { getPrefsFn, setPrefsFn } from '@/server/prefs'
 import { changePasswordFn, updateProfileFn } from '@/server/profile'
 import { getSession } from '@/server/session'
-import type { SkipAction } from '@/services/prefs'
 
 export const Route = createFileRoute('/_app/settings')({
   loader: async () => {
-    const [session, prefs] = await Promise.all([getSession(), getPrefsFn()])
-    return { user: session!.user, prefs }
+    const session = await getSession()
+    return { user: session!.user }
   },
   component: SettingsPage,
 })
 
 const FIELD = 'h-12 rounded-xl text-[16px]'
 
-const SKIP_OPTIONS: Array<{
-  value: SkipAction
-  title: string
-  sub: string
-}> = [
-  {
-    value: 'ask',
-    title: 'Спрашивать каждый раз',
-    sub: 'Показывать окно с выбором.',
-  },
-  {
-    value: 'save-isbn',
-    title: 'Сохранять по ISBN',
-    sub: 'Молча складывать в «Не распознано» и идти дальше.',
-  },
-  {
-    value: 'discard',
-    title: 'Не сохранять',
-    sub: 'Просто закрывать черновик и возвращаться к сканеру.',
-  },
-]
-
 function SettingsPage() {
-  const { user, prefs } = Route.useLoaderData()
+  const { user } = Route.useLoaderData()
   const router = useRouter()
 
   const [editing, setEditing] = useState(false)
@@ -57,8 +33,6 @@ function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [savingPassword, setSavingPassword] = useState(false)
-
-  const [skipAction, setSkipAction] = useState<SkipAction>(prefs.skipAction)
 
   async function saveProfile() {
     setSavingProfile(true)
@@ -85,15 +59,6 @@ function SettingsPage() {
       toast.error(e instanceof Error ? e.message : 'Не получилось')
     } finally {
       setSavingPassword(false)
-    }
-  }
-
-  async function chooseSkip(value: SkipAction) {
-    setSkipAction(value)
-    try {
-      await setPrefsFn({ data: { skipAction: value } })
-    } catch {
-      toast.error('Не получилось сохранить настройку')
     }
   }
 
@@ -212,46 +177,6 @@ function SettingsPage() {
               Сменить пароль
             </Button>
           </div>
-        </div>
-      </section>
-
-      <section className="mt-7">
-        <SectionLabel>Сканирование</SectionLabel>
-        <p className="text-[12.5px] text-muted-foreground">
-          Что делает кнопка «Пропустить» в форме книги
-        </p>
-        <div className="mt-2 grid gap-2">
-          {SKIP_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`flex min-h-[52px] items-start gap-3 rounded-2xl border p-3 text-left ${
-                skipAction === opt.value
-                  ? 'border-primary/45 bg-accent/50'
-                  : 'bg-card'
-              }`}
-              onClick={() => void chooseSkip(opt.value)}
-            >
-              <span
-                aria-hidden
-                className={`mt-0.5 grid size-5 flex-none place-items-center rounded-full border-[1.5px] ${
-                  skipAction === opt.value ? 'border-primary' : 'border-border'
-                }`}
-              >
-                {skipAction === opt.value && (
-                  <span className="size-2.5 rounded-full bg-primary" />
-                )}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[14.5px] font-semibold">
-                  {opt.title}
-                </span>
-                <span className="block text-[12.5px] text-muted-foreground">
-                  {opt.sub}
-                </span>
-              </span>
-            </button>
-          ))}
         </div>
       </section>
 

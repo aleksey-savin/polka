@@ -80,7 +80,20 @@ describe('нераспознанные книги', () => {
   test('без названия и без ISBN сохранить нельзя', async () => {
     expect(
       createBook(ALEX, { title: '', libraryId: library.id }),
-    ).rejects.toThrow('Нужно название книги')
+    ).rejects.toThrow('Нужно название книги или ISBN')
+  })
+
+  test('одного ISBN достаточно — книга помечается как нераспознанная', async () => {
+    const created = await createBook(ALEX, {
+      title: '',
+      isbn13: '9785041739263',
+      libraryId: library.id,
+    })
+    const card = await getBookCard(ALEX, created.id)
+    expect(card.title).toBe('9785041739263')
+    expect(
+      (await listUnrecognized(ALEX)).some((r) => r.id === created.id),
+    ).toBe(true)
   })
 })
 

@@ -8,6 +8,7 @@ import {
 } from '@/components/book/BookForm'
 import type { BookFormValue } from '@/components/book/BookForm'
 import { BarcodeScanner } from '@/components/scanner/BarcodeScanner'
+import { TitleSearch } from '@/components/book/TitleSearch'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,9 +16,6 @@ import { createBookFn } from '@/server/books'
 import { getLibraryOverviewFn, listMyLibrariesFn } from '@/server/libraries'
 import { lookupIsbnFn } from '@/server/lookup'
 import { countUnrecognizedFn } from '@/server/unrecognized'
-import { getPrefsFn } from '@/server/prefs'
-import { SkipChoiceSheet } from '@/components/book/SkipChoiceSheet'
-import type { SkipAction } from '@/services/prefs'
 import { SOURCE_LABEL } from '@/services/metadata/types'
 import type { LookupResult } from '@/services/metadata/lookup'
 
@@ -26,7 +24,7 @@ export const Route = createFileRoute('/_app/add')({
   component: AddPage,
 })
 
-type Mode = 'scan' | 'isbn' | 'manual'
+type Mode = 'scan' | 'isbn' | 'title' | 'manual'
 const DEST_KEY = 'polka.add.dest'
 
 function AddPage() {
@@ -44,12 +42,9 @@ function AddPage() {
   const [lookup, setLookup] = useState<LookupResult | null>(null)
   const [draft, setDraft] = useState<BookFormValue | null>(null)
   const [unrecognized, setUnrecognized] = useState(0)
-  const [skipAction, setSkipAction] = useState<SkipAction>('ask')
-  const [skipOpen, setSkipOpen] = useState(false)
   // сколько болванок уже накопилось всего — не только за этот заход
   useEffect(() => {
     void countUnrecognizedFn().then(setUnrecognized)
-    void getPrefsFn().then((p) => setSkipAction(p.skipAction))
   }, [])
   const [error, setError] = useState<string | null>(null)
   const [savedCount, setSavedCount] = useState(0)
@@ -120,46 +115,12 @@ function AddPage() {
     [dest],
   )
 
-  function backToScanner() {
+  /** «Пропустить»: просто закрываем черновик и возвращаемся к сканеру. */
+  function skip() {
     setDraft(null)
     setLookup(null)
     setIsbnInput('')
     setMode('scan')
-  }
-
-  /** Пропуск по выбранному разу или по настройке. */
-  async function runSkip(action: 'save-isbn' | 'discard') {
-    if (action === 'discard') {
-      backToScanner()
-      return
-    }
-    if (!draft) return
-    setBusy(true)
-    setError(null)
-    try {
-      await createBookFn({
-        data: {
-          ...toBookInput({ ...draft, title: draft.title || '' }),
-          title: '',
-          unrecognized: true,
-        },
-      })
-      setUnrecognized((n) => n + 1)
-      backToScanner()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не получилось сохранить книгу')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  /** «Пропустить»: спрашиваем, если пользователь не решил раз и навсегда. */
-  function skip() {
-    if (skipAction === 'ask') {
-      setSkipOpen(true)
-      return
-    }
-    void runSkip(skipAction)
   }
 
   async function save(openCard: boolean) {
@@ -232,30 +193,19 @@ function AddPage() {
             . Второй экземпляр сохранить можно.
           </p>
         )}
-        <SkipChoiceSheet
-          open={skipOpen}
-          isbn={draft.isbn13}
-          busy={busy}
-          onClose={() => setSkipOpen(false)}
-          onChoose={(action, remember) => {
-            setSkipOpen(false)
-            if (remember) setSkipAction(action)
-            void runSkip(action)
-          }}
-        />
         <BookForm
           value={draft}
           onChange={setDraft}
           onSubmit={() => void save(false)}
           submitLabel="Сохранить и добавить ещё"
-          onSkip={skip}
+          onSave={() => void save(true)}
           busy={busy}
           error={error}
           secondaryActions={[
             {
-              key: 'open',
-              label: 'Сохранить и открыть карточку',
-              onSelect: () => void save(true),
+              key: 'skip',
+              label: 'Пропустить',
+              onSelect: skip,
             },
             {
               key: 'cancel',
@@ -295,6 +245,8 @@ function AddPage() {
           [
             ['scan', 'Сканер'],
             ['isbn', 'ISBN'],
+            ['title', 'По названию'],
+            // ручной ввод — последним: честный запасной вариант
             ['manual', 'Вручную'],
           ] as const
         ).map(([m, label]) => (
@@ -303,8 +255,8 @@ function AddPage() {
             type="button"
             className={
               mode === m
-                ? 'flex-1 rounded-full bg-foreground py-2 text-[13px] font-semibold text-white'
-                : 'flex-1 rounded-full py-2 text-[13px] font-semibold text-muted-foreground'
+                ? 'flex-1 rounded-full bg-foreground py-2 text-[12.5px] font-semibold whitespace-nowrap text-white'
+                : 'flex-1 rounded-full py-2 text-[12.5px] font-semibold whitespace-nowrap text-muted-foreground'
             }
             onClick={() => {
               setMode(m)
@@ -384,6 +336,16 @@ function AddPage() {
               сама.
             </p>
           )}
+          {mode === 'title' && (
+            <TitleSearch
+              dest={dest}
+              onDraft={(value) => {
+                setLookup(null)
+                setDraft(value)
+              }}
+            />
+          )}
+          {mode !== 'title' && (
           <form
             className="mt-4 flex gap-2"
             onSubmit={(e) => {
@@ -405,6 +367,7 @@ function AddPage() {
               {busy ? 'Ищем…' : 'Найти'}
             </Button>
           </form>
+          )}
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
           {busy && mode === 'scan' && (
             <p className="mt-3 text-sm text-muted-foreground">

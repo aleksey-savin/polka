@@ -94,12 +94,15 @@ export async function createBook(
   input: BookInput,
 ): Promise<{ id: string }> {
   const placement = await placementFor(userId, input)
-  // болванка: названия ещё нет, временно им служит сам номер —
-  // так книга находится поиском по ISBN и не выглядит пустой строкой
-  const title =
-    input.title.trim() ||
-    (input.unrecognized ? (input.isbn13?.trim() ?? '') : '')
-  if (!title) throw new AppError('Нужно название книги', 'invalid')
+  // сохранить можно и по одному ISBN: названием временно служит номер —
+  // так книга находится поиском и не выглядит пустой строкой.
+  // Без номера название обязательно.
+  const isbn = input.isbn13?.trim() ?? ''
+  const title = input.title.trim() || isbn
+  if (!title) {
+    throw new AppError('Нужно название книги или ISBN', 'invalid')
+  }
+  const unrecognized = input.unrecognized ?? !input.title.trim()
   const seriesId = input.seriesName
     ? await resolveSeriesByName(userId, input.seriesName)
     : null
@@ -129,7 +132,7 @@ export async function createBook(
       coverType: input.coverType ?? null,
       giftEdition: input.giftEdition ?? false,
       heightMm: input.heightMm ?? null,
-      unrecognized: input.unrecognized ?? false,
+      unrecognized,
       titleNorm: normalizeForSearch(title),
       authorsNorm: normalizeForSearch(input.authors ?? ''),
     })

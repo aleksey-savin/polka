@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 
 import { AddToListButton } from '@/components/book/AddToListButton'
+import { AddToShelfButton } from '@/components/book/AddToShelfButton'
 import { ListBadges } from '@/components/book/ListBadges'
 import { Button } from '@/components/ui/button'
 import { getRefBookViewFn } from '@/server/reference'
@@ -119,13 +120,25 @@ function EditionPage() {
             </Link>
           </Button>
         ) : (
-          <AddToListButton
-            target={{ refBookId: view.id }}
-            title={view.title}
-            subtitle={authorName}
-            variant="wide"
-            active={view.lists.length > 0}
-          />
+          <div className="grid gap-2">
+            <AddToShelfButton
+              className="h-12 w-full"
+              title={view.title}
+              authors={authorName}
+              publisher={view.publisher}
+              year={view.year}
+              pages={view.pages}
+              isbn13={view.isbn13}
+              refWorkId={view.works[0]?.id ?? null}
+            />
+            <AddToListButton
+              target={{ refBookId: view.id }}
+              title={view.title}
+              subtitle={authorName}
+              variant="wide"
+              active={view.lists.length > 0}
+            />
+          </div>
         )}
       </div>
     </div>

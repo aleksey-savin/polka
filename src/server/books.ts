@@ -20,7 +20,8 @@ import { listMyTags } from '@/services/tags'
 import { authMiddleware } from './middleware'
 
 const bookInput = z.object({
-  // пустое имя допустимо только для болванок из сканера — проверяет сервис
+  // сохранить можно и по одному ISBN; без номера название обязательно —
+  // проверяет сервис, ему видны оба поля
   title: z.string().trim(),
   authors: z.string().optional(),
   isbn10: z.string().optional(),

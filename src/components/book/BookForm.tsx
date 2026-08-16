@@ -39,6 +39,8 @@ export interface BookFormValue {
   heightMm: string
   /** Зацепки FantLab-авторов из lookup — скрытое поле. */
   fantlabAuthors: Array<{ name: string; id: number }>
+  /** Произведение эталона, если книгу нашли по названию (M20). */
+  refWorkId: string
 }
 
 export const EMPTY_BOOK_FORM: BookFormValue = {
@@ -63,6 +65,7 @@ export const EMPTY_BOOK_FORM: BookFormValue = {
   giftEdition: false,
   heightMm: '',
   fantlabAuthors: [],
+  refWorkId: '',
 }
 
 /** Перевод значения формы в input серверной функции. */
@@ -89,6 +92,7 @@ export function toBookInput(v: BookFormValue) {
     giftEdition: v.giftEdition,
     heightMm: v.heightMm ? Number(v.heightMm) : null,
     fantlabAuthors: v.fantlabAuthors.length > 0 ? v.fantlabAuthors : undefined,
+    refWorkId: v.refWorkId || null,
     unrecognized: false as boolean,
   }
 }
@@ -140,7 +144,7 @@ export function BookForm({
   onChange,
   onSubmit,
   submitLabel,
-  onSkip,
+  onSave,
   secondaryActions = [],
   busy,
   error,
@@ -149,8 +153,8 @@ export function BookForm({
   onChange: (value: BookFormValue) => void
   onSubmit: () => void
   submitLabel: string
-  /** Поток сканирования: сохранить по одному ISBN и вернуться к сканеру. */
-  onSkip?: () => void
+  /** Вторая кнопка «Сохранить» — сохранить и уйти к карточке. */
+  onSave?: () => void
   secondaryActions?: Array<FormSecondaryAction>
   busy?: boolean
   error?: string | null
@@ -216,6 +220,12 @@ export function BookForm({
       },
     )
   }, [value.libraryId])
+
+  // сохранить можно и по одному ISBN — название допишем потом;
+  // без номера название обязательно
+  const canSave =
+    (value.title.trim().length > 0 || value.isbn13.trim().length > 0) &&
+    !(value.placement === 'list' && !value.listId)
 
   return (
     <form
@@ -504,22 +514,19 @@ export function BookForm({
           type="submit"
           className="h-12 flex-1 sm:flex-none sm:px-6"
           loading={busy}
-          disabled={
-            !value.title.trim() ||
-            (value.placement === 'list' && !value.listId)
-          }
+          disabled={!canSave}
         >
           {submitLabel}
         </Button>
-        {onSkip && (
+        {onSave && (
           <Button
             type="button"
             variant="outline"
             className="h-12 flex-none px-4"
-            disabled={busy}
-            onClick={onSkip}
+            disabled={busy || !canSave}
+            onClick={onSave}
           >
-            Пропустить
+            Сохранить
           </Button>
         )}
         {secondaryActions.length > 0 && (

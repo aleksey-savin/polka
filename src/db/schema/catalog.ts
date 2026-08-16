@@ -459,23 +459,6 @@ export const bookPersonal = sqliteTable(
   ],
 )
 
-/** Настройки пользователя (M19): живут в профиле, а не в браузере —
-    поведение одинаково с телефона и с ноутбука. */
-export const userPref = sqliteTable('user_pref', {
-  userId: text('user_id')
-    .primaryKey()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  /** Что делает «Пропустить» в форме книги. */
-  skipAction: text('skip_action', {
-    enum: ['ask', 'save-isbn', 'discard'],
-  })
-    .notNull()
-    .default('ask'),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
-    .notNull()
-    .$defaultFn(() => new Date()),
-})
-
 export const tag = sqliteTable(
   'tag',
   {
