@@ -210,10 +210,7 @@ export async function getCycleView(
     .leftJoin(library, eq(library.id, book.libraryId))
     .leftJoin(
       bookPersonal,
-      and(
-        eq(bookPersonal.bookId, book.id),
-        eq(bookPersonal.userId, userId),
-      ),
+      and(eq(bookPersonal.bookId, book.id), eq(bookPersonal.userId, userId)),
     )
     .where(
       and(
@@ -279,8 +276,7 @@ export async function getCycleView(
       place: place ?? null,
       owned: Boolean(owned),
       listed:
-        (inLists.get(`work:${r.workId}`)?.length ?? 0) > 0 ||
-        Boolean(wishRow),
+        (inLists.get(`work:${r.workId}`)?.length ?? 0) > 0 || Boolean(wishRow),
       reading:
         readingStatus === 'read' || readingStatus === 'reading'
           ? readingStatus
@@ -317,7 +313,9 @@ export async function authorCycles(
     .from(refWork)
     .innerJoin(refWorkAuthor, eq(refWorkAuthor.workId, refWork.id))
     .innerJoin(refWorkLink, eq(refWorkLink.parentId, refWork.id))
-    .where(and(eq(refWorkAuthor.authorId, authorId), eq(refWork.workType, 'cycle')))
+    .where(
+      and(eq(refWorkAuthor.authorId, authorId), eq(refWork.workType, 'cycle')),
+    )
     .groupBy(refWork.id)
     .orderBy(asc(refWork.title))
   return rows

@@ -51,7 +51,9 @@ export function AppShell({
       .then((acc) => {
         setAccount(acc)
         if (acc.role !== 'user') {
-          void pendingModerationFn().then(setPendingModeration).catch(() => {})
+          void pendingModerationFn()
+            .then(setPendingModeration)
+            .catch(() => {})
         }
       })
       .catch(() => {})

@@ -54,7 +54,8 @@ function UnrecognizedPage() {
         </h1>
         {rows.length > 0 && (
           <span className="font-mono text-[11.5px] text-muted-foreground">
-            {rows.length} {plural(rows.length, 'книга ждёт', 'книги ждут', 'книг ждут')}{' '}
+            {rows.length}{' '}
+            {plural(rows.length, 'книга ждёт', 'книги ждут', 'книг ждут')}{' '}
             названия
           </span>
         )}
@@ -62,7 +63,12 @@ function UnrecognizedPage() {
           <Button
             className="ml-auto"
             loading={busyId === 'all'}
-            onClick={() => void retry(rows.map((r) => r.id), 'all')}
+            onClick={() =>
+              void retry(
+                rows.map((r) => r.id),
+                'all',
+              )
+            }
           >
             Проверить все
           </Button>

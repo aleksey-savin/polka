@@ -102,9 +102,9 @@ describe('очередь и санкции', () => {
     expect(item?.reports[0]?.reason).toBe('Реклама и спам')
 
     // снятие без причины не проходит
-    expect(
-      resolve('u-first', item!.id, 'removed', '   '),
-    ).rejects.toThrow('Укажите причину')
+    expect(resolve('u-first', item!.id, 'removed', '   ')).rejects.toThrow(
+      'Укажите причину',
+    )
 
     await resolve('u-first', item!.id, 'removed', 'Реклама и спам')
     const [after] = await db

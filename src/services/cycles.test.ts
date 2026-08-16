@@ -37,7 +37,13 @@ async function setup() {
     libraryId: library.id,
     name: 'Детективы',
   })
-  const cycleId = await ensureRefWork('fantlab', '543715', 'Харри Холе', null, 'cycle')
+  const cycleId = await ensureRefWork(
+    'fantlab',
+    '543715',
+    'Харри Холе',
+    null,
+    'cycle',
+  )
   const works: Array<{ id: string; title: string; year: number }> = []
   for (const [i, [sourceId, title, year]] of (
     [

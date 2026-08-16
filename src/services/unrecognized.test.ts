@@ -11,9 +11,8 @@ const { user } = await import('@/db/schema/auth')
 const { book } = await import('@/db/schema/catalog')
 const { eq } = await import('drizzle-orm')
 const { createLibrary } = await import('./libraries')
-const { createBook, updateBook, getBookCard, listBooks } = await import(
-  './books'
-)
+const { createBook, updateBook, getBookCard, listBooks } =
+  await import('./books')
 const { countUnrecognized, listUnrecognized } = await import('./unrecognized')
 const { createList, getList } = await import('./lists')
 
@@ -111,9 +110,7 @@ describe('форма: куда положить', () => {
     })
 
     const view = await getList(ALEX, listId)
-    expect(view.items).toMatchObject([
-      { title: 'Вечер и утро', form: 'book' },
-    ])
+    expect(view.items).toMatchObject([{ title: 'Вечер и утро', form: 'book' }])
     const card = await getBookCard(ALEX, created.id)
     expect(card.status).toBe('wishlist')
     expect(card.libraryId).toBeNull()

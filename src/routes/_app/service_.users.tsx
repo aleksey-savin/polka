@@ -96,7 +96,11 @@ function UsersPage() {
               <ActionMenu
                 caption={row.name}
                 trigger={
-                  <Button variant="ghost" size="icon-sm" disabled={busyId === row.id}>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={busyId === row.id}
+                  >
                     ···
                   </Button>
                 }
@@ -180,7 +184,8 @@ function UsersPage() {
                         key: 'block',
                         label: 'Заблокировать аккаунт',
                         danger: true,
-                        onSelect: () => setAsking({ user: row, action: 'block' }),
+                        onSelect: () =>
+                          setAsking({ user: row, action: 'block' }),
                       },
                 ]}
               />

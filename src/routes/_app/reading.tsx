@@ -273,7 +273,9 @@ function ListsSections({
           <section key={group.kind} className="mt-7">
             <SectionLabel>
               {group.label}
-              {own.length > 0 && <span className="text-stamp"> · {own.length}</span>}
+              {own.length > 0 && (
+                <span className="text-stamp"> · {own.length}</span>
+              )}
             </SectionLabel>
             <div className="grid gap-2.5">
               {own.map((list) => (

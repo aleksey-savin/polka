@@ -32,8 +32,7 @@ const target = z
     refBookId: z.string().optional(),
   })
   .refine(
-    (t) =>
-      [t.bookId, t.refWorkId, t.refBookId].filter(Boolean).length === 1,
+    (t) => [t.bookId, t.refWorkId, t.refBookId].filter(Boolean).length === 1,
     'Нужна ровно одна ссылка на книгу',
   )
   .transform((t) =>

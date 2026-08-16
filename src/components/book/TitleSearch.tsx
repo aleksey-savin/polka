@@ -147,7 +147,9 @@ export function TitleSearch({
                   {e.pages && (
                     <>
                       {' · '}
-                      <span className="font-mono text-[11.5px]">{e.pages}</span>{' '}
+                      <span className="font-mono text-[11.5px]">
+                        {e.pages}
+                      </span>{' '}
                       с.
                     </>
                   )}
@@ -283,7 +285,10 @@ export function TitleSearch({
                         {hit.workType && ` · ${hit.workType}`}
                       </span>
                     </span>
-                    <span aria-hidden className="flex-none text-muted-foreground">
+                    <span
+                      aria-hidden
+                      className="flex-none text-muted-foreground"
+                    >
                       ›
                     </span>
                   </button>

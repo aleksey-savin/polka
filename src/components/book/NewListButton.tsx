@@ -51,7 +51,9 @@ export function NewListButton({ kind }: { kind: 'wishlist' | 'collection' }) {
       <Input
         autoFocus
         className="h-12 rounded-xl text-[16px]"
-        placeholder={kind === 'wishlist' ? 'Название вишлиста' : 'Название подборки'}
+        placeholder={
+          kind === 'wishlist' ? 'Название вишлиста' : 'Название подборки'
+        }
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => {
@@ -59,7 +61,11 @@ export function NewListButton({ kind }: { kind: 'wishlist' | 'collection' }) {
           if (e.key === 'Escape') setEditing(false)
         }}
       />
-      <Button className="h-12 flex-none" loading={busy} onClick={() => void create()}>
+      <Button
+        className="h-12 flex-none"
+        loading={busy}
+        onClick={() => void create()}
+      >
         Создать
       </Button>
     </div>

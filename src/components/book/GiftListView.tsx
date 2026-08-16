@@ -102,8 +102,7 @@ export function GiftListView({
       <div className="mb-5 flex items-center justify-between gap-3">
         <Logo />
         <span className="font-mono text-[11px] tracking-[0.1em] text-muted-foreground uppercase">
-          {view.kind === 'wishlist' ? 'Вишлист' : 'Подборка'} ·{' '}
-          {view.ownerName}
+          {view.kind === 'wishlist' ? 'Вишлист' : 'Подборка'} · {view.ownerName}
         </span>
       </div>
 
@@ -210,7 +209,10 @@ export function GiftListView({
       </div>
 
       <div className="mt-6 flex items-center justify-between gap-3">
-        <a href="/rules" className="text-[12.5px] text-muted-foreground underline">
+        <a
+          href="/rules"
+          className="text-[12.5px] text-muted-foreground underline"
+        >
           Правила
         </a>
         <ReportButton
@@ -227,7 +229,10 @@ export function GiftListView({
         </p>
       )}
 
-      <Drawer open={asking !== null} onOpenChange={(o) => !o && setAsking(null)}>
+      <Drawer
+        open={asking !== null}
+        onOpenChange={(o) => !o && setAsking(null)}
+      >
         <DrawerContent>
           <DrawerHeader className="pt-1">
             <DrawerTitle>Дарю «{asking?.title}»</DrawerTitle>

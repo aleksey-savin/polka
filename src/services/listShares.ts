@@ -42,7 +42,8 @@ export async function publicShareKind(
     .select({ scope: share.scope, revokedAt: share.revokedAt })
     .from(share)
     .where(eq(share.token, token))
-  if (!row || row.revokedAt) throw new AppError('Ссылка не действует', 'not_found')
+  if (!row || row.revokedAt)
+    throw new AppError('Ссылка не действует', 'not_found')
   return row.scope === 'list' ? 'list' : 'catalog'
 }
 
@@ -95,10 +96,7 @@ export async function getListShareView(
 ): Promise<ListShareView> {
   const row = await resolveListShare(token)
   const listId = row.listId!
-  const [list] = await db
-    .select()
-    .from(bookList)
-    .where(eq(bookList.id, listId))
+  const [list] = await db.select().from(bookList).where(eq(bookList.id, listId))
   if (!list) throw new AppError('Список не найден', 'not_found')
 
   const [owner] = await db
@@ -201,9 +199,7 @@ export async function listGiftHolds(
     })
     .from(giftHold)
     .innerJoin(bookListItem, eq(bookListItem.id, giftHold.itemId))
-    .where(
-      and(eq(bookListItem.listId, listId), isNull(giftHold.canceledAt)),
-    )
+    .where(and(eq(bookListItem.listId, listId), isNull(giftHold.canceledAt)))
   const items = await listItems(userId, listId)
   const titleById = new Map(items.map((i) => [i.id, i.title]))
   return rows.map((r) => ({

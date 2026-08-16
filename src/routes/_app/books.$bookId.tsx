@@ -334,7 +334,10 @@ function BookCardPage() {
               className="mb-2 flex max-w-full min-w-0 items-center gap-[7px] rounded-full border border-stamp/30 bg-card px-3 py-1 text-[12.5px] font-semibold text-stamp"
               onClick={() => setCycleOpen(true)}
             >
-              <span aria-hidden className="flex flex-none items-end gap-[1.5px]">
+              <span
+                aria-hidden
+                className="flex flex-none items-end gap-[1.5px]"
+              >
                 <span className="h-[11px] w-[3.5px] rounded-[1px] bg-stamp/75" />
                 <span className="h-[8px] w-[3.5px] rounded-[1px] bg-stamp/75" />
                 <span className="h-[10px] w-[3.5px] rounded-[1px] bg-stamp/75" />

@@ -112,8 +112,12 @@ export async function listSavedShares(
         .select({
           title: sql<string>`coalesce(${book.title}, ${refWork.title}, ${refBook.title})`,
           pages: sql<number | null>`coalesce(${book.pages}, ${refBook.pages})`,
-          coverColor: sql<string | null>`coalesce(${book.coverColor}, ${refBook.coverColor})`,
-          year: sql<number | null>`coalesce(${book.year}, ${refWork.year}, ${refBook.year})`,
+          coverColor: sql<
+            string | null
+          >`coalesce(${book.coverColor}, ${refBook.coverColor})`,
+          year: sql<
+            number | null
+          >`coalesce(${book.year}, ${refWork.year}, ${refBook.year})`,
         })
         .from(bookListItem)
         .leftJoin(book, eq(book.id, bookListItem.bookId))

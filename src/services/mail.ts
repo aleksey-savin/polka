@@ -125,9 +125,10 @@ async function transportFor() {
       secure: found.secure === 'tls',
       requireTLS: found.secure === 'starttls',
       ignoreTLS: found.secure === 'none',
-      auth: found.username && password
-        ? { user: found.username, pass: password }
-        : undefined,
+      auth:
+        found.username && password
+          ? { user: found.username, pass: password }
+          : undefined,
       connectionTimeout: 10_000,
       greetingTimeout: 10_000,
     }),

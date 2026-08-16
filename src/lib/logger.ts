@@ -69,7 +69,9 @@ function makeFileTransport(): winston.transport | null {
       symlinkName: 'polka.log',
     })
     transport.on('error', (error: Error) => {
-      process.stderr.write(`журнал: запись в файл не удалась — ${error.message}\n`)
+      process.stderr.write(
+        `журнал: запись в файл не удалась — ${error.message}\n`,
+      )
     })
     return transport
   } catch (error) {

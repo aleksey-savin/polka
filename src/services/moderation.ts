@@ -2,7 +2,14 @@ import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { user } from '@/db/schema/auth'
-import { book, bookList, shelf, library, refBook, refWork } from '@/db/schema/catalog'
+import {
+  book,
+  bookList,
+  shelf,
+  library,
+  refBook,
+  refWork,
+} from '@/db/schema/catalog'
 import { share } from '@/db/schema/circulation'
 import {
   moderationItem,
@@ -258,7 +265,11 @@ async function describeTarget(
     return {
       title: name,
       subtitle: [
-        row?.scope === 'list' ? 'список' : row?.scope === 'shelf' ? 'полка' : 'библиотека',
+        row?.scope === 'list'
+          ? 'список'
+          : row?.scope === 'shelf'
+            ? 'полка'
+            : 'библиотека',
         row?.revokedAt ? 'ссылка отозвана' : `/s/${row?.token ?? ''}`,
       ]
         .filter(Boolean)
@@ -533,9 +544,7 @@ export async function listLog(userId: string): Promise<Array<LogRow>> {
     .leftJoin(actor, eq(actor.id, moderationLog.actorId))
     .orderBy(desc(moderationLog.createdAt))
     .limit(200)
-  const subjects = await db
-    .select({ id: user.id, name: user.name })
-    .from(user)
+  const subjects = await db.select({ id: user.id, name: user.name }).from(user)
   return rows.map((r) => ({
     id: r.id,
     action: r.action,
@@ -580,6 +589,11 @@ export async function pendingCount(userId: string): Promise<number> {
   const [row] = await db
     .select({ n: count() })
     .from(moderationItem)
-    .where(and(eq(moderationItem.status, 'pending'), isNull(moderationItem.reviewedAt)))
+    .where(
+      and(
+        eq(moderationItem.status, 'pending'),
+        isNull(moderationItem.reviewedAt),
+      ),
+    )
   return row?.n ?? 0
 }

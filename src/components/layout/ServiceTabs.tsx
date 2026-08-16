@@ -13,6 +13,7 @@ export function ServiceTabs({
     { to: '/service', label: 'Очередь', badge: pending, admin: false },
     { to: '/service/users', label: 'Пользователи', admin: true },
     { to: '/service/mail', label: 'Почта', admin: true },
+    { to: '/service/ai', label: 'ИИ', admin: true },
     { to: '/service/log', label: 'Журнал', admin: false },
   ] as const
 
@@ -22,7 +23,9 @@ export function ServiceTabs({
         .filter((tab) => isAdmin || !tab.admin)
         .map((tab) => {
           const active =
-            tab.to === '/service' ? path === '/service' : path.startsWith(tab.to)
+            tab.to === '/service'
+              ? path === '/service'
+              : path.startsWith(tab.to)
           return (
             <Link
               key={tab.to}
@@ -34,7 +37,9 @@ export function ServiceTabs({
             >
               {tab.label}
               {'badge' in tab && tab.badge ? (
-                <span className="ml-1 font-mono text-[11px]">· {tab.badge}</span>
+                <span className="ml-1 font-mono text-[11px]">
+                  · {tab.badge}
+                </span>
               ) : null}
             </Link>
           )

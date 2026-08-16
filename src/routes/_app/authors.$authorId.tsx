@@ -16,7 +16,6 @@ export const Route = createFileRoute('/_app/authors/$authorId')({
   component: AuthorPage,
 })
 
-
 /** Группы библиографии: порядок и заголовки во множественном числе. */
 const TYPE_ORDER = [
   'роман',

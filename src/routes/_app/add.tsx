@@ -346,27 +346,27 @@ function AddPage() {
             />
           )}
           {mode !== 'title' && (
-          <form
-            className="mt-4 flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (isbnInput.trim()) void runLookup(isbnInput)
-            }}
-          >
-            <Input
-              className="font-mono"
-              placeholder={
-                mode === 'scan' ? '…или введите ISBN цифрами' : '978-5-…'
-              }
-              value={isbnInput}
-              onChange={(e) => setIsbnInput(e.target.value)}
-              inputMode="numeric"
-              autoComplete="off"
-            />
-            <Button type="submit" loading={busy} disabled={!isbnInput.trim()}>
-              {busy ? 'Ищем…' : 'Найти'}
-            </Button>
-          </form>
+            <form
+              className="mt-4 flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (isbnInput.trim()) void runLookup(isbnInput)
+              }}
+            >
+              <Input
+                className="font-mono"
+                placeholder={
+                  mode === 'scan' ? '…или введите ISBN цифрами' : '978-5-…'
+                }
+                value={isbnInput}
+                onChange={(e) => setIsbnInput(e.target.value)}
+                inputMode="numeric"
+                autoComplete="off"
+              />
+              <Button type="submit" loading={busy} disabled={!isbnInput.trim()}>
+                {busy ? 'Ищем…' : 'Найти'}
+              </Button>
+            </form>
           )}
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
           {busy && mode === 'scan' && (

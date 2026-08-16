@@ -105,7 +105,10 @@ function WorkPage() {
             Изданий в каталоге Полки пока нет.
           </p>
         ) : (
-          (allEditions ? view.editions : view.editions.slice(0, EDITIONS_HEAD)).map((e) => {
+          (allEditions
+            ? view.editions
+            : view.editions.slice(0, EDITIONS_HEAD)
+          ).map((e) => {
             const look = spineFor(e.title, e.pages)
             return (
               <div
@@ -141,7 +144,9 @@ function WorkPage() {
                     <span className="block truncate text-xs text-muted-foreground">
                       {e.publisher && `${e.publisher} · `}
                       {e.year && (
-                        <span className="font-mono text-[11.5px]">{e.year}</span>
+                        <span className="font-mono text-[11.5px]">
+                          {e.year}
+                        </span>
                       )}
                       {e.pages && (
                         <>

@@ -41,7 +41,9 @@ if (existsSync(migrationsFolder)) {
     sqlite.run('PRAGMA foreign_keys = OFF;')
     migrate(db, { migrationsFolder })
     const [broken] = sqlite
-      .query<{ n: number }, []>('SELECT count(*) AS n FROM pragma_foreign_key_check')
+      .query<{ n: number }, []>(
+        'SELECT count(*) AS n FROM pragma_foreign_key_check',
+      )
       .all()
     if (broken && broken.n > 0) {
       log.error('db', 'после миграций битые внешние ключи', { rows: broken.n })
@@ -60,10 +62,7 @@ if (existsSync(migrationsFolder)) {
   }
 
   /** Фоновые задачи старта: падение одной не должно ронять процесс молча. */
-  const background = (
-    name: string,
-    run: () => Promise<unknown>,
-  ): void => {
+  const background = (name: string, run: () => Promise<unknown>): void => {
     const from = performance.now()
     void run()
       .then(() =>

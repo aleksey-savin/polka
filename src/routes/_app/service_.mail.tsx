@@ -295,7 +295,9 @@ function MailPage() {
         </div>
       )}
 
-      <h2 className="mt-7 text-[17px] font-semibold">Какие письма отправлять</h2>
+      <h2 className="mt-7 text-[17px] font-semibold">
+        Какие письма отправлять
+      </h2>
       <div className="mt-2">
         {LETTERS.map((letter) => (
           <div

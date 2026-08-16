@@ -28,7 +28,8 @@ function EditBookPage() {
     tags: book.tags,
     libraryId: book.libraryId ?? '',
     shelfId: book.shelfId ?? '',
-    placement: book.status === 'wishlist' ? ('list' as const) : ('shelf' as const),
+    placement:
+      book.status === 'wishlist' ? ('list' as const) : ('shelf' as const),
     listId: book.lists[0]?.id ?? '',
     coverUrl: '',
     coverType: book.coverType ?? '',

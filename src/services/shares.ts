@@ -86,7 +86,9 @@ export async function listMyShares(userId: string): Promise<Array<MyShareRow>> {
         eq(borrowRequest.status, 'pending'),
       ),
     )
-    .where(and(isNull(share.revokedAt), inArray(share.scope, ['library', 'shelf'])))
+    .where(
+      and(isNull(share.revokedAt), inArray(share.scope, ['library', 'shelf'])),
+    )
     .groupBy(share.id)
     .orderBy(asc(share.createdAt))
   const memberLibs = new Set(

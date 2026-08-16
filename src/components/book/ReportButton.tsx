@@ -71,7 +71,9 @@ export function ReportButton({
         <DrawerContent>
           <DrawerHeader className="pt-1">
             <DrawerTitle>Пожаловаться</DrawerTitle>
-            <DrawerDescription className="truncate">{subject}</DrawerDescription>
+            <DrawerDescription className="truncate">
+              {subject}
+            </DrawerDescription>
           </DrawerHeader>
           <div className="grid gap-2">
             {REASONS.map((r) => (

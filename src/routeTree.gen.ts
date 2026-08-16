@@ -38,6 +38,7 @@ import { Route as AppLibrariesIndexRouteImport } from './routes/_app/libraries.i
 import { Route as AppListsListIdRouteImport } from './routes/_app/lists.$listId'
 import { Route as AppSeriesIndexRouteImport } from './routes/_app/series.index'
 import { Route as AppSeriesSeriesIdRouteImport } from './routes/_app/series.$seriesId'
+import { Route as AppServiceAiRouteImport } from './routes/_app/service_.ai'
 import { Route as AppServiceLogRouteImport } from './routes/_app/service_.log'
 import { Route as AppServiceMailRouteImport } from './routes/_app/service_.mail'
 import { Route as AppServiceUsersRouteImport } from './routes/_app/service_.users'
@@ -194,6 +195,11 @@ const AppSeriesSeriesIdRoute = AppSeriesSeriesIdRouteImport.update({
   path: '/series/$seriesId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppServiceAiRoute = AppServiceAiRouteImport.update({
+  id: '/service_/ai',
+  path: '/service/ai',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppServiceLogRoute = AppServiceLogRouteImport.update({
   id: '/service_/log',
   path: '/service/log',
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof AppInviteTokenRoute
   '/lists/$listId': typeof AppListsListIdRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
+  '/service/ai': typeof AppServiceAiRoute
   '/service/log': typeof AppServiceLogRoute
   '/service/mail': typeof AppServiceMailRoute
   '/service/users': typeof AppServiceUsersRoute
@@ -317,6 +324,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof AppInviteTokenRoute
   '/lists/$listId': typeof AppListsListIdRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
+  '/service/ai': typeof AppServiceAiRoute
   '/service/log': typeof AppServiceLogRoute
   '/service/mail': typeof AppServiceMailRoute
   '/service/users': typeof AppServiceUsersRoute
@@ -360,6 +368,7 @@ export interface FileRoutesById {
   '/_app/invite/$token': typeof AppInviteTokenRoute
   '/_app/lists/$listId': typeof AppListsListIdRoute
   '/_app/series/$seriesId': typeof AppSeriesSeriesIdRoute
+  '/_app/service_/ai': typeof AppServiceAiRoute
   '/_app/service_/log': typeof AppServiceLogRoute
   '/_app/service_/mail': typeof AppServiceMailRoute
   '/_app/service_/users': typeof AppServiceUsersRoute
@@ -403,6 +412,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/lists/$listId'
     | '/series/$seriesId'
+    | '/service/ai'
     | '/service/log'
     | '/service/mail'
     | '/service/users'
@@ -444,6 +454,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/lists/$listId'
     | '/series/$seriesId'
+    | '/service/ai'
     | '/service/log'
     | '/service/mail'
     | '/service/users'
@@ -486,6 +497,7 @@ export interface FileRouteTypes {
     | '/_app/invite/$token'
     | '/_app/lists/$listId'
     | '/_app/series/$seriesId'
+    | '/_app/service_/ai'
     | '/_app/service_/log'
     | '/_app/service_/mail'
     | '/_app/service_/users'
@@ -723,6 +735,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSeriesSeriesIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/service_/ai': {
+      id: '/_app/service_/ai'
+      path: '/service/ai'
+      fullPath: '/service/ai'
+      preLoaderRoute: typeof AppServiceAiRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/service_/log': {
       id: '/_app/service_/log'
       path: '/service/log'
@@ -821,6 +840,7 @@ interface AppRouteChildren {
   AppInviteTokenRoute: typeof AppInviteTokenRoute
   AppListsListIdRoute: typeof AppListsListIdRoute
   AppSeriesSeriesIdRoute: typeof AppSeriesSeriesIdRoute
+  AppServiceAiRoute: typeof AppServiceAiRoute
   AppServiceLogRoute: typeof AppServiceLogRoute
   AppServiceMailRoute: typeof AppServiceMailRoute
   AppServiceUsersRoute: typeof AppServiceUsersRoute
@@ -851,6 +871,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInviteTokenRoute: AppInviteTokenRoute,
   AppListsListIdRoute: AppListsListIdRoute,
   AppSeriesSeriesIdRoute: AppSeriesSeriesIdRoute,
+  AppServiceAiRoute: AppServiceAiRoute,
   AppServiceLogRoute: AppServiceLogRoute,
   AppServiceMailRoute: AppServiceMailRoute,
   AppServiceUsersRoute: AppServiceUsersRoute,

@@ -11,13 +11,8 @@ process.env.BETTER_AUTH_SECRET = '0123456789012345678901234567890123'
 const { db } = await import('@/db')
 const { sql } = await import('drizzle-orm')
 const { seal, open } = await import('@/lib/secretbox')
-const {
-  getMailSettings,
-  mailReady,
-  saveMailSettings,
-  sendMail,
-  sendTestMail,
-} = await import('./mail')
+const { getMailSettings, mailReady, saveMailSettings, sendMail, sendTestMail } =
+  await import('./mail')
 
 /** Фиктивный SMTP: отвечает как настоящий и запоминает диалог. */
 const dialogue: Array<string> = []

@@ -89,7 +89,10 @@ async function searchMine(
         accessible,
         // каждое слово должно найтись в названии или у автора
         ...parts.map((w) =>
-          or(like(book.titleNorm, `%${sanitizeLike(w)}%`), like(book.authorsNorm, `%${sanitizeLike(w)}%`)),
+          or(
+            like(book.titleNorm, `%${sanitizeLike(w)}%`),
+            like(book.authorsNorm, `%${sanitizeLike(w)}%`),
+          ),
         ),
       ),
     )
@@ -229,13 +232,7 @@ export async function adoptExternalWork(
   workType: string | null,
   addedBy?: string,
 ): Promise<string> {
-  const workId = await ensureRefWork(
-    'fantlab',
-    sourceId,
-    title,
-    year,
-    workType,
-  )
+  const workId = await ensureRefWork('fantlab', sourceId, title, year, workType)
   const first = authors.split(/[,;]/)[0]?.trim()
   if (first) {
     const authorId = await ensureAuthor(first)

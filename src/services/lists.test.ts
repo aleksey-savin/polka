@@ -26,8 +26,13 @@ const {
   removeFromList,
 } = await import('./lists')
 const { authorBibliography, getWorkView } = await import('./reference')
-const { createListShare, getListShareView, holdGift, listGiftHolds, releaseGift } =
-  await import('./listShares')
+const {
+  createListShare,
+  getListShareView,
+  holdGift,
+  listGiftHolds,
+  releaseGift,
+} = await import('./listShares')
 
 const ALEX = 'u-lists-alex'
 const OLYA = 'u-lists-olya'
@@ -133,9 +138,13 @@ describe('вишлисты и подборки', () => {
 
     // чужую бронь не снять, свою — можно
     await releaseGift(token, itemId, 'key-petya')
-    expect((await getListShareView(token, 'key-olya')).items[0]!.held).toBe(true)
+    expect((await getListShareView(token, 'key-olya')).items[0]!.held).toBe(
+      true,
+    )
     await releaseGift(token, itemId, 'key-olya')
-    expect((await getListShareView(token, 'key-olya')).items[0]!.held).toBe(false)
+    expect((await getListShareView(token, 'key-olya')).items[0]!.held).toBe(
+      false,
+    )
   })
 
   test('старый виш-лист переезжает в список «Хочу почитать»', async () => {
@@ -177,9 +186,7 @@ describe('сквозная индикация', () => {
         year: 2017,
       })
       .returning({ id: refBook.id })
-    await db
-      .insert(refBookWork)
-      .values({ refBookId: edition!.id, workId })
+    await db.insert(refBookWork).values({ refBookId: edition!.id, workId })
 
     // мигрированный «Хочу»: книга каталога со ссылкой на произведение
     const migrated = await createBook(ALEX, {
@@ -258,9 +265,9 @@ describe('сквозная индикация', () => {
     expect(pickWork?.match?.refBookId).toBe(edition!.id)
 
     // точная форма на месте → конфликта нет, тап убирает её
-    const samePick = (
-      await listsForTarget(ALEX, { refWorkId: workId })
-    ).find((x) => x.id === withWork)
+    const samePick = (await listsForTarget(ALEX, { refWorkId: workId })).find(
+      (x) => x.id === withWork,
+    )
     expect(samePick).toMatchObject({ contains: true, conflict: null })
     expect(samePick?.match?.form).toBe('work')
 

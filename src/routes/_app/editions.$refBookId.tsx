@@ -67,7 +67,9 @@ function EditionPage() {
                 <br />
               </>
             )}
-            {view.year && <span className="font-mono text-xs">{view.year}</span>}
+            {view.year && (
+              <span className="font-mono text-xs">{view.year}</span>
+            )}
             {view.pages && (
               <>
                 {' · '}

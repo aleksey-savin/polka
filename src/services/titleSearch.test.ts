@@ -80,7 +80,13 @@ describe('поиск по названию', () => {
     expect(res.reference.map((r) => r.workId)).toContain(id)
     // повторный выбор не плодит дублей
     expect(
-      await adoptExternalWork('w-external', 'Бесы', 'Фёдор Достоевский', 1872, 'novel'),
+      await adoptExternalWork(
+        'w-external',
+        'Бесы',
+        'Фёдор Достоевский',
+        1872,
+        'novel',
+      ),
     ).toBe(id)
   })
 })

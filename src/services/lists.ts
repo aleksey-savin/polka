@@ -28,9 +28,7 @@ export type ListKind = 'wishlist' | 'collection'
 
 /** Куда указывает элемент списка — ровно одна ссылка. */
 export type ItemTarget =
-  | { bookId: string }
-  | { refWorkId: string }
-  | { refBookId: string }
+  { bookId: string } | { refWorkId: string } | { refBookId: string }
 
 const targetCondition = (target: ItemTarget) =>
   'bookId' in target
@@ -51,10 +49,7 @@ export interface ListRow {
 }
 
 async function requireOwnList(userId: string, listId: string) {
-  const [row] = await db
-    .select()
-    .from(bookList)
-    .where(eq(bookList.id, listId))
+  const [row] = await db.select().from(bookList).where(eq(bookList.id, listId))
   if (!row) throw new AppError('Список не найден', 'not_found')
   if (row.ownerId !== userId) throw new AppError('Список чужой', 'forbidden')
   return row
@@ -162,7 +157,8 @@ export async function getList(
   let removedReason: string | null = null
   if (anyShare) {
     const { removalsFor } = await import('./moderation')
-    removedReason = (await removalsFor('share', [anyShare.id])).get(anyShare.id) ?? null
+    removedReason =
+      (await removalsFor('share', [anyShare.id])).get(anyShare.id) ?? null
   }
 
   return {
@@ -216,7 +212,9 @@ export async function listItems(
   if (rows.length === 0) return []
 
   // авторы произведений эталона — отдельным запросом
-  const workIds = rows.map((r) => r.refWorkId).filter((id): id is string => !!id)
+  const workIds = rows
+    .map((r) => r.refWorkId)
+    .filter((id): id is string => !!id)
   const workAuthors = new Map<string, string>()
   if (workIds.length > 0) {
     const authorRows = await db
@@ -251,7 +249,9 @@ export async function listItems(
         authors: r.bookAuthors ?? '',
         year: r.bookYear,
         note: r.note,
-        coverUrl: r.bookCover ? `/api/covers/${r.bookId}?v=${r.bookCover}` : null,
+        coverUrl: r.bookCover
+          ? `/api/covers/${r.bookId}?v=${r.bookCover}`
+          : null,
         coverColor: r.bookColor,
         myBookId: r.bookStatus === 'in_library' ? r.bookId : null,
         place,
@@ -261,8 +261,7 @@ export async function listItems(
     }
     const key = r.refWorkId ?? r.refBookId ?? ''
     const found = mine.get(key) as
-      | { bookId: string; place: string | null }
-      | undefined
+      { bookId: string; place: string | null } | undefined
     return {
       id: r.id,
       form: r.refWorkId ? ('work' as const) : ('edition' as const),
@@ -513,7 +512,9 @@ async function expandTargets(
   targets: Array<ItemTarget>,
 ): Promise<Map<string, TargetLinks>> {
   const out = new Map<string, TargetLinks>()
-  const targetBookIds = targets.flatMap((t) => ('bookId' in t ? [t.bookId] : []))
+  const targetBookIds = targets.flatMap((t) =>
+    'bookId' in t ? [t.bookId] : [],
+  )
   const targetWorkIds = targets.flatMap((t) =>
     'refWorkId' in t ? [t.refWorkId] : [],
   )
@@ -592,10 +593,7 @@ async function expandTargets(
   }
 
   // названия произведений — для поиска моих книг по совпадению
-  const allWorkIds = new Set([
-    ...workPool,
-    ...coverRows.map((c) => c.workId),
-  ])
+  const allWorkIds = new Set([...workPool, ...coverRows.map((c) => c.workId)])
   const workRows =
     allWorkIds.size > 0
       ? await db

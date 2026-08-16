@@ -1,5 +1,11 @@
 import { sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+} from 'drizzle-orm/sqlite-core'
 
 import { user } from './auth'
 
@@ -138,3 +144,38 @@ export const mailSetting = sqliteTable('mail_setting', {
     .notNull()
     .$defaultFn(() => new Date()),
 })
+
+/** Подключение ИИ (M24): ключ шифруется, как SMTP-пароль. */
+export const aiSetting = sqliteTable('ai_setting', {
+  id: text('id').primaryKey().default('default'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+  provider: text('provider', { enum: ['yandex', 'openai'] })
+    .notNull()
+    .default('yandex'),
+  apiKeyEnc: text('api_key_enc'),
+  folderId: text('folder_id'),
+  model: text('model'),
+  /** Для OpenAI-совместимых — свой адрес; у Яндекса подставляется сам. */
+  endpoint: text('endpoint'),
+  dailyLimit: integer('daily_limit').notNull().default(30),
+  lastResult: text('last_result'),
+  lastResultAt: integer('last_result_at', { mode: 'timestamp' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+})
+
+/** Счётчик суточного лимита: ключ и счёт владельца, тратят все. */
+export const aiUsage = sqliteTable(
+  'ai_usage',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** YYYY-MM-DD в UTC — сутки считаем по серверу. */
+    day: text('day').notNull(),
+    calls: integer('calls').notNull().default(0),
+    tokens: integer('tokens').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
+)

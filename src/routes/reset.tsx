@@ -34,9 +34,7 @@ function ResetPage() {
       await navigate({ to: '/login' })
     } catch (e) {
       toast.error(
-        e instanceof Error
-          ? e.message
-          : 'Ссылка не подошла — запросите новую',
+        e instanceof Error ? e.message : 'Ссылка не подошла — запросите новую',
       )
     } finally {
       setBusy(false)
