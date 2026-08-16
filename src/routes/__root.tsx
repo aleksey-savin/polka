@@ -114,6 +114,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru">
       <head>
+        {/* тему ставим до первой отрисовки — иначе ночью страница мигнёт
+            белым; скрипт крошечный и работает без гидрации */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(()=>{try{var m=localStorage.getItem('polka.theme')||'system';var d=m==='dark'||(m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light'}catch(e){}})()`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>

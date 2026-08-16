@@ -15,6 +15,7 @@ import {
 import { LogoLink } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
 import { ActionMenu } from '@/components/ui/action-menu'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { authClient } from '@/lib/auth-client'
 import { countPendingRequestsFn } from '@/server/shares'
 import { myAccountFn, pendingModerationFn } from '@/server/moderation'
@@ -101,6 +102,11 @@ export function AppShell({
               </Button>
             }
             entries={[
+              {
+                key: 'theme',
+                label: 'Тема',
+                custom: <ThemeToggle compact />,
+              },
               ...(account && account.role !== 'user'
                 ? ([
                     {

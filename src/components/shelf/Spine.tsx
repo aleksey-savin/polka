@@ -66,6 +66,13 @@ export function Spine({
           'inset -1px 0 0 rgba(35,43,56,.10), inset 1px 0 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(35,43,56,.06)',
       }}
     >
+      {/* в тёмной теме цвета обложек кричат — гасим общей вуалью (M23);
+          в светлой переменная прозрачна и слой ничего не делает */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-t-[3px] rounded-b-[1px]"
+        style={{ background: 'var(--spine-veil)' }}
+      />
       <span
         className="absolute inset-0 grid place-items-center overflow-hidden font-display text-xs font-medium whitespace-nowrap"
         style={{

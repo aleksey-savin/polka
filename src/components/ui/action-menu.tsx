@@ -24,7 +24,15 @@ export interface ActionMenuItem {
   danger?: boolean
   onSelect: () => void
 }
-export type ActionMenuEntry = ActionMenuItem | 'separator'
+/** Произвольный элемент в меню — например переключатель темы (M23). */
+export interface ActionMenuCustom {
+  key: string
+  custom: ReactNode
+}
+export type ActionMenuEntry = ActionMenuItem | ActionMenuCustom | 'separator'
+
+const isCustom = (entry: ActionMenuEntry): entry is ActionMenuCustom =>
+  entry !== 'separator' && 'custom' in entry
 
 const MOBILE_QUERY = '(max-width: 639px)'
 const subscribeMobile = (cb: () => void) => {
@@ -64,6 +72,10 @@ export function ActionMenu({
           {entries.map((entry, i) =>
             entry === 'separator' ? (
               <DropdownMenuSeparator key={`sep-${i}`} />
+            ) : isCustom(entry) ? (
+              <div key={entry.key} className="flex px-1.5 py-1">
+                {entry.custom}
+              </div>
             ) : (
               <DropdownMenuItem
                 key={entry.key}
@@ -100,6 +112,10 @@ export function ActionMenu({
               aria-hidden
               className="mx-3 my-1 h-px bg-border"
             />
+          ) : isCustom(entry) ? (
+            <div key={entry.key} className="flex px-2 py-1.5">
+              {entry.custom}
+            </div>
           ) : (
             <button
               key={entry.key}

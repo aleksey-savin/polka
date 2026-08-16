@@ -4,6 +4,7 @@ import { LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { SectionLabel } from '@/components/layout/SectionLabel'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -135,6 +136,17 @@ function SettingsPage() {
             </div>
           </div>
         )}
+      </section>
+
+      <section className="mt-7">
+        <SectionLabel>Оформление</SectionLabel>
+        <div className="flex max-w-[320px] items-center gap-3">
+          <ThemeToggle />
+        </div>
+        <p className="mt-2 text-[12.5px] text-muted-foreground">
+          «Авто» следует за настройкой телефона или системы. Выбор запоминается
+          на этом устройстве.
+        </p>
       </section>
 
       <section className="mt-7">
