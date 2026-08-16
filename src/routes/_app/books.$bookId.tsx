@@ -247,7 +247,13 @@ function BookCardPage() {
                 {book.shelfName}
               </Link>
             ) : (
-              'Неразобранное'
+              <Link
+                to="/unsorted"
+                search={{ lib: book.libraryId }}
+                className="hover:text-foreground"
+              >
+                Неразобранное
+              </Link>
             )}
             {' / '}
           </>
@@ -427,7 +433,24 @@ function BookCardPage() {
           <div className="min-w-0 flex-1">
             <p className="text-[14.5px]">Дома</p>
             <p className="truncate text-[12.5px] text-muted-foreground">
-              {book.libraryName} · {book.shelfName ?? 'Неразобранное'}
+              {book.libraryName} ·{' '}
+              {book.shelfId ? (
+                <Link
+                  to="/shelves/$shelfId"
+                  params={{ shelfId: book.shelfId }}
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  {book.shelfName}
+                </Link>
+              ) : (
+                <Link
+                  to="/unsorted"
+                  search={{ lib: book.libraryId ?? undefined }}
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  Неразобранное
+                </Link>
+              )}
             </p>
           </div>
           <Button onClick={() => setLendOpen(true)}>Дал почитать</Button>

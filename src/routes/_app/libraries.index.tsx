@@ -167,7 +167,15 @@ function LibrariesPage() {
 
       <section className="mt-10">
         <div className="mb-2 flex items-baseline gap-3.5">
-          <h2 className="text-[21px] font-semibold">Неразобранное</h2>
+          <h2 className="text-[21px] font-semibold">
+            <Link
+              to="/unsorted"
+              search={{ lib: overview.id }}
+              className="hover:underline"
+            >
+              Неразобранное
+            </Link>
+          </h2>
           <span className="font-mono text-xs text-muted-foreground">
             <b className="font-medium text-foreground">
               {overview.unsorted.count}
