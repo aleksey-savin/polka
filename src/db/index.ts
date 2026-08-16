@@ -10,8 +10,14 @@ import { log } from '@/lib/logger'
 import * as authSchema from './schema/auth'
 import * as catalog from './schema/catalog'
 import * as circulation from './schema/circulation'
+import * as moderation from './schema/moderation'
 
-export const schema = { ...authSchema, ...catalog, ...circulation }
+export const schema = {
+  ...authSchema,
+  ...catalog,
+  ...circulation,
+  ...moderation,
+}
 
 mkdirSync(env.DATA_DIR, { recursive: true })
 
@@ -80,6 +86,10 @@ if (existsSync(migrationsFolder)) {
   // авторы из денормализованных строк (M13)
   background('бэкфилл авторов', () =>
     import('@/services/authors').then((m) => m.backfillAuthors()),
+  )
+  // первый зарегистрированный — админ, иначе некому разбирать очередь (M21)
+  background('назначение первого админа', () =>
+    import('@/services/moderation').then((m) => m.ensureFirstAdmin()),
   )
   // переезд старого виш-листа в список «Хочу почитать» (M17)
   background('переезд виш-листа', () =>

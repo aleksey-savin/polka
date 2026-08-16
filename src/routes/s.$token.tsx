@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 
 import { Logo } from '@/components/layout/Logo'
+import { ReportButton } from '@/components/book/ReportButton'
 import { Button } from '@/components/ui/button'
 import {
   Drawer,
@@ -204,6 +205,13 @@ function CatalogSharePage() {
             </div>
           </section>
         ))}
+        <div className="mt-8 flex justify-end">
+          <ReportButton
+            kind="share"
+            targetId={view.shareId}
+            subject={view.title}
+          />
+        </div>
       </main>
 
       <AskDialog

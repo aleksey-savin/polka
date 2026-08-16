@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Logo } from '@/components/layout/Logo'
+import { ReportButton } from '@/components/book/ReportButton'
 import { Button } from '@/components/ui/button'
 import {
   Drawer,
@@ -206,6 +207,14 @@ export function GiftListView({
               ))}
           </div>
         ))}
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <ReportButton
+          kind="share"
+          targetId={view.shareId}
+          subject={view.title}
+        />
       </div>
 
       {view.gifts && (

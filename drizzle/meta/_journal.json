@@ -120,6 +120,13 @@
       "when": 1786865847185,
       "tag": "0016_equal_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1786869884606,
+      "tag": "0017_regular_azazel",
+      "breakpoints": true
     }
   ]
 }

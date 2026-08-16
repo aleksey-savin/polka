@@ -31,14 +31,20 @@ export async function createShare(
     shelfId = target.shelfId
   }
   await assertMember(userId, libraryId)
+  const { assertCanPublish, enqueue } = await import('./moderation')
+  await assertCanPublish(userId)
   const token = randomToken()
-  await db.insert(share).values({
-    createdBy: userId,
-    token,
-    scope: target.scope,
-    libraryId: target.scope === 'library' ? libraryId : null,
-    shelfId,
-  })
+  const [created] = await db
+    .insert(share)
+    .values({
+      createdBy: userId,
+      token,
+      scope: target.scope,
+      libraryId: target.scope === 'library' ? libraryId : null,
+      shelfId,
+    })
+    .returning({ id: share.id })
+  if (created) await enqueue('share', created.id, userId)
   return { token }
 }
 

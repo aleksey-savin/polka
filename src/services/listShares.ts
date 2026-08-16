@@ -70,13 +70,14 @@ export async function createListShare(
     .limit(1)
   if (existing) return { token: existing.token }
 
+  const { assertCanPublish, enqueue } = await import('./moderation')
+  await assertCanPublish(userId)
   const token = randomToken()
-  await db.insert(share).values({
-    createdBy: userId,
-    token,
-    scope: 'list',
-    listId,
-  })
+  const [created] = await db
+    .insert(share)
+    .values({ createdBy: userId, token, scope: 'list', listId })
+    .returning({ id: share.id })
+  if (created) await enqueue('share', created.id, userId)
   return { token }
 }
 

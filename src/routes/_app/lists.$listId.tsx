@@ -91,6 +91,16 @@ function ListPage() {
         </p>
       )}
 
+      {list.removedReason && (
+        <div className="mt-3 rounded-2xl border border-destructive/40 bg-destructive/5 px-3.5 py-3">
+          <b className="block text-[14.5px]">Список снят с публикации</b>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Причина: {list.removedReason}. Ссылка не работает, книги остались у
+            вас — поправьте и включите ссылку заново.
+          </p>
+        </div>
+      )}
+
       <div className="mt-3.5 flex flex-wrap gap-2">
         <Button loading={busy} onClick={() => void share()}>
           <Link2 aria-hidden /> {list.shareToken ? 'Ссылка' : 'Поделиться'}

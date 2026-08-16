@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppAddRouteImport } from './routes/_app/add'
 import { Route as AppFriendsRouteImport } from './routes/_app/friends'
 import { Route as AppLoansRouteImport } from './routes/_app/loans'
+import { Route as AppModerationRouteImport } from './routes/_app/moderation'
 import { Route as AppReadingRouteImport } from './routes/_app/reading'
 import { Route as AppRequestsRouteImport } from './routes/_app/requests'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
@@ -32,6 +33,8 @@ import { Route as AppEditionsRefBookIdRouteImport } from './routes/_app/editions
 import { Route as AppInviteTokenRouteImport } from './routes/_app/invite.$token'
 import { Route as AppLibrariesIndexRouteImport } from './routes/_app/libraries.index'
 import { Route as AppListsListIdRouteImport } from './routes/_app/lists.$listId'
+import { Route as AppModerationLogRouteImport } from './routes/_app/moderation_.log'
+import { Route as AppModerationUsersRouteImport } from './routes/_app/moderation_.users'
 import { Route as AppSeriesIndexRouteImport } from './routes/_app/series.index'
 import { Route as AppSeriesSeriesIdRouteImport } from './routes/_app/series.$seriesId'
 import { Route as AppShelvesShelfIdRouteImport } from './routes/_app/shelves.$shelfId'
@@ -70,6 +73,11 @@ const AppFriendsRoute = AppFriendsRouteImport.update({
 const AppLoansRoute = AppLoansRouteImport.update({
   id: '/loans',
   path: '/loans',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppModerationRoute = AppModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
   getParentRoute: () => AppRoute,
 } as any)
 const AppReadingRoute = AppReadingRouteImport.update({
@@ -157,6 +165,16 @@ const AppListsListIdRoute = AppListsListIdRouteImport.update({
   path: '/lists/$listId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppModerationLogRoute = AppModerationLogRouteImport.update({
+  id: '/moderation_/log',
+  path: '/moderation/log',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppModerationUsersRoute = AppModerationUsersRouteImport.update({
+  id: '/moderation_/users',
+  path: '/moderation/users',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSeriesIndexRoute = AppSeriesIndexRouteImport.update({
   id: '/series/',
   path: '/series/',
@@ -214,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/add': typeof AppAddRoute
   '/friends': typeof AppFriendsRoute
   '/loans': typeof AppLoansRoute
+  '/moderation': typeof AppModerationRoute
   '/reading': typeof AppReadingRoute
   '/requests': typeof AppRequestsRoute
   '/settings': typeof AppSettingsRoute
@@ -229,6 +248,8 @@ export interface FileRoutesByFullPath {
   '/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/invite/$token': typeof AppInviteTokenRoute
   '/lists/$listId': typeof AppListsListIdRoute
+  '/moderation/log': typeof AppModerationLogRoute
+  '/moderation/users': typeof AppModerationUsersRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/works/$workId': typeof AppWorksWorkIdRoute
@@ -248,6 +269,7 @@ export interface FileRoutesByTo {
   '/add': typeof AppAddRoute
   '/friends': typeof AppFriendsRoute
   '/loans': typeof AppLoansRoute
+  '/moderation': typeof AppModerationRoute
   '/reading': typeof AppReadingRoute
   '/requests': typeof AppRequestsRoute
   '/settings': typeof AppSettingsRoute
@@ -263,6 +285,8 @@ export interface FileRoutesByTo {
   '/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/invite/$token': typeof AppInviteTokenRoute
   '/lists/$listId': typeof AppListsListIdRoute
+  '/moderation/log': typeof AppModerationLogRoute
+  '/moderation/users': typeof AppModerationUsersRoute
   '/series/$seriesId': typeof AppSeriesSeriesIdRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/works/$workId': typeof AppWorksWorkIdRoute
@@ -284,6 +308,7 @@ export interface FileRoutesById {
   '/_app/add': typeof AppAddRoute
   '/_app/friends': typeof AppFriendsRoute
   '/_app/loans': typeof AppLoansRoute
+  '/_app/moderation': typeof AppModerationRoute
   '/_app/reading': typeof AppReadingRoute
   '/_app/requests': typeof AppRequestsRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -299,6 +324,8 @@ export interface FileRoutesById {
   '/_app/editions/$refBookId': typeof AppEditionsRefBookIdRoute
   '/_app/invite/$token': typeof AppInviteTokenRoute
   '/_app/lists/$listId': typeof AppListsListIdRoute
+  '/_app/moderation_/log': typeof AppModerationLogRoute
+  '/_app/moderation_/users': typeof AppModerationUsersRoute
   '/_app/series/$seriesId': typeof AppSeriesSeriesIdRoute
   '/_app/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/_app/works/$workId': typeof AppWorksWorkIdRoute
@@ -320,6 +347,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/friends'
     | '/loans'
+    | '/moderation'
     | '/reading'
     | '/requests'
     | '/settings'
@@ -335,6 +363,8 @@ export interface FileRouteTypes {
     | '/editions/$refBookId'
     | '/invite/$token'
     | '/lists/$listId'
+    | '/moderation/log'
+    | '/moderation/users'
     | '/series/$seriesId'
     | '/shelves/$shelfId'
     | '/works/$workId'
@@ -354,6 +384,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/friends'
     | '/loans'
+    | '/moderation'
     | '/reading'
     | '/requests'
     | '/settings'
@@ -369,6 +400,8 @@ export interface FileRouteTypes {
     | '/editions/$refBookId'
     | '/invite/$token'
     | '/lists/$listId'
+    | '/moderation/log'
+    | '/moderation/users'
     | '/series/$seriesId'
     | '/shelves/$shelfId'
     | '/works/$workId'
@@ -389,6 +422,7 @@ export interface FileRouteTypes {
     | '/_app/add'
     | '/_app/friends'
     | '/_app/loans'
+    | '/_app/moderation'
     | '/_app/reading'
     | '/_app/requests'
     | '/_app/settings'
@@ -404,6 +438,8 @@ export interface FileRouteTypes {
     | '/_app/editions/$refBookId'
     | '/_app/invite/$token'
     | '/_app/lists/$listId'
+    | '/_app/moderation_/log'
+    | '/_app/moderation_/users'
     | '/_app/series/$seriesId'
     | '/_app/shelves/$shelfId'
     | '/_app/works/$workId'
@@ -473,6 +509,13 @@ declare module '@tanstack/react-router' {
       path: '/loans'
       fullPath: '/loans'
       preLoaderRoute: typeof AppLoansRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/moderation': {
+      id: '/_app/moderation'
+      path: '/moderation'
+      fullPath: '/moderation'
+      preLoaderRoute: typeof AppModerationRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/reading': {
@@ -594,6 +637,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppListsListIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/moderation_/log': {
+      id: '/_app/moderation_/log'
+      path: '/moderation/log'
+      fullPath: '/moderation/log'
+      preLoaderRoute: typeof AppModerationLogRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/moderation_/users': {
+      id: '/_app/moderation_/users'
+      path: '/moderation/users'
+      fullPath: '/moderation/users'
+      preLoaderRoute: typeof AppModerationUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/series/': {
       id: '/_app/series/'
       path: '/series'
@@ -671,6 +728,7 @@ interface AppRouteChildren {
   AppAddRoute: typeof AppAddRoute
   AppFriendsRoute: typeof AppFriendsRoute
   AppLoansRoute: typeof AppLoansRoute
+  AppModerationRoute: typeof AppModerationRoute
   AppReadingRoute: typeof AppReadingRoute
   AppRequestsRoute: typeof AppRequestsRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -683,6 +741,8 @@ interface AppRouteChildren {
   AppEditionsRefBookIdRoute: typeof AppEditionsRefBookIdRoute
   AppInviteTokenRoute: typeof AppInviteTokenRoute
   AppListsListIdRoute: typeof AppListsListIdRoute
+  AppModerationLogRoute: typeof AppModerationLogRoute
+  AppModerationUsersRoute: typeof AppModerationUsersRoute
   AppSeriesSeriesIdRoute: typeof AppSeriesSeriesIdRoute
   AppShelvesShelfIdRoute: typeof AppShelvesShelfIdRoute
   AppWorksWorkIdRoute: typeof AppWorksWorkIdRoute
@@ -697,6 +757,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAddRoute: AppAddRoute,
   AppFriendsRoute: AppFriendsRoute,
   AppLoansRoute: AppLoansRoute,
+  AppModerationRoute: AppModerationRoute,
   AppReadingRoute: AppReadingRoute,
   AppRequestsRoute: AppRequestsRoute,
   AppSettingsRoute: AppSettingsRoute,
@@ -709,6 +770,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppEditionsRefBookIdRoute: AppEditionsRefBookIdRoute,
   AppInviteTokenRoute: AppInviteTokenRoute,
   AppListsListIdRoute: AppListsListIdRoute,
+  AppModerationLogRoute: AppModerationLogRoute,
+  AppModerationUsersRoute: AppModerationUsersRoute,
   AppSeriesSeriesIdRoute: AppSeriesSeriesIdRoute,
   AppShelvesShelfIdRoute: AppShelvesShelfIdRoute,
   AppWorksWorkIdRoute: AppWorksWorkIdRoute,

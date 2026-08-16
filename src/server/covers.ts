@@ -26,6 +26,9 @@ export const uploadCoverFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }) => {
     await requireBookAccess(context.user.id, data.bookId)
     const saved = await saveCover(data.bookId, await data.file.arrayBuffer())
+    // файл лежит на нашем сервере и может уехать на витрину — в очередь (M21)
+    const { enqueue } = await import('@/services/moderation')
+    await enqueue('book_cover', data.bookId, context.user.id)
     await db
       .update(book)
       .set({

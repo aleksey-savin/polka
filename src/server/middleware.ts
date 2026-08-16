@@ -40,5 +40,16 @@ export const authMiddleware = createMiddleware({ type: 'function' })
   .server(async ({ next }) => {
     const session = await auth.api.getSession({ headers: getRequestHeaders() })
     if (!session) throw new AppError('Нужно войти', 'forbidden')
-    return next({ context: { user: session.user } })
+    // заблокированный аккаунт живёт, но ничего не может (M21)
+    const { accountOf } = await import('@/services/moderation')
+    const account = await accountOf(session.user.id)
+    if (account.blocked) {
+      throw new AppError(
+        account.blockedReason
+          ? `Аккаунт заблокирован: ${account.blockedReason}`
+          : 'Аккаунт заблокирован',
+        'forbidden',
+      )
+    }
+    return next({ context: { user: session.user, account } })
   })

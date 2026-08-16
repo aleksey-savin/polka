@@ -131,6 +131,8 @@ export interface ListView {
   description: string | null
   items: Array<ListItemView>
   shareToken: string | null
+  /** Ссылку снял модератор — показываем владельцу причину (M21). */
+  removedReason: string | null
 }
 
 /** Состав списка с резолвом «есть ли эта книга у меня». */
@@ -151,6 +153,18 @@ export async function getList(
       ),
     )
     .limit(1)
+  // если ссылку снял модератор — владелец должен знать почему
+  const [anyShare] = await db
+    .select({ id: share.id })
+    .from(share)
+    .where(and(eq(share.scope, 'list'), eq(share.listId, listId)))
+    .limit(1)
+  let removedReason: string | null = null
+  if (anyShare) {
+    const { removalsFor } = await import('./moderation')
+    removedReason = (await removalsFor('share', [anyShare.id])).get(anyShare.id) ?? null
+  }
+
   return {
     id: row.id,
     kind: row.kind,
@@ -158,6 +172,7 @@ export async function getList(
     description: row.description,
     items,
     shareToken: openShare?.token ?? null,
+    removedReason,
   }
 }
 

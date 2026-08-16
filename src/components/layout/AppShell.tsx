@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   Settings,
+  ShieldCheck,
   Users,
 } from 'lucide-react'
 
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { ActionMenu } from '@/components/ui/action-menu'
 import { authClient } from '@/lib/auth-client'
 import { countPendingRequestsFn } from '@/server/shares'
+import { myAccountFn, pendingModerationFn } from '@/server/moderation'
 
 const sections = [
   { to: '/reading', label: 'Чтение' },
@@ -36,10 +38,21 @@ export function AppShell({
   const router = useRouter()
   const navigating = useRouterState({ select: (s) => s.isLoading })
   const [pendingRequests, setPendingRequests] = useState(0)
+  const [account, setAccount] = useState<{ role: string } | null>(null)
+  const [pendingModeration, setPendingModeration] = useState(0)
 
   useEffect(() => {
     void countPendingRequestsFn()
       .then(setPendingRequests)
+      .catch(() => {})
+    // роль решает, показывать ли модерацию в меню (M21)
+    void myAccountFn()
+      .then((acc) => {
+        setAccount(acc)
+        if (acc.role !== 'user') {
+          void pendingModerationFn().then(setPendingModeration).catch(() => {})
+        }
+      })
       .catch(() => {})
   }, [])
 
@@ -88,6 +101,32 @@ export function AppShell({
               </Button>
             }
             entries={[
+              ...(account && account.role !== 'user'
+                ? ([
+                    {
+                      key: 'moderation',
+                      label: 'Модерация',
+                      sub: pendingModeration > 0 ? `${pendingModeration} в очереди` : undefined,
+                      icon: <ShieldCheck />,
+                      onSelect: () =>
+                        void router.navigate({
+                          to: '/moderation',
+                          search: {},
+                        }),
+                    },
+                  ] as const)
+                : []),
+              ...(account?.role === 'admin'
+                ? ([
+                    {
+                      key: 'users',
+                      label: 'Пользователи',
+                      icon: <Users />,
+                      onSelect: () =>
+                        void router.navigate({ to: '/moderation/users' }),
+                    },
+                  ] as const)
+                : []),
               {
                 key: 'settings',
                 label: 'Настройки',

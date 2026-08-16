@@ -227,6 +227,7 @@ export async function adoptExternalWork(
   authors: string,
   year: number | null,
   workType: string | null,
+  addedBy?: string,
 ): Promise<string> {
   const workId = await ensureRefWork(
     'fantlab',
@@ -240,5 +241,8 @@ export async function adoptExternalWork(
     const authorId = await ensureAuthor(first)
     await linkWorkAuthor(workId, authorId)
   }
+  // запись в общем каталоге, заведённая по выбору человека (M21)
+  const { enqueue } = await import('./moderation')
+  await enqueue('ref_work', workId, addedBy ?? null)
   return workId
 }
