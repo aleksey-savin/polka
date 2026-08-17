@@ -44,12 +44,7 @@ function AppSettingsPage() {
           to="/service/queue"
           badge={data.pending || undefined}
           state={
-            data.pending > 0
-              ? {
-                  tone: 'bad',
-                  text: `${data.pending} ${plural(data.pending, 'жалоба ждёт', 'жалобы ждут', 'жалоб ждут')}`,
-                }
-              : { tone: 'ok', text: 'жалоб нет' }
+            data.pending > 0 ? undefined : { tone: 'ok', text: 'жалоб нет' }
           }
         />
         {data.isAdmin && (
@@ -60,10 +55,7 @@ function AppSettingsPage() {
             badge={data.aiPending || undefined}
             state={
               data.aiPending > 0
-                ? {
-                    tone: 'bad',
-                    text: `${data.aiPending} ${plural(data.aiPending, 'запись ждёт', 'записи ждут', 'записей ждут')}`,
-                  }
+                ? undefined
                 : { tone: 'ok', text: 'всё разобрано' }
             }
           />
