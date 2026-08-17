@@ -80,7 +80,7 @@ function UnrecognizedPage() {
   }
 
   async function save(bookId: string) {
-    setBusyId(bookId)
+    setBusyId(`save:${bookId}`)
     try {
       await applyRecognitionFn({
         data: { bookId, coverUrl: chosenCover[bookId] ?? undefined },
@@ -96,7 +96,7 @@ function UnrecognizedPage() {
 
   /** «Искать дальше»: отвергнуть вариант и продолжить цепочку. */
   async function next(bookId: string) {
-    setBusyId(bookId)
+    setBusyId(`next:${bookId}`)
     try {
       const { result } = await nextVariantFn({ data: { bookId } })
       setFound((f) => ({ ...f, [bookId]: result }))
@@ -122,25 +122,19 @@ function UnrecognizedPage() {
     <div className="mx-auto max-w-[640px] pb-6">
       <p className="mb-4 truncate text-[13px] text-muted-foreground">
         <Link to="/add" className="hover:text-foreground">
-          Добавить
-        </Link>{' '}
-        / Не распознано
+          Сканер
+        </Link>
+        {' / '}
+        Не распознано
       </p>
 
-      <div className="flex flex-wrap items-baseline gap-3">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-[25px] leading-tight font-semibold">
           Не распознано
         </h1>
         {rows.length > 0 && (
-          <span className="font-mono text-[11.5px] text-muted-foreground">
-            {rows.length}{' '}
-            {plural(rows.length, 'книга ждёт', 'книги ждут', 'книг ждут')}{' '}
-            названия
-          </span>
-        )}
-        {rows.length > 0 && (
           <Button
-            className="ml-auto"
+            className="flex-none"
             loading={batch !== null && batch.done < batch.total}
             onClick={() => void findAll()}
           >
@@ -148,6 +142,13 @@ function UnrecognizedPage() {
           </Button>
         )}
       </div>
+      {rows.length > 0 && (
+        <p className="mt-1 font-mono text-[11.5px] text-muted-foreground">
+          {rows.length}{' '}
+          {plural(rows.length, 'книга ждёт', 'книги ждут', 'книг ждут')}{' '}
+          названия
+        </p>
+      )}
 
       {batch && (
         <div className="mt-3 rounded-2xl border bg-card px-3.5 py-3">
@@ -356,16 +357,14 @@ function UnrecognizedPage() {
                               ? 'default'
                               : 'outline'
                           }
-                          loading={busyId === row.id}
+                          loading={busyId === `save:${row.id}`}
                           onClick={() => void save(row.id)}
                         >
-                          {result.verdict === 'confirmed'
-                            ? 'Сохранить'
-                            : 'Сохранить с пометкой'}
+                          Сохранить
                         </Button>
                         <Button
                           variant="outline"
-                          loading={busyId === row.id}
+                          loading={busyId === `next:${row.id}`}
                           onClick={() => void next(row.id)}
                         >
                           Искать дальше
