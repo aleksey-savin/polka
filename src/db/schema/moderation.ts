@@ -250,3 +250,14 @@ export const aiSuggestion = sqliteTable(
     index('ai_suggestion_status_idx').on(t.status),
   ],
 )
+
+/** Ключи внешних источников (M25.1): Google Books и прочее — шифрованно. */
+export const sourceSetting = sqliteTable('source_setting', {
+  id: text('id').primaryKey().default('default'),
+  googleKeyEnc: text('google_key_enc'),
+  lastCheck: text('last_check'),
+  lastCheckAt: integer('last_check_at', { mode: 'timestamp' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+})

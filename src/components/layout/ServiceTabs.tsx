@@ -14,11 +14,13 @@ export function ServiceTabs({
     { to: '/service/users', label: 'Пользователи', admin: true },
     { to: '/service/mail', label: 'Почта', admin: true },
     { to: '/service/ai', label: 'ИИ', admin: true },
+    { to: '/service/sources', label: 'Источники', admin: true },
     { to: '/service/log', label: 'Журнал', admin: false },
   ] as const
 
   return (
-    <div className="mb-4 flex gap-1 rounded-full border bg-card p-1">
+    // вкладок шесть — на телефоне ряд прокручивается, а не сжимается в кашу
+    <div className="mb-4 flex gap-1 overflow-x-auto rounded-full border bg-card p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {tabs
         .filter((tab) => isAdmin || !tab.admin)
         .map((tab) => {

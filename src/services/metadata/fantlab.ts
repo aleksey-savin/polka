@@ -135,6 +135,8 @@ export function parseFantlabWork(json: unknown): Partial<MetadataDraft> {
 export async function fetchFantlab(
   isbn13: string,
 ): Promise<SourceResult | null> {
+  // тесты герметичны: наружу не ходим
+  if (process.env.NODE_ENV === 'test') return null
   try {
     const searchRes = await fetch(`${BASE}/search-editions?q=${isbn13}`, {
       signal: AbortSignal.timeout(TIMEOUT),

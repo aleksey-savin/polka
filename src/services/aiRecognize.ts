@@ -40,6 +40,13 @@ export interface Guess {
   seriesName: string | null
 }
 
+/** Что ответил каждый источник — чтобы «не нашлось» не выглядело загадкой. */
+export interface SourceReport {
+  name: string
+  outcome: 'нашёл' | 'молчит' | 'ошибка'
+  detail: string | null
+}
+
 export interface RecognizeResult {
   bookId: string
   isbn13: string
@@ -63,6 +70,9 @@ export interface RecognizeResult {
   } | null
   /** Ответ пришёл из кэша — запрос к модели не тратился. */
   cached: boolean
+  /** Спрашивали ли модель вообще: источники могли справиться сами. */
+  askedModel: boolean
+  sources: Array<SourceReport>
 }
 
 const SYSTEM = [
@@ -231,6 +241,69 @@ export async function recognizeBook(
       workId: hit.workId,
       confirmed: hit.refBookId ? await confirmedFields(hit.refBookId) : null,
       cached: true,
+      askedModel: false,
+      sources: [],
+    }
+  }
+
+  // Источники — первыми: модель дорогая и ISBN не знает, а Google/FantLab
+  // порой отвечают со второй попытки (квота, таймаут при добавлении).
+  const { lookupIsbn } = await import('./metadata/lookup')
+  const direct = await lookupIsbn(userId, isbn13)
+  const sources: Array<SourceReport> = [
+    {
+      name: 'FantLab',
+      outcome: direct.sources.includes('fantlab') ? 'нашёл' : 'молчит',
+      detail: null,
+    },
+    {
+      name: 'Google Books',
+      outcome: direct.sources.includes('google') ? 'нашёл' : 'молчит',
+      detail: direct.sources.includes('google')
+        ? null
+        : 'без своего ключа общая квота Google часто исчерпана',
+    },
+    {
+      name: 'OpenLibrary',
+      outcome: direct.sources.includes('openlibrary') ? 'нашёл' : 'молчит',
+      detail: null,
+    },
+  ]
+  if (direct.draft.title?.trim()) {
+    // источники справились сами — модель не тревожим
+    const refBookId = await bestRefBookIdForIsbn(isbn13)
+    log.info('ai', 'разбор: хватило источников', {
+      isbn: isbn13,
+      sources: direct.sources.join(','),
+    })
+    return {
+      bookId,
+      isbn13,
+      verdict: 'confirmed',
+      guess: {
+        known: true,
+        title: direct.draft.title,
+        authors: direct.draft.authors ?? null,
+        publisher: direct.draft.publisher ?? null,
+        year: direct.draft.year ?? null,
+        seriesName: direct.draft.seriesName ?? null,
+      },
+      fromPrefix,
+      refBookId,
+      workId: null,
+      confirmed: {
+        title: direct.draft.title,
+        authors: direct.draft.authors ?? '',
+        publisher: direct.draft.publisher ?? null,
+        year: direct.draft.year ?? null,
+        pages: direct.draft.pages ?? null,
+        seriesName: direct.draft.seriesName ?? null,
+        coverUrl: direct.draft.coverUrl ?? null,
+        annotation: direct.draft.annotation ?? null,
+      },
+      cached: false,
+      askedModel: false,
+      sources,
     }
   }
 
@@ -281,6 +354,8 @@ export async function recognizeBook(
       ? await confirmedFields(checked.refBookId)
       : null,
     cached: false,
+    askedModel: true,
+    sources,
   }
 }
 
@@ -312,7 +387,14 @@ export async function applyRecognition(
   if (!row.isbn13) throw new AppError('У книги нет ISBN', 'invalid')
 
   const hit = await cached(row.isbn13)
-  if (!hit) throw new AppError('Сначала разберите книгу', 'invalid')
+  if (!hit) {
+    // Источники справились сами — это обычное дозаполнение, а не работа ИИ:
+    // пометку «заполнил ИИ» и очередь модератора здесь ставить не за что.
+    const { retryLookup } = await import('./unrecognized')
+    const result = await retryLookup(userId, [bookId])
+    if (result.resolved > 0) return { verdict: 'confirmed' }
+    throw new AppError('Сначала разберите книгу', 'invalid')
+  }
   if (hit.verdict === 'unknown') {
     throw new AppError(
       'Модель не знает этого номера — заполните вручную',

@@ -293,47 +293,113 @@ export async function checkAi(
 }
 
 /**
- * Список моделей. У Яндекса публичного каталога моделей нет, поэтому даём
- * известные варианты; для OpenAI-совместимых спрашиваем /models. Поле в любом
- * случае остаётся вводимым руками — состав моделей меняется чаще выкаток.
+ * Список моделей — спрашиваем у самого провайдера.
+ *
+ * У Yandex AI Studio есть OpenAI-совместимый слой, поэтому пробуем несколько
+ * известных адресов подряд: какой ответит — тот и берём. Что именно ответили,
+ * показываем дословно: гадать про права сервисного аккаунта бессмысленно.
  */
 export async function listModels(): Promise<{
   models: Array<string>
   note: string | null
 }> {
   const found = await row()
-  if (found?.provider === 'openai' && found.endpoint && found.apiKeyEnc) {
-    const key = await open(found.apiKeyEnc)
+  const key = found?.apiKeyEnc ? await open(found.apiKeyEnc) : null
+  if (!key) {
+    return { models: [], note: 'Сначала сохраните ключ' }
+  }
+
+  const isYandex = (found?.provider ?? 'yandex') === 'yandex'
+  const folder = found?.folderId ?? ''
+  const candidates = isYandex
+    ? [
+        {
+          url: `https://llm.api.cloud.yandex.net/v1/models${folder ? `?folderId=${folder}` : ''}`,
+          auth: `Api-Key ${key}`,
+        },
+        {
+          url: `https://llm.api.cloud.yandex.net/foundationModels/v1/models${folder ? `?folderId=${folder}` : ''}`,
+          auth: `Api-Key ${key}`,
+        },
+      ]
+    : [
+        {
+          url: `${found?.endpoint ?? ''}/models`,
+          auth: `Bearer ${key}`,
+        },
+      ]
+
+  const failures: Array<string> = []
+  for (const candidate of candidates) {
     try {
-      const res = await fetch(`${found.endpoint}/models`, {
-        headers: { authorization: `Bearer ${key ?? ''}` },
+      const res = await fetch(candidate.url, {
+        headers: {
+          authorization: candidate.auth,
+          ...(isYandex && folder ? { 'x-folder-id': folder } : {}),
+        },
         signal: AbortSignal.timeout(10_000),
       })
-      if (res.ok) {
-        const data = (await res.json()) as {
-          data?: Array<{ id?: string }>
-        }
-        const models = (data.data ?? [])
-          .map((m) => m.id)
-          .filter((id): id is string => Boolean(id))
-          .sort()
-        if (models.length > 0) return { models, note: null }
+      const raw = await res.text()
+      if (!res.ok) {
+        failures.push(`${res.status}: ${raw.slice(0, 160)}`)
+        continue
       }
-      return {
-        models: [],
-        note: `Список не пришёл (${res.status}) — впишите модель руками`,
+      const models = parseModelList(raw, folder)
+      if (models.length > 0) {
+        log.info('ai', 'список моделей получен', {
+          url: candidate.url.split('?')[0],
+          count: models.length,
+        })
+        return { models, note: null }
       }
+      failures.push(`пустой список: ${raw.slice(0, 160)}`)
     } catch (error) {
-      return {
-        models: [],
-        note: `Список не пришёл (${error instanceof Error ? error.message : 'ошибка'}) — впишите модель руками`,
-      }
+      failures.push(error instanceof Error ? error.message : String(error))
     }
   }
+
+  log.warn('ai', 'список моделей не пришёл', { failures })
   return {
-    models: YANDEX_FALLBACK,
-    note: 'Каталог моделей Яндекс не отдаёт — список известных; можно вписать свою',
+    models: isYandex ? YANDEX_FALLBACK : [],
+    note: `Провайдер не отдал список (${failures.join(' · ')}). Ниже — известные модели, можно вписать свою.`,
   }
+}
+
+/** Форма ответа у провайдеров разная: data[].id, models[].uri, models[].name. */
+export function parseModelList(raw: string, folder = ''): Array<string> {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return []
+  }
+  if (typeof parsed !== 'object' || parsed === null) return []
+  const o = parsed as Record<string, unknown>
+  const rows = [o.data, o.models, o.modelSpecs, o.foundationModels].find(
+    (v): v is Array<unknown> => Array.isArray(v),
+  )
+  if (!rows) return []
+
+  const names = rows
+    .map((item) => {
+      if (typeof item === 'string') return item
+      if (typeof item !== 'object' || item === null) return null
+      const r = item as Record<string, unknown>
+      const value = [r.id, r.uri, r.modelUri, r.name].find(
+        (v): v is string => typeof v === 'string' && v.length > 0,
+      )
+      return value ?? null
+    })
+    .filter((v): v is string => v !== null)
+    // gpt://<каталог>/<модель> сокращаем до имени: каталог уже задан отдельно
+    .map((v) => {
+      const short = v.replace(/^gpt:\/\//, '')
+      return folder && short.startsWith(`${folder}/`)
+        ? short.slice(folder.length + 1)
+        : short
+    })
+
+  return [...new Set(names)].sort()
 }
 
 /** Доступен ли ИИ прямо сейчас — от этого зависят кнопки в интерфейсе. */

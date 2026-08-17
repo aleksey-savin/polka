@@ -120,7 +120,7 @@ describe('ответ модели', () => {
 
 describe('разбор нераспознанного', () => {
   test('честное «не знаю» не заполняет карточку', async () => {
-    const id = await unrecognizedBook('9785999999999')
+    const id = await unrecognizedBook('9785999999993')
     answer = '{"known":false}'
     const result = await recognizeBook(ME, id)
     expect(result.verdict).toBe('unknown')
@@ -129,7 +129,7 @@ describe('разбор нераспознанного', () => {
   })
 
   test('неподтверждённое применяется с пометкой и откатывается', async () => {
-    const id = await unrecognizedBook('9785171111111')
+    const id = await unrecognizedBook('9785171111113')
     answer =
       '{"known":true,"title":"Небывалая книга","authors":"Иван Иванов","year":2020}'
     const result = await recognizeBook(ME, id)
@@ -143,7 +143,7 @@ describe('разбор нераспознанного', () => {
 
     await revertRecognition(ME, id)
     const [back] = await db.select().from(book).where(eq(book.id, id))
-    expect(back?.title).toBe('9785171111111')
+    expect(back?.title).toBe('9785171111113')
     expect(back?.unrecognized).toBe(true)
   })
 
@@ -174,9 +174,31 @@ describe('разбор нераспознанного', () => {
     expect(saved?.pages).toBe(608)
   })
 
+  test('источники сильнее модели: их находка не помечается как работа ИИ', async () => {
+    const isbn = '9785171636951' // это издание лежит в эталоне (тест выше)
+    const before = calls
+    const id = await unrecognizedBook(isbn)
+    await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn))
+
+    const result = await recognizeBook(ME, id)
+    expect(result.askedModel).toBe(false)
+    expect(result.verdict).toBe('confirmed')
+    expect(calls).toBe(before) // запрос к модели не потрачен
+
+    await applyRecognition(ME, id)
+    const [saved] = await db.select().from(book).where(eq(book.id, id))
+    expect(saved?.unrecognized).toBe(false)
+    // пометки «заполнил ИИ» быть не должно: данные пришли из каталога
+    const marks = await db
+      .select()
+      .from(aiSuggestion)
+      .where(eq(aiSuggestion.bookId, id))
+    expect(marks.length).toBe(0)
+  })
+
   test('повторный разбор того же номера модель не тревожит', async () => {
     const before = calls
-    const id = await unrecognizedBook('9785171111111')
+    const id = await unrecognizedBook('9785171111113')
     const result = await recognizeBook(ME, id)
     expect(result.cached).toBe(true)
     expect(calls).toBe(before)
@@ -193,14 +215,14 @@ describe('права', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-    const id = await unrecognizedBook('9785044444444')
+    const id = await unrecognizedBook('9785044444447')
     await expect(recognizeBook('stranger', id)).rejects.toThrow(/доступа/i)
   })
 })
 
 describe('модерация и эталон', () => {
   test('утверждение заводит запись эталона, отклонение — откатывает', async () => {
-    const isbn = '9785042222222'
+    const isbn = '9785042222221'
     const id = await unrecognizedBook(isbn)
     answer =
       '{"known":true,"title":"Проверяемая книга","authors":"Пётр Петров","year":2019}'
@@ -224,7 +246,7 @@ describe('модерация и эталон', () => {
   })
 
   test('отклонение требует причины и возвращает книгу в нераспознанные', async () => {
-    const isbn = '9785043333333'
+    const isbn = '9785043333339'
     const id = await unrecognizedBook(isbn)
     answer = '{"known":true,"title":"Выдумка","authors":"Никто","year":2021}'
     await recognizeBook(ME, id)

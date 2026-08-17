@@ -1,8 +1,16 @@
 /**
- * Google Books. Без ключа общая анонимная квота часто исчерпана (проверено),
- * поэтому GOOGLE_BOOKS_API_KEY в проде фактически обязателен.
+ * Google Books. Без ключа общая анонимная квота исчерпана (проверено: 429),
+ * поэтому ключ в проде обязателен — задаётся в «Сервис → Источники» или через
+ * GOOGLE_BOOKS_API_KEY.
+ *
+ * Ключи в консоли Google по умолчанию ограничены по HTTP-referrer, а серверный
+ * запрос реферер не посылает — отсюда 403 «Requests from referer <empty> are
+ * blocked». Поэтому подставляем реферер приложения: ключ выдан для этого же
+ * домена, и с ним ограничение выполняется.
  */
 import { env } from '@/lib/env'
+import { log } from '@/lib/logger'
+import { googleBooksKey } from '@/services/sources'
 import { yearFrom } from './types'
 import type { MetadataDraft, SourceResult } from './types'
 
@@ -43,18 +51,36 @@ export function parseGoogleBooks(json: unknown): MetadataDraft | null {
 export async function fetchGoogleBooks(
   isbn13: string,
 ): Promise<SourceResult | null> {
+  // тесты герметичны: наружу не ходим
+  if (process.env.NODE_ENV === 'test') return null
   try {
-    const key = env.GOOGLE_BOOKS_API_KEY
-      ? `&key=${env.GOOGLE_BOOKS_API_KEY}`
-      : ''
+    const stored = await googleBooksKey()
+    const key = stored ? `&key=${stored}` : ''
     const res = await fetch(
       `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn13}&country=RU${key}`,
-      { signal: AbortSignal.timeout(TIMEOUT) },
+      {
+        headers: { referer: `${env.APP_URL}/` },
+        signal: AbortSignal.timeout(TIMEOUT),
+      },
     )
-    if (!res.ok) return null
+    if (!res.ok) {
+      // 403 — ключ ограничен и реферер не подошёл, 429 — квота: и то и другое
+      // выглядит для человека как «книга не нашлась», поэтому пишем в журнал
+      log.warn('lookup', 'google books отказал', {
+        isbn: isbn13,
+        status: res.status,
+        keyed: Boolean(stored),
+        body: (await res.text()).slice(0, 200),
+      })
+      return null
+    }
     const draft = parseGoogleBooks(await res.json())
     return draft ? { source: 'google', draft } : null
-  } catch {
+  } catch (error) {
+    log.warn('lookup', 'google books не ответил', {
+      isbn: isbn13,
+      error: error instanceof Error ? error : new Error(String(error)),
+    })
     return null
   }
 }

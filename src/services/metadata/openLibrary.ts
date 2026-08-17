@@ -38,6 +38,8 @@ export function parseOpenLibraryBook(json: unknown): {
 export async function fetchOpenLibrary(
   isbn13: string,
 ): Promise<SourceResult | null> {
+  // тесты герметичны: наружу не ходим
+  if (process.env.NODE_ENV === 'test') return null
   try {
     const res = await fetch(`https://openlibrary.org/isbn/${isbn13}.json`, {
       headers: HEADERS,

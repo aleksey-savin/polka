@@ -42,6 +42,7 @@ import { Route as AppServiceAiRouteImport } from './routes/_app/service_.ai'
 import { Route as AppServiceAiReviewRouteImport } from './routes/_app/service_.ai-review'
 import { Route as AppServiceLogRouteImport } from './routes/_app/service_.log'
 import { Route as AppServiceMailRouteImport } from './routes/_app/service_.mail'
+import { Route as AppServiceSourcesRouteImport } from './routes/_app/service_.sources'
 import { Route as AppServiceUsersRouteImport } from './routes/_app/service_.users'
 import { Route as AppShelvesShelfIdRouteImport } from './routes/_app/shelves.$shelfId'
 import { Route as AppWorksWorkIdRouteImport } from './routes/_app/works.$workId'
@@ -216,6 +217,11 @@ const AppServiceMailRoute = AppServiceMailRouteImport.update({
   path: '/service/mail',
   getParentRoute: () => AppRoute,
 } as any)
+const AppServiceSourcesRoute = AppServiceSourcesRouteImport.update({
+  id: '/service_/sources',
+  path: '/service/sources',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppServiceUsersRoute = AppServiceUsersRouteImport.update({
   id: '/service_/users',
   path: '/service/users',
@@ -292,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/service/ai-review': typeof AppServiceAiReviewRoute
   '/service/log': typeof AppServiceLogRoute
   '/service/mail': typeof AppServiceMailRoute
+  '/service/sources': typeof AppServiceSourcesRoute
   '/service/users': typeof AppServiceUsersRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/works/$workId': typeof AppWorksWorkIdRoute
@@ -335,6 +342,7 @@ export interface FileRoutesByTo {
   '/service/ai-review': typeof AppServiceAiReviewRoute
   '/service/log': typeof AppServiceLogRoute
   '/service/mail': typeof AppServiceMailRoute
+  '/service/sources': typeof AppServiceSourcesRoute
   '/service/users': typeof AppServiceUsersRoute
   '/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/works/$workId': typeof AppWorksWorkIdRoute
@@ -380,6 +388,7 @@ export interface FileRoutesById {
   '/_app/service_/ai-review': typeof AppServiceAiReviewRoute
   '/_app/service_/log': typeof AppServiceLogRoute
   '/_app/service_/mail': typeof AppServiceMailRoute
+  '/_app/service_/sources': typeof AppServiceSourcesRoute
   '/_app/service_/users': typeof AppServiceUsersRoute
   '/_app/shelves/$shelfId': typeof AppShelvesShelfIdRoute
   '/_app/works/$workId': typeof AppWorksWorkIdRoute
@@ -425,6 +434,7 @@ export interface FileRouteTypes {
     | '/service/ai-review'
     | '/service/log'
     | '/service/mail'
+    | '/service/sources'
     | '/service/users'
     | '/shelves/$shelfId'
     | '/works/$workId'
@@ -468,6 +478,7 @@ export interface FileRouteTypes {
     | '/service/ai-review'
     | '/service/log'
     | '/service/mail'
+    | '/service/sources'
     | '/service/users'
     | '/shelves/$shelfId'
     | '/works/$workId'
@@ -512,6 +523,7 @@ export interface FileRouteTypes {
     | '/_app/service_/ai-review'
     | '/_app/service_/log'
     | '/_app/service_/mail'
+    | '/_app/service_/sources'
     | '/_app/service_/users'
     | '/_app/shelves/$shelfId'
     | '/_app/works/$workId'
@@ -775,6 +787,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppServiceMailRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/service_/sources': {
+      id: '/_app/service_/sources'
+      path: '/service/sources'
+      fullPath: '/service/sources'
+      preLoaderRoute: typeof AppServiceSourcesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/service_/users': {
       id: '/_app/service_/users'
       path: '/service/users'
@@ -863,6 +882,7 @@ interface AppRouteChildren {
   AppServiceAiReviewRoute: typeof AppServiceAiReviewRoute
   AppServiceLogRoute: typeof AppServiceLogRoute
   AppServiceMailRoute: typeof AppServiceMailRoute
+  AppServiceSourcesRoute: typeof AppServiceSourcesRoute
   AppServiceUsersRoute: typeof AppServiceUsersRoute
   AppShelvesShelfIdRoute: typeof AppShelvesShelfIdRoute
   AppWorksWorkIdRoute: typeof AppWorksWorkIdRoute
@@ -895,6 +915,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppServiceAiReviewRoute: AppServiceAiReviewRoute,
   AppServiceLogRoute: AppServiceLogRoute,
   AppServiceMailRoute: AppServiceMailRoute,
+  AppServiceSourcesRoute: AppServiceSourcesRoute,
   AppServiceUsersRoute: AppServiceUsersRoute,
   AppShelvesShelfIdRoute: AppShelvesShelfIdRoute,
   AppWorksWorkIdRoute: AppWorksWorkIdRoute,

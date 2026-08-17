@@ -276,6 +276,30 @@ function UnrecognizedPage() {
                       </b>{' '}
                       {verdict.text}
                     </div>
+                    {result.sources.length > 0 && (
+                      <p className="mt-1.5 text-[11.5px] text-muted-foreground">
+                        {result.sources
+                          .map((src) => `${src.name}: ${src.outcome}`)
+                          .join(' · ')}
+                        {result.askedModel
+                          ? ' · спросили модель'
+                          : ' · хватило источников'}
+                      </p>
+                    )}
+                    {result.sources.some(
+                      (src) => src.name === 'Google Books' && src.detail,
+                    ) &&
+                      isAdmin && (
+                        <p className="mt-1 text-[11.5px]">
+                          <Link
+                            to="/service/sources"
+                            className="underline underline-offset-2"
+                          >
+                            Проверить источники
+                          </Link>{' '}
+                          — без ключа Google молчит на любой номер.
+                        </p>
+                      )}
                     <div className="mt-2 flex flex-wrap gap-2">
                       {result.verdict !== 'unknown' && (
                         <Button
