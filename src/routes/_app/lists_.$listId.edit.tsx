@@ -178,17 +178,25 @@ function EditListPage() {
       <Drawer open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DrawerContent>
           <DrawerHeader className="pt-1">
-            <DrawerTitle>Удалить «{list.title}»?</DrawerTitle>
+            <DrawerTitle>Удалить список?</DrawerTitle>
             <DrawerDescription>
-              Список исчезнет вместе с ссылкой на него. Книги останутся на
-              местах — из каталога ничего не удаляется.
+              «{list.title}» исчезнет вместе с ссылкой на него. Книги останутся
+              на местах — из каталога ничего не удаляется.
             </DrawerDescription>
           </DrawerHeader>
           <DrawerFooter>
-            <Button variant="destructive" onClick={() => void remove()}>
-              Удалить
+            <Button
+              variant="destructive"
+              className="h-12 w-full text-[15px]"
+              onClick={() => void remove()}
+            >
+              Удалить список
             </Button>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+            <Button
+              variant="outline"
+              className="h-12 w-full text-[15px]"
+              onClick={() => setDeleteOpen(false)}
+            >
               Отмена
             </Button>
           </DrawerFooter>

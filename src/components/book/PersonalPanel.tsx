@@ -86,7 +86,7 @@ export function PersonalPanel({
       <Card>
         <CardContent className="grid gap-4 pt-5">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-            <div className="grid gap-1">
+            <div className="grid w-full gap-1 sm:w-auto">
               <span className="text-[13px] font-semibold text-muted-foreground">
                 Моя оценка
               </span>
@@ -94,6 +94,10 @@ export function PersonalPanel({
                 value={mine?.rating ?? null}
                 onChange={(rating) => void quickSave({ bookId, rating })}
               />
+              <span className="flex justify-between px-1 text-[11.5px] text-muted-foreground">
+                <span>не пошло</span>
+                <span>отлично</span>
+              </span>
             </div>
             <div className="grid w-full gap-1 sm:w-auto">
               <span className="text-[13px] font-semibold text-muted-foreground">

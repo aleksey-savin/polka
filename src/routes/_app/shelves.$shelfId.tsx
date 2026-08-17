@@ -11,6 +11,7 @@ import { ActionMenu } from '@/components/ui/action-menu'
 import { Button } from '@/components/ui/button'
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
   DrawerFooter,
   DrawerHeader,
@@ -320,17 +321,27 @@ function DeleteShelfDialog({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>Удалить полку «{name}»?</DrawerTitle>
+          <DrawerTitle>Удалить полку?</DrawerTitle>
         </DrawerHeader>
         <p className="text-sm text-muted-foreground">
+          «{name}» —{' '}
           {count > 0
-            ? `Книги (${count}) не пропадут — они переедут в «Неразобранное» этой библиотеки.`
-            : 'Полка пустая.'}
+            ? `книги (${count}) не пропадут, они переедут в «Неразобранное» этой библиотеки.`
+            : 'полка пустая.'}
         </p>
         <DrawerFooter>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button
+            variant="destructive"
+            className="h-12 w-full text-[15px]"
+            onClick={onConfirm}
+          >
             Удалить полку
           </Button>
+          <DrawerClose asChild>
+            <Button variant="outline" className="h-12 w-full text-[15px]">
+              Отмена
+            </Button>
+          </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

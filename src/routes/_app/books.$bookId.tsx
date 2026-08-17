@@ -6,7 +6,6 @@ import {
   EyeOff,
   Gift,
   Heart,
-  House,
   Image as ImageIcon,
   ImageOff,
   Trash2,
@@ -29,6 +28,7 @@ import type { ActionMenuEntry } from '@/components/ui/action-menu'
 import { Button } from '@/components/ui/button'
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
   DrawerFooter,
   DrawerHeader,
@@ -304,8 +304,15 @@ function BookCardPage() {
         {book.title}
       </p>
 
-      {/* ── Книга-объект ── */}
-      <header className="flex items-end gap-[18px]">
+      {/* ── Книга-объект ──
+          Длинное название разъезжается на шесть строк и утаскивает обложку
+          вниз, поэтому кегль подбираем по длине, а выравнивание по низу
+          оставляем коротким: там книга красиво стоит рядом с текстом. */}
+      <header
+        className={`flex gap-[18px] ${
+          book.title.length > 40 ? 'items-start' : 'items-end'
+        }`}
+      >
         <div className="relative w-[106px] flex-none">
           <button
             type="button"
@@ -386,7 +393,15 @@ function BookCardPage() {
               )}
             </button>
           )}
-          <h1 className="text-[25px] leading-[1.16] font-semibold tracking-[-0.015em] md:text-[28px]">
+          <h1
+            className={`font-semibold tracking-[-0.015em] text-balance ${
+              book.title.length > 70
+                ? 'text-[18.5px] leading-[1.22] md:text-[21px]'
+                : book.title.length > 40
+                  ? 'text-[21px] leading-[1.18] md:text-[24px]'
+                  : 'text-[25px] leading-[1.16] md:text-[28px]'
+            }`}
+          >
             {book.title}
           </h1>
           {book.authorLinks.length > 0 ? (
@@ -467,33 +482,32 @@ function BookCardPage() {
           </Button>
         </div>
       ) : book.status === 'in_library' ? (
-        <div className="mt-6 flex items-center gap-3 rounded-xl border border-primary/25 bg-accent p-3">
-          <House aria-hidden className="size-6 flex-none text-primary" />
-          <div className="min-w-0 flex-1">
-            <p className="text-[14.5px]">Дома</p>
-            <p className="truncate text-[12.5px] text-muted-foreground">
-              {book.libraryName} ·{' '}
-              {book.shelfId ? (
-                <Link
-                  to="/shelves/$shelfId"
-                  params={{ shelfId: book.shelfId }}
-                  className="underline underline-offset-2 hover:text-foreground"
-                >
-                  {book.shelfName}
-                </Link>
-              ) : (
-                <Link
-                  to="/unsorted"
-                  search={{ lib: book.libraryId ?? undefined }}
-                  className="underline underline-offset-2 hover:text-foreground"
-                >
-                  Неразобранное
-                </Link>
-              )}
-            </p>
-          </div>
-          <Button onClick={() => setLendOpen(true)}>Дал почитать</Button>
-        </div>
+        // «книга дома» — норма, а не новость: акцентную плашку бережём для
+        // выданных и подаренных, здесь довольно строки
+        <p className="mt-5 flex items-center gap-2 text-[13px] text-muted-foreground">
+          <span
+            aria-hidden
+            className="size-[7px] flex-none rounded-full bg-primary"
+          />
+          Дома · {book.libraryName} ·{' '}
+          {book.shelfId ? (
+            <Link
+              to="/shelves/$shelfId"
+              params={{ shelfId: book.shelfId }}
+              className="truncate underline underline-offset-2 hover:text-foreground"
+            >
+              {book.shelfName}
+            </Link>
+          ) : (
+            <Link
+              to="/unsorted"
+              search={{ lib: book.libraryId ?? undefined }}
+              className="truncate underline underline-offset-2 hover:text-foreground"
+            >
+              Неразобранное
+            </Link>
+          )}
+        </p>
       ) : book.status === 'gifted' ? (
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-patina-old bg-patina-old/20 p-3">
           <Gift aria-hidden className="size-6 flex-none text-[#A5824A]" />
@@ -567,6 +581,9 @@ function BookCardPage() {
 
       {/* ── Действия ── */}
       <div className="mt-3 flex flex-wrap gap-2">
+        {book.status === 'in_library' && !activeLoan && (
+          <Button onClick={() => setLendOpen(true)}>Дал почитать</Button>
+        )}
         <Button asChild variant="outline">
           <Link to="/books/$bookId/edit" params={{ bookId: book.id }}>
             Редактировать
@@ -895,16 +912,25 @@ function DeleteBookDialog({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>Удалить «{title}»?</DrawerTitle>
+          <DrawerTitle>Удалить книгу?</DrawerTitle>
         </DrawerHeader>
         <p className="text-sm text-muted-foreground">
-          Карточка, тэги, история выдач и обложка будут удалены навсегда.
+          «{title}» — карточка, тэги, история выдач и обложка исчезнут навсегда.
           Отменить нельзя.
         </p>
         <DrawerFooter>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button
+            variant="destructive"
+            className="h-12 w-full text-[15px]"
+            onClick={onConfirm}
+          >
             Удалить книгу
           </Button>
+          <DrawerClose asChild>
+            <Button variant="outline" className="h-12 w-full text-[15px]">
+              Отмена
+            </Button>
+          </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
