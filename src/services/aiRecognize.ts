@@ -348,12 +348,13 @@ export async function recognizeIsbn(
   if (hit && hit.via && rejected.includes(hit.via)) hit = null
 
   if (hit) {
+    const cachedTitle = hit.title ? cleanFoundTitle(hit.title) : hit.title
     return {
       isbn13,
       verdict: hit.verdict,
       guess: {
         known: hit.verdict !== 'unknown',
-        title: hit.title,
+        title: cachedTitle,
         authors: hit.authors,
         publisher: hit.publisher,
         year: hit.year,
@@ -364,9 +365,9 @@ export async function recognizeIsbn(
       workId: hit.workId,
       confirmed: hit.refBookId
         ? await confirmedFields(hit.refBookId)
-        : hit.title
+        : cachedTitle
           ? {
-              title: hit.title,
+              title: cachedTitle,
               authors: hit.authors ?? '',
               publisher: hit.publisher,
               year: hit.year,
@@ -910,7 +911,7 @@ export async function applyRecognition(
         coverUrl: hit.coverUrl,
         annotation: hit.annotation,
       }
-  const title = (fields?.title ?? hit.title ?? '').trim()
+  const title = cleanFoundTitle(fields?.title ?? hit.title ?? '')
   if (!title) throw new AppError('Нечего применять: названия нет', 'invalid')
   const authors = (fields?.authors ?? hit.authors ?? '').trim()
   const seriesName = fields?.seriesName ?? hit.seriesName
