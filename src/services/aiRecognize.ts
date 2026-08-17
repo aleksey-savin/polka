@@ -23,7 +23,7 @@ import {
   fetchOpenGraph,
   genSearch,
   mentionsIsbn,
-  searchCoverImage,
+  searchCoverImages,
   searchWeb,
   spendSearch,
   webSettings,
@@ -84,6 +84,8 @@ export interface RecognizeResult {
   sources: Array<SourceReport>
   /** Человек отверг все пути — предлагать больше нечего. */
   exhausted: boolean
+  /** Кандидаты обложек для свайпа: первым — самый надёжный. */
+  coverOptions: Array<string>
   /** Каким путём получено: sources · web-extract · web-generative · model. */
   via: string
   /** Страница, на которой встретился номер. */
@@ -98,6 +100,19 @@ const SYSTEM = [
   'Если ты не знаешь книгу с этим номером — верни {"known": false}.',
   'Выдумывать название запрещено: неуверенность означает known: false.',
 ].join(' ')
+
+/** Магазинный мусор в названиях: точка в конце, «(тв. переплёт)», ISBN. */
+export function cleanFoundTitle(raw: string): string {
+  return raw
+    .replace(
+      /\s*\((?=[^)]*(?:переплёт|переплет|обложк|isbn|97[89][\d -]{10,}))[^)]*\)/gi,
+      '',
+    )
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/(?<!\.)\.$/, '')
+    .trim()
+}
 
 /** Достаём объект из ответа: модели любят обрамлять JSON текстом и ```. */
 export function parseGuess(text: string): Guess {
@@ -125,7 +140,8 @@ export function parseGuess(text: string): Guess {
     return s.length > 0 ? s : null
   }
   const year = Number(o.year)
-  const title = str(o.title)
+  const rawTitle = str(o.title)
+  const title = rawTitle ? cleanFoundTitle(rawTitle) || null : null
   return {
     known: o.known === true && title !== null,
     title,
@@ -252,29 +268,44 @@ async function enrichMissing(base: {
   proofUrl: string | null
 }): Promise<{
   coverUrl: string | null
+  coverOptions: Array<string>
   annotation: string | null
   pages: number | null
 }> {
-  let { coverUrl, annotation, pages } = base
-  if (coverUrl && annotation && pages) return { coverUrl, annotation, pages }
-
-  const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
-  const byTitle = await fetchGoogleByTitle(base.title, base.authors)
-  coverUrl = coverUrl ?? byTitle?.coverUrl ?? null
-  annotation = annotation ?? byTitle?.annotation ?? null
-  pages = pages ?? byTitle?.pages ?? null
-
-  if ((!coverUrl || !annotation) && base.proofUrl) {
+  let { annotation, pages } = base
+  const covers: Array<string> = []
+  const addCover = (url: string | null | undefined) => {
+    if (url && url.startsWith('http') && !covers.includes(url)) covers.push(url)
+  }
+  // порядок надёжности: страница с номером → каталоги → Google → Картинки
+  if (base.proofUrl) {
     const page = await fetchOpenGraph(base.proofUrl)
-    coverUrl = coverUrl ?? page.image ?? null
+    addCover(page.image)
     annotation = annotation ?? page.description ?? null
   }
-  if (!coverUrl) {
-    coverUrl = await searchCoverImage(
-      `${base.title} ${base.authors ?? ''} обложка книги`.trim(),
-    )
+  addCover(base.coverUrl)
+
+  if (!annotation || !pages || covers.length < 2) {
+    const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
+    const byTitle = await fetchGoogleByTitle(base.title, base.authors)
+    addCover(byTitle?.coverUrl)
+    annotation = annotation ?? byTitle?.annotation ?? null
+    pages = pages ?? byTitle?.pages ?? null
   }
-  return { coverUrl, annotation, pages }
+  if (covers.length < 4) {
+    for (const url of await searchCoverImages(
+      `${base.title} ${base.authors ?? ''} книга обложка`.trim(),
+      4 - covers.length,
+    )) {
+      addCover(url)
+    }
+  }
+  return {
+    coverUrl: covers[0] ?? null,
+    coverOptions: covers.slice(0, 5),
+    annotation,
+    pages,
+  }
 }
 
 /**
@@ -348,6 +379,7 @@ export async function recognizeIsbn(
       cached: true,
       askedModel: false,
       sources: [],
+      coverOptions: parseRejected(hit.coverOptions),
       exhausted: hit.verdict === 'unknown' && rejected.length > 0,
       via: hit.via ?? 'model',
       proof: hit.proofUrl
@@ -403,6 +435,7 @@ export async function recognizeIsbn(
         pages: extra.pages,
         annotation: extra.annotation,
         coverUrl: extra.coverUrl,
+        coverOptions: JSON.stringify(extra.coverOptions),
         refBookId,
         workId: null,
         via: 'sources',
@@ -439,6 +472,7 @@ export async function recognizeIsbn(
         cached: false,
         askedModel: false,
         sources,
+        coverOptions: extra.coverOptions,
         exhausted: false,
         via: 'sources',
         proof: null,
@@ -507,7 +541,12 @@ export async function recognizeIsbn(
           pages: null,
           proofUrl: null,
         })
-      : { coverUrl: null, annotation: null, pages: null }
+      : {
+          coverUrl: null,
+          coverOptions: [] as Array<string>,
+          annotation: null,
+          pages: null,
+        }
 
     await writeGuess({
       isbn13,
@@ -520,6 +559,7 @@ export async function recognizeIsbn(
       pages: extra.pages,
       annotation: extra.annotation,
       coverUrl: extra.coverUrl,
+      coverOptions: JSON.stringify(extra.coverOptions),
       refBookId: checked.refBookId,
       workId: checked.workId,
       model: settings.model,
@@ -556,6 +596,7 @@ export async function recognizeIsbn(
       cached: false,
       askedModel: true,
       sources,
+      coverOptions: extra.coverOptions,
       exhausted: !guess.title && rejected.length > 0,
       via: 'model',
       proof: null,
@@ -587,6 +628,7 @@ export async function recognizeIsbn(
     cached: false,
     askedModel: false,
     sources,
+    coverOptions: [],
     exhausted: true,
     via: 'model',
     proof: null,
@@ -750,27 +792,15 @@ async function webLookup(
   const via = mode === 'generative' ? 'web-generative' : 'web-extract'
   const settings = await getAiSettings()
 
-  // В сниппетах нет ни обложки, ни описания. По названию и автору их отдаёт
-  // Google Books; если и он молчит — берём открытые теги найденной страницы.
-  const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
-  const byTitle = await fetchGoogleByTitle(guess.title, guess.authors)
-  const page =
-    box.proof && !byTitle?.coverUrl
-      ? await fetchOpenGraph(box.proof.url)
-      : { image: null, description: null }
-  const extra = {
-    pages: byTitle?.pages ?? null,
-    annotation: byTitle?.annotation ?? page.description ?? null,
-    coverUrl: byTitle?.coverUrl ?? page.image ?? null,
-  }
-  if (extra.coverUrl || extra.annotation) {
-    log.info('web', 'добрали обложку и описание', {
-      isbn: isbn13,
-      from: byTitle ? 'google-by-title' : 'страница',
-      cover: Boolean(extra.coverUrl),
-      annotation: Boolean(extra.annotation),
-    })
-  }
+  // в сниппетах нет ни обложки, ни описания — добираем общим путём
+  const extra = await enrichMissing({
+    title: guess.title,
+    authors: guess.authors,
+    coverUrl: null,
+    annotation: null,
+    pages: null,
+    proofUrl: box.proof?.url ?? null,
+  })
 
   await writeGuess({
     isbn13,
@@ -784,6 +814,7 @@ async function webLookup(
     pages: extra.pages,
     annotation: extra.annotation,
     coverUrl: extra.coverUrl,
+    coverOptions: JSON.stringify(extra.coverOptions),
     refBookId: checked.refBookId,
     workId: checked.workId,
     model: settings.model,
@@ -815,6 +846,7 @@ async function webLookup(
         },
     cached: false,
     askedModel: true,
+    coverOptions: extra.coverOptions,
     exhausted: false,
     via,
     proof: box.proof,
@@ -842,6 +874,7 @@ function snapshot(row: typeof book.$inferSelect) {
 export async function applyRecognition(
   userId: string,
   bookId: string,
+  chosenCover?: string,
 ): Promise<{ verdict: Verdict }> {
   const [row] = await db.select().from(book).where(eq(book.id, bookId))
   if (!row) throw new AppError('Книга не найдена', 'not_found')
@@ -908,10 +941,13 @@ export async function applyRecognition(
     .where(eq(book.id, bookId))
   await syncBookAuthors(bookId, authors)
 
-  if (!row.coverPath && fields?.coverUrl) {
+  const coverToSave = chosenCover?.startsWith('http')
+    ? chosenCover
+    : fields?.coverUrl
+  if (!row.coverPath && coverToSave) {
     try {
       const { saveCoverFromUrl } = await import('./covers')
-      const saved = await saveCoverFromUrl(bookId, fields.coverUrl)
+      const saved = await saveCoverFromUrl(bookId, coverToSave)
       await db
         .update(book)
         .set({ coverPath: saved.path, coverColor: saved.color })

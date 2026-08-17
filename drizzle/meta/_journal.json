@@ -183,6 +183,13 @@
       "when": 1786968478923,
       "tag": "0025_rare_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1786970433658,
+      "tag": "0026_illegal_jimmy_woo",
+      "breakpoints": true
     }
   ]
 }

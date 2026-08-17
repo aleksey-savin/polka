@@ -431,13 +431,16 @@ export function parseImageXml(xml: string): Array<string> {
 }
 
 /**
- * Обложка через Яндекс Картинки — последний шанс, когда ни каталоги, ни
- * страница-доказательство обложку не дали. Best-effort: любая ошибка — null.
+ * Обложки через Яндекс Картинки — кандидаты для свайпа. Best-effort: любая
+ * ошибка — пустой список.
  */
-export async function searchCoverImage(query: string): Promise<string | null> {
-  if (process.env.NODE_ENV === 'test') return null
+export async function searchCoverImages(
+  query: string,
+  limit = 3,
+): Promise<Array<string>> {
+  if (process.env.NODE_ENV === 'test') return []
   const creds = await aiCredentials()
-  if (!creds) return null
+  if (!creds) return []
   try {
     const res = await fetch(`${SEARCH_HOST}/v2/image/search`, {
       method: 'POST',
@@ -458,20 +461,20 @@ export async function searchCoverImage(query: string): Promise<string | null> {
         status: res.status,
         body: raw.slice(0, 160),
       })
-      return null
+      return []
     }
     const data = JSON.parse(raw) as {
       rawData?: string
       response?: { rawData?: string }
     }
     const xml = data.response?.rawData ?? data.rawData
-    if (!xml) return null
+    if (!xml) return []
     const urls = parseImageXml(Buffer.from(xml, 'base64').toString('utf8'))
-    return urls[0] ?? null
+    return urls.slice(0, limit)
   } catch (error) {
     log.info('web', 'картинки не ответили', {
       message: error instanceof Error ? error.message : String(error),
     })
-    return null
+    return []
   }
 }

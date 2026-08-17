@@ -203,6 +203,8 @@ export const aiIsbnGuess = sqliteTable('ai_isbn_guess', {
   pages: integer('pages'),
   annotation: text('annotation'),
   coverUrl: text('cover_url'),
+  /** Кандидаты обложек для свайпа (JSON-массив ссылок, до 5). */
+  coverOptions: text('cover_options'),
   /** Что подтвердилось: издание в эталоне и/или произведение. */
   refBookId: text('ref_book_id'),
   workId: text('work_id'),

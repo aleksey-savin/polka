@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -39,6 +39,10 @@ function UnrecognizedPage() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [found, setFound] = useState<Record<string, RecognizeResult>>({})
   const [details, setDetails] = useState<Record<string, boolean>>({})
+  const [chosenCover, setChosenCover] = useState<Record<string, string | null>>(
+    {},
+  )
+  const [annOpen, setAnnOpen] = useState<Record<string, boolean>>({})
   const [batch, setBatch] = useState<{
     done: number
     total: number
@@ -78,7 +82,9 @@ function UnrecognizedPage() {
   async function save(bookId: string) {
     setBusyId(bookId)
     try {
-      await applyRecognitionFn({ data: { bookId } })
+      await applyRecognitionFn({
+        data: { bookId, coverUrl: chosenCover[bookId] ?? undefined },
+      })
       toast.success('Сохранили')
       void router.invalidate()
     } catch (e) {
@@ -231,65 +237,97 @@ function UnrecognizedPage() {
                 </div>
 
                 {result && !empty && (
-                  <div className="mt-2.5 flex gap-3 rounded-2xl border border-primary/30 bg-accent/25 p-3">
-                    {result.confirmed?.coverUrl ? (
-                      <img
-                        src={result.confirmed.coverUrl}
-                        alt=""
-                        className="aspect-[7/10] w-[66px] flex-none rounded-[4px] object-cover shadow-[0_6px_14px_-8px_rgba(35,43,56,.5)]"
+                  <div
+                    className={`mt-2.5 rounded-2xl border p-3.5 shadow-[0_10px_26px_-20px_rgba(35,43,56,.5)] ${
+                      result.verdict === 'confirmed'
+                        ? 'border-primary/30 bg-card'
+                        : 'border-destructive/25 bg-card'
+                    }`}
+                  >
+                    <div className="flex gap-[15px]">
+                      <CoverSwiper
+                        urls={result.coverOptions}
+                        fallback={result.confirmed?.coverUrl ?? null}
+                        onChoose={(url) =>
+                          setChosenCover((c) => ({ ...c, [row.id]: url }))
+                        }
                       />
-                    ) : (
-                      <span
-                        aria-hidden
-                        className="aspect-[7/10] w-[66px] flex-none rounded-[4px] bg-patina-old/40"
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[15.5px] leading-tight font-semibold text-balance">
-                        {result.confirmed?.title ?? result.guess.title}
-                      </p>
-                      <p className="mt-0.5 text-[13px] text-muted-foreground">
-                        {result.confirmed?.authors || result.guess.authors}
-                      </p>
-                      <p className="mt-1 font-mono text-[11.5px] text-muted-foreground">
-                        {[
-                          result.confirmed?.publisher ??
-                            result.guess.publisher ??
-                            result.fromPrefix,
-                          result.confirmed?.year ?? result.guess.year,
-                          result.confirmed?.pages
-                            ? `${result.confirmed.pages} с.`
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                      {result.confirmed?.annotation && (
-                        <p className="mt-1.5 line-clamp-3 text-[12.5px] leading-snug text-muted-foreground">
-                          {result.confirmed.annotation}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[16.5px] leading-[1.22] font-semibold text-balance">
+                          {result.confirmed?.title ?? result.guess.title}
                         </p>
-                      )}
-                      {result.proof ? (
-                        <p className="mt-2 text-[12px] text-accent-foreground">
-                          ISBN найден на{' '}
-                          <a
-                            href={result.proof.url}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="underline underline-offset-2"
-                          >
-                            {hostOf(result.proof.url)}
-                          </a>
+                        {(result.confirmed?.authors ||
+                          result.guess.authors) && (
+                          <p className="mt-0.5 text-[13.5px] text-muted-foreground">
+                            {result.confirmed?.authors || result.guess.authors}
+                          </p>
+                        )}
+                        <p className="mt-1 font-mono text-[11.5px] text-muted-foreground">
+                          {[
+                            result.confirmed?.publisher ??
+                              result.guess.publisher ??
+                              result.fromPrefix,
+                            result.confirmed?.year ?? result.guess.year,
+                            result.confirmed?.pages
+                              ? `${result.confirmed.pages} с.`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </p>
-                      ) : (
-                        <p className="mt-2 text-[12px] text-muted-foreground">
-                          {result.via === 'sources'
-                            ? 'Нашлось в каталогах'
-                            : result.verdict === 'confirmed'
-                              ? 'Подтверждено каталогом'
-                              : 'Каталог не подтвердил — сверьте с книгой'}
+                        {result.confirmed?.annotation && (
+                          <>
+                            <p
+                              className={`mt-1.5 text-[12.5px] leading-[1.5] text-muted-foreground ${
+                                annOpen[row.id] ? '' : 'line-clamp-3'
+                              }`}
+                            >
+                              {result.confirmed.annotation}
+                            </p>
+                            {result.confirmed.annotation.length > 160 && (
+                              <button
+                                type="button"
+                                className="mt-0.5 text-[12px] text-accent-foreground"
+                                onClick={() =>
+                                  setAnnOpen((a) => ({
+                                    ...a,
+                                    [row.id]: !a[row.id],
+                                  }))
+                                }
+                              >
+                                {annOpen[row.id] ? 'свернуть' : 'развернуть'}
+                              </button>
+                            )}
+                          </>
+                        )}
+                        <p className="mt-2.5">
+                          {result.proof ? (
+                            <a
+                              href={result.proof.url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent/40 py-[3.5px] pr-3 pl-2 text-[11.5px] text-accent-foreground"
+                            >
+                              <span aria-hidden>✓</span> ISBN совпал ·{' '}
+                              <b className="font-semibold">
+                                {hostOf(result.proof.url)}
+                              </b>
+                            </a>
+                          ) : result.verdict === 'confirmed' ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent/40 py-[3.5px] pr-3 pl-2 text-[11.5px] text-accent-foreground">
+                              <span aria-hidden>✓</span>
+                              {result.via === 'sources'
+                                ? 'нашлось в каталогах'
+                                : 'подтверждено каталогом'}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/5 py-[3.5px] pr-3 pl-2 text-[11.5px] text-destructive">
+                              <span aria-hidden>!</span> не подтверждено —
+                              сверьте с книгой
+                            </span>
+                          )}
                         </p>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -313,10 +351,17 @@ function UnrecognizedPage() {
                     {!empty && (
                       <>
                         <Button
+                          variant={
+                            result.verdict === 'confirmed'
+                              ? 'default'
+                              : 'outline'
+                          }
                           loading={busyId === row.id}
                           onClick={() => void save(row.id)}
                         >
-                          Сохранить
+                          {result.verdict === 'confirmed'
+                            ? 'Сохранить'
+                            : 'Сохранить с пометкой'}
                         </Button>
                         <Button
                           variant="outline"
@@ -327,50 +372,153 @@ function UnrecognizedPage() {
                         </Button>
                       </>
                     )}
-                    <Button variant={empty ? 'default' : 'ghost'} asChild>
-                      <Link
-                        to="/books/$bookId/edit"
-                        params={{ bookId: row.id }}
-                      >
-                        Заполнить руками
-                      </Link>
-                    </Button>
-                    {result.sources.length > 0 && (
-                      <button
-                        type="button"
-                        className="text-[12.5px] text-muted-foreground underline underline-offset-2"
-                        onClick={() =>
-                          setDetails((d) => ({ ...d, [row.id]: !d[row.id] }))
-                        }
-                      >
-                        {details[row.id] ? 'Скрыть' : 'Подробнее'}
-                      </button>
+                    {empty && (
+                      <Button asChild>
+                        <Link
+                          to="/books/$bookId/edit"
+                          params={{ bookId: row.id }}
+                        >
+                          Заполнить руками
+                        </Link>
+                      </Button>
                     )}
+                    <button
+                      type="button"
+                      className="ml-auto text-[12.5px] text-muted-foreground underline underline-offset-2"
+                      onClick={() =>
+                        setDetails((d) => ({ ...d, [row.id]: !d[row.id] }))
+                      }
+                    >
+                      {details[row.id] ? 'Скрыть' : 'Подробнее'}
+                    </button>
                   </div>
                 )}
 
                 {result && details[row.id] && (
-                  <p className="mt-2 text-[11.5px] text-muted-foreground">
-                    {result.sources
-                      .map((src) => `${src.name}: ${src.outcome}`)
-                      .join(' · ')}
-                    {result.cached && ' · из памяти'}
-                    {isAdmin && (
-                      <>
-                        {' · '}
+                  <div className="mt-2 text-[11.5px] text-muted-foreground">
+                    {result.sources.length > 0 && (
+                      <p>
+                        {result.sources
+                          .map((src) => `${src.name}: ${src.outcome}`)
+                          .join(' · ')}
+                        {result.cached && ' · из памяти'}
+                      </p>
+                    )}
+                    <p className="mt-1">
+                      {!empty && (
+                        <>
+                          <Link
+                            to="/books/$bookId/edit"
+                            params={{ bookId: row.id }}
+                            className="underline underline-offset-2"
+                          >
+                            заполнить руками
+                          </Link>
+                          {isAdmin && ' · '}
+                        </>
+                      )}
+                      {isAdmin && (
                         <Link
                           to="/service/sources"
                           className="underline underline-offset-2"
                         >
                           настройки источников
                         </Link>
-                      </>
-                    )}
-                  </p>
+                      )}
+                    </p>
+                  </div>
                 )}
               </div>
             )
           })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Свайп обложек: обычный горизонтальный scroll со snap, сохраняется видимая.
+ * Битые ссылки выпадают по onError — «либо картинка грузится, либо её нет».
+ */
+function CoverSwiper({
+  urls,
+  fallback,
+  onChoose,
+}: {
+  urls: Array<string>
+  fallback: string | null
+  onChoose: (url: string | null) => void
+}) {
+  const all = urls.length > 0 ? urls : fallback ? [fallback] : []
+  const [dead, setDead] = useState<Record<string, boolean>>({})
+  const [index, setIndex] = useState(0)
+  const scroller = useRef<HTMLDivElement>(null)
+  const alive = all.filter((u) => !dead[u])
+
+  function onScroll() {
+    const el = scroller.current
+    if (!el) return
+    const i = Math.min(
+      alive.length - 1,
+      Math.max(0, Math.round(el.scrollLeft / el.clientWidth)),
+    )
+    if (i !== index) {
+      setIndex(i)
+      onChoose(alive[i] ?? null)
+    }
+  }
+
+  if (alive.length === 0) {
+    return (
+      <span
+        aria-hidden
+        className="aspect-[7/10] w-[96px] flex-none rounded-[5px] bg-patina-old/40 shadow-[inset_3px_0_0_rgba(255,255,255,.25)]"
+      />
+    )
+  }
+
+  return (
+    <div className="w-[96px] flex-none">
+      <div className="relative">
+        <div
+          ref={scroller}
+          className="flex snap-x snap-mandatory overflow-x-auto rounded-[5px] shadow-[inset_3px_0_0_rgba(255,255,255,.25),0_10px_20px_-10px_rgba(35,43,56,.55)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          onScroll={onScroll}
+        >
+          {alive.map((url) => (
+            <img
+              key={url}
+              src={url}
+              alt=""
+              className="aspect-[7/10] w-[96px] flex-none snap-center object-cover"
+              onError={() => {
+                setDead((d) => ({ ...d, [url]: true }))
+                onChoose(alive.filter((u) => u !== url)[0] ?? null)
+              }}
+            />
+          ))}
+        </div>
+        {alive.length > 1 && (
+          <span className="absolute top-1.5 right-1.5 rounded-full bg-foreground/70 px-1.5 py-0.5 font-mono text-[10px] text-background">
+            {index + 1} из {alive.length}
+          </span>
+        )}
+        <span
+          aria-hidden
+          className="absolute -inset-x-2 -bottom-[7px] h-1 rounded-full bg-[linear-gradient(#E3D3AE,#CBB686)]"
+        />
+      </div>
+      {alive.length > 1 && (
+        <div className="mt-3 flex justify-center gap-[5px]" aria-hidden>
+          {alive.map((url, i) => (
+            <i
+              key={url}
+              className={`size-[5px] rounded-full ${
+                i === index ? 'bg-muted-foreground' : 'bg-border'
+              }`}
+            />
+          ))}
         </div>
       )}
     </div>

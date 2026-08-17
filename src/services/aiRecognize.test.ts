@@ -20,6 +20,7 @@ const { createBook } = await import('./books')
 const { userAccount } = await import('@/db/schema/moderation')
 const {
   applyRecognition,
+  cleanFoundTitle,
   dismissRecognition,
   nextVariant,
   proposeForBook,
@@ -371,5 +372,27 @@ describe('модерация и эталон', () => {
       .from(aiSuggestion)
       .where(eq(aiSuggestion.isbn13, isbn))
     expect(suggestion?.status).toBe('rejected')
+  })
+})
+
+describe('чистка названий', () => {
+  test('магазинный мусор снимается', () => {
+    expect(cleanFoundTitle('Читаем, пишем, говорим по-японски.')).toBe(
+      'Читаем, пишем, говорим по-японски',
+    )
+    expect(cleanFoundTitle('Взгляд назад (мягкая обложка)')).toBe(
+      'Взгляд назад',
+    )
+    expect(cleanFoundTitle('Книга (ISBN 978-5-04-117324-9)')).toBe('Книга')
+    expect(cleanFoundTitle('Тайна (твёрдый переплёт).')).toBe('Тайна')
+  })
+
+  test('честные скобки и многоточие не трогаются', () => {
+    expect(cleanFoundTitle('Пикник на обочине (сборник)')).toBe(
+      'Пикник на обочине (сборник)',
+    )
+    expect(cleanFoundTitle('А зори здесь тихие...')).toBe(
+      'А зори здесь тихие...',
+    )
   })
 })
