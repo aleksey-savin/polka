@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
-import { AiTabs, ServiceTabs } from '@/components/layout/ServiceTabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { dateHuman } from '@/lib/dates'
@@ -12,6 +11,7 @@ import {
   rejectRecognitionFn,
 } from '@/server/aiRecognize'
 import type { ReviewRow } from '@/services/aiRecognize'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 
 /**
  * Что ИИ применил и ждёт человека (M25). Эталон общий для всех, поэтому
@@ -56,9 +56,15 @@ function AiReviewPage() {
 
   return (
     <div className="mx-auto max-w-[640px] pb-6">
-      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
-      <ServiceTabs isAdmin />
-      <AiTabs pending={rows.length} />
+      <Breadcrumbs
+        items={[
+          { label: 'Настройки', to: '/service' },
+          { label: 'Проверка находок' },
+        ]}
+      />
+      <h1 className="mb-4 text-[25px] leading-tight font-semibold">
+        Проверка находок
+      </h1>
 
       {rows.length === 0 ? (
         <p className="rounded-2xl border bg-card px-3.5 py-8 text-sm text-muted-foreground">

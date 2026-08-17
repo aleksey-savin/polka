@@ -1,273 +1,201 @@
-import { useState } from 'react'
-import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { z } from 'zod'
-import { toast } from 'sonner'
-
-import { ServiceTabs } from '@/components/layout/ServiceTabs'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { dateHuman } from '@/lib/dates'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import {
-  moderationQueueFn,
-  myAccountFn,
-  resolveModerationFn,
-} from '@/server/moderation'
-import type { QueueRow } from '@/services/moderation'
+  ChevronRight,
+  Flag,
+  Mail,
+  ScrollText,
+  Search,
+  Sparkles,
+  UserRound,
+  Wand2,
+} from 'lucide-react'
+import type { ReactNode } from 'react'
 
-/** Очередь модератора (M21): публикация не ждёт, разбираем потом. */
+import { SectionLabel } from '@/components/layout/SectionLabel'
+import { serviceOverviewFn } from '@/server/moderation'
+import { plural } from '@/lib/plural'
+
+/**
+ * Настройки приложения (бывший «Сервис»).
+ *
+ * Шесть вкладок в строку не помещались ни на одном телефоне — значит это не
+ * вкладки, а список разделов. Заодно состояние каждого видно сразу: «Google
+ * без ключа» или «ИИ выключен» не приходится искать, заходя внутрь.
+ */
 export const Route = createFileRoute('/_app/service')({
-  validateSearch: z.object({
-    filter: z.enum(['reported', 'pending', 'resolved']).optional(),
-  }),
-  loaderDeps: ({ search }) => search,
-  loader: async ({ deps }) => {
-    const [rows, account] = await Promise.all([
-      moderationQueueFn({ data: { filter: deps.filter ?? 'reported' } }),
-      myAccountFn(),
-    ])
-    return { rows, isAdmin: account.role === 'admin' }
-  },
-  component: ModerationPage,
+  loader: () => serviceOverviewFn(),
+  component: AppSettingsPage,
 })
 
-const KIND_LABEL: Record<QueueRow['kind'], string> = {
-  book_cover: 'обложка',
-  share: 'публичная ссылка',
-  ref_work: 'эталон · произведение',
-  ref_book: 'эталон · издание',
-}
+type Tone = 'ok' | 'bad' | 'off'
 
-const REASONS = [
-  'Запрещённая символика или экстремизм',
-  'Порнография',
-  'Оскорбления и травля',
-  'Реклама и спам',
-  'Чужие права (пиратский скан)',
-  'Другое',
-]
-
-function ModerationPage() {
-  const { rows, isAdmin } = Route.useLoaderData()
-  const search = Route.useSearch()
-  const router = useRouter()
-  const navigate = Route.useNavigate()
-  const filter = search.filter ?? 'reported'
-
-  const [openId, setOpenId] = useState<string | null>(null)
-  const [reason, setReason] = useState(REASONS[0]!)
-  const [note, setNote] = useState('')
-  const [deleteFile, setDeleteFile] = useState(true)
-  const [busy, setBusy] = useState<string | null>(null)
-
-  async function decide(
-    item: QueueRow,
-    decision: 'ok' | 'removed',
-    withFile = false,
-  ) {
-    setBusy(item.id)
-    try {
-      await resolveModerationFn({
-        data: {
-          itemId: item.id,
-          decision,
-          reason:
-            decision === 'removed'
-              ? [reason, note.trim()].filter(Boolean).join(' — ')
-              : null,
-          deleteFile: withFile,
-        },
-      })
-      toast.success(decision === 'ok' ? 'Помечено «в порядке»' : 'Снято')
-      setOpenId(null)
-      setNote('')
-      void router.invalidate()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Не получилось')
-    } finally {
-      setBusy(null)
-    }
-  }
+function AppSettingsPage() {
+  const data = Route.useLoaderData()
 
   return (
-    <div className="mx-auto max-w-[640px] pb-6">
-      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
-      <ServiceTabs isAdmin={isAdmin} pending={rows.length} />
+    <div className="mx-auto max-w-[560px] pb-6">
+      <h1 className="text-[25px] leading-tight font-semibold">Настройки</h1>
 
-      <div className="flex gap-1 rounded-full border bg-card p-1">
-        {(
-          [
-            ['reported', 'Жалобы'],
-            ['pending', 'На проверке'],
-            ['resolved', 'Разобрано'],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={`flex-1 rounded-full py-2 text-[13px] font-semibold ${
-              filter === value
-                ? 'bg-foreground text-background'
-                : 'text-muted-foreground'
-            }`}
-            onClick={() => void navigate({ search: { filter: value } })}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <section className="mt-5">
+        <SectionLabel>Содержимое</SectionLabel>
+        <Row
+          icon={<Flag />}
+          label="Очередь модерации"
+          to="/service/queue"
+          badge={data.pending || undefined}
+          state={
+            data.pending > 0
+              ? {
+                  tone: 'bad',
+                  text: `${data.pending} ${plural(data.pending, 'жалоба ждёт', 'жалобы ждут', 'жалоб ждут')}`,
+                }
+              : { tone: 'ok', text: 'жалоб нет' }
+          }
+        />
+        {data.isAdmin && (
+          <Row
+            icon={<Sparkles />}
+            label="Проверка находок"
+            to="/service/ai-review"
+            badge={data.aiPending || undefined}
+            state={
+              data.aiPending > 0
+                ? {
+                    tone: 'bad',
+                    text: `${data.aiPending} ${plural(data.aiPending, 'запись ждёт', 'записи ждут', 'записей ждут')}`,
+                  }
+                : { tone: 'ok', text: 'всё разобрано' }
+            }
+          />
+        )}
+        <Row
+          icon={<ScrollText />}
+          label="Журнал решений"
+          sub="кто и что снимал"
+          to="/service/log"
+        />
+      </section>
 
-      {rows.length === 0 ? (
-        <Card className="mt-5">
-          <CardContent className="py-8 text-sm text-muted-foreground">
-            {filter === 'reported'
-              ? 'Жалоб нет.'
-              : filter === 'pending'
-                ? 'Всё разобрано.'
-                : 'Пока ничего не разбирали.'}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="mt-4 grid gap-2.5">
-          {rows.map((item) => (
-            <div
-              key={item.id}
-              className={`flex gap-3 rounded-2xl border p-3 ${
-                item.reportCount > 0
-                  ? 'border-destructive/40 bg-destructive/5'
-                  : 'bg-card'
-              }`}
-            >
-              {item.coverUrl ? (
-                <img
-                  src={item.coverUrl}
-                  alt=""
-                  className="h-[78px] w-[54px] flex-none rounded object-cover shadow-sm"
-                />
-              ) : (
-                <span
-                  aria-hidden
-                  className="h-[78px] w-[54px] flex-none rounded bg-secondary"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <span
-                  className={`inline-block rounded-[3px] border-[1.5px] px-1.5 font-mono text-[9.5px] tracking-[0.07em] uppercase ${
-                    item.reportCount > 0
-                      ? 'border-destructive text-destructive'
-                      : 'border-muted-foreground/50 text-muted-foreground'
-                  }`}
-                >
-                  {item.reportCount > 0
-                    ? `жалоба · ${item.reportCount}`
-                    : KIND_LABEL[item.kind]}
-                </span>
-                <h2 className="mt-1.5 truncate text-[15.5px] font-semibold">
-                  {item.title}
-                </h2>
-                <p className="truncate text-[12.5px] text-muted-foreground">
-                  {[item.subtitle, item.ownerName && `автор ${item.ownerName}`]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-                {item.reports.slice(0, 2).map((rep, i) => (
-                  <p
-                    key={i}
-                    className="mt-1.5 border-l-2 pl-2 text-[12.5px] text-muted-foreground"
-                  >
-                    «{rep.reason}
-                    {rep.note ? `: ${rep.note}` : ''}» ·{' '}
-                    {dateHuman(rep.createdAt)}
-                  </p>
-                ))}
-                {item.status === 'removed' && item.reason && (
-                  <p className="mt-1.5 text-[12.5px] text-destructive">
-                    снято: {item.reason}
-                  </p>
-                )}
+      {data.isAdmin && (
+        <>
+          <section className="mt-6">
+            <SectionLabel>Откуда берутся данные</SectionLabel>
+            <Row
+              icon={<Search />}
+              label="Источники книг"
+              to="/service/sources"
+              state={
+                !data.sources.hasGoogleKey
+                  ? { tone: 'bad', text: 'Google без ключа' }
+                  : data.sources.webEnabled
+                    ? { tone: 'ok', text: 'каталоги и поиск включены' }
+                    : { tone: 'off', text: 'поиск в интернете выключен' }
+              }
+            />
+            <Row
+              icon={<Wand2 />}
+              label="ИИ"
+              to="/service/ai"
+              state={
+                !data.ai.enabled
+                  ? { tone: 'off', text: 'выключен' }
+                  : !data.ai.configured
+                    ? { tone: 'bad', text: 'не настроен' }
+                    : data.ai.failed
+                      ? { tone: 'bad', text: 'последний запрос не удался' }
+                      : { tone: 'ok', text: 'отвечает' }
+              }
+            />
+          </section>
 
-                {item.status === 'pending' && (
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    <Button
-                      size="sm"
-                      loading={busy === item.id && openId === null}
-                      onClick={() => void decide(item, 'ok')}
-                    >
-                      В порядке
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-destructive"
-                      onClick={() =>
-                        setOpenId(openId === item.id ? null : item.id)
-                      }
-                    >
-                      Снять…
-                    </Button>
-                  </div>
-                )}
-
-                {openId === item.id && (
-                  <div className="mt-2.5 grid gap-2 rounded-xl border bg-background p-2.5">
-                    <label className="grid gap-1 text-[12.5px] font-semibold">
-                      Причина
-                      <select
-                        className="h-10 rounded-lg border bg-card px-2.5 text-[14px] font-normal"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                      >
-                        {REASONS.map((r) => (
-                          <option key={r}>{r}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <textarea
-                      rows={2}
-                      className="rounded-lg border bg-card px-2.5 py-2 text-[14px]"
-                      placeholder="Комментарий владельцу (необязательно)"
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                    />
-                    {item.kind === 'book_cover' && (
-                      <label className="flex items-center gap-2 text-[13px]">
-                        <input
-                          type="checkbox"
-                          checked={deleteFile}
-                          onChange={(e) => setDeleteFile(e.target.checked)}
-                        />
-                        Удалить файл обложки с сервера
-                      </label>
-                    )}
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        loading={busy === item.id}
-                        onClick={() =>
-                          void decide(
-                            item,
-                            'removed',
-                            item.kind === 'book_cover' && deleteFile,
-                          )
-                        }
-                      >
-                        Снять с публикации
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setOpenId(null)}
-                      >
-                        Отмена
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+          <section className="mt-6">
+            <SectionLabel>Люди и связь</SectionLabel>
+            <Row
+              icon={<UserRound />}
+              label="Пользователи"
+              to="/service/users"
+              state={{
+                tone: 'ok',
+                text: `${data.users.count} ${plural(data.users.count, 'человек', 'человека', 'человек')}`,
+              }}
+            />
+            <Row
+              icon={<Mail />}
+              label="Почта"
+              to="/service/mail"
+              state={
+                data.mail.configured
+                  ? { tone: 'ok', text: 'письма уходят' }
+                  : { tone: 'off', text: 'не настроена' }
+              }
+            />
+          </section>
+        </>
       )}
     </div>
+  )
+}
+
+/** Строка раздела: состояние подписью — где непорядок, видно из списка. */
+function Row({
+  icon,
+  label,
+  sub,
+  to,
+  badge,
+  state,
+}: {
+  icon: ReactNode
+  label: string
+  sub?: string
+  to: string
+  badge?: number
+  state?: { tone: Tone; text: string }
+}) {
+  return (
+    <Link
+      to={to as never}
+      search={{} as never}
+      className="flex min-h-14 w-full items-center gap-3 border-t py-2 text-left text-[15.5px] first:border-t-0"
+    >
+      <span
+        aria-hidden
+        className="flex w-[22px] flex-none justify-center text-muted-foreground [&_svg]:size-[19px]"
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        {label}
+        {state && (
+          <span className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+            <span
+              aria-hidden
+              className={`size-[7px] flex-none rounded-full ${
+                state.tone === 'ok'
+                  ? 'bg-primary'
+                  : state.tone === 'bad'
+                    ? 'bg-destructive'
+                    : 'bg-muted-foreground/50'
+              }`}
+            />
+            {state.text}
+          </span>
+        )}
+        {sub && !state && (
+          <span className="mt-0.5 block truncate text-[12.5px] text-muted-foreground">
+            {sub}
+          </span>
+        )}
+      </span>
+      {badge ? (
+        <span className="grid h-[22px] min-w-[22px] flex-none place-items-center rounded-full bg-destructive px-1.5 font-mono text-[11.5px] text-white">
+          {badge}
+        </span>
+      ) : null}
+      <ChevronRight
+        aria-hidden
+        className="size-[18px] flex-none text-muted-foreground"
+      />
+    </Link>
   )
 }

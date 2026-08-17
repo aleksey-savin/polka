@@ -18,7 +18,7 @@ import { ActionMenu } from '@/components/ui/action-menu'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { authClient } from '@/lib/auth-client'
 import { countPendingRequestsFn } from '@/server/shares'
-import { myAccountFn, pendingModerationFn } from '@/server/moderation'
+import { myAccountFn } from '@/server/moderation'
 import { lastLibrary } from '@/lib/origin'
 
 const sections = [
@@ -55,22 +55,14 @@ export function AppShell({
   }, [path])
   const [pendingRequests, setPendingRequests] = useState(0)
   const [account, setAccount] = useState<{ role: string } | null>(null)
-  const [pendingModeration, setPendingModeration] = useState(0)
 
   useEffect(() => {
     void countPendingRequestsFn()
       .then(setPendingRequests)
       .catch(() => {})
-    // роль решает, показывать ли модерацию в меню (M21)
+    // роль решает, показывать ли настройки приложения в меню (M21)
     void myAccountFn()
-      .then((acc) => {
-        setAccount(acc)
-        if (acc.role !== 'user') {
-          void pendingModerationFn()
-            .then(setPendingModeration)
-            .catch(() => {})
-        }
-      })
+      .then(setAccount)
       .catch(() => {})
   }, [])
 
@@ -128,11 +120,7 @@ export function AppShell({
                 ? ([
                     {
                       key: 'service',
-                      label: 'Сервис',
-                      sub:
-                        pendingModeration > 0
-                          ? `${pendingModeration} в очереди`
-                          : undefined,
+                      label: 'Настройки',
                       icon: <ShieldCheck />,
                       to: '/service',
                       search: {},
@@ -141,7 +129,7 @@ export function AppShell({
                 : []),
               {
                 key: 'settings',
-                label: 'Настройки',
+                label: 'Профиль',
                 icon: <Settings />,
                 to: '/settings',
               },

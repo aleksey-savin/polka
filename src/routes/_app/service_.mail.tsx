@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
-import { ServiceTabs } from '@/components/layout/ServiceTabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,6 +12,7 @@ import {
   sendTestMailFn,
 } from '@/server/mail'
 import { getSession } from '@/server/session'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 
 /** Настройки почты (M22): всё в приложении, пароль — зашифрованным в базе. */
 export const Route = createFileRoute('/_app/service_/mail')({
@@ -124,8 +124,10 @@ function MailPage() {
 
   return (
     <div className="mx-auto max-w-[580px] pb-6">
-      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
-      <ServiceTabs isAdmin />
+      <Breadcrumbs
+        items={[{ label: 'Настройки', to: '/service' }, { label: 'Почта' }]}
+      />
+      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Почта</h1>
 
       <div
         className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 ${

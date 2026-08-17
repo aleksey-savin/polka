@@ -3,7 +3,6 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { ActionMenu } from '@/components/ui/action-menu'
-import { ServiceTabs } from '@/components/layout/ServiceTabs'
 import { Button } from '@/components/ui/button'
 import { plural } from '@/lib/plural'
 import {
@@ -13,6 +12,7 @@ import {
   setRoleFn,
 } from '@/server/moderation'
 import type { UserRow } from '@/services/moderation'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 
 /** Управление аккаунтами — только для админа (M21). */
 export const Route = createFileRoute('/_app/service_/users')({
@@ -55,8 +55,15 @@ function UsersPage() {
 
   return (
     <div className="mx-auto max-w-[640px] pb-6">
-      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
-      <ServiceTabs isAdmin />
+      <Breadcrumbs
+        items={[
+          { label: 'Настройки', to: '/service' },
+          { label: 'Пользователи' },
+        ]}
+      />
+      <h1 className="mb-4 text-[25px] leading-tight font-semibold">
+        Пользователи
+      </h1>
 
       <div className="mt-4">
         {rows.map((row) => (

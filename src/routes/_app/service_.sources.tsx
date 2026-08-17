@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
-import { ServiceTabs } from '@/components/layout/ServiceTabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +14,7 @@ import {
   saveWebSettingsFn,
 } from '@/server/sources'
 import type { SourceProbe } from '@/services/sources'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 
 /**
  * Источники метаданных (M25.1). Google Books без ключа отвечает 429, и для
@@ -107,8 +107,15 @@ function SourcesPage() {
 
   return (
     <div className="mx-auto max-w-[580px] pb-6">
-      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
-      <ServiceTabs isAdmin />
+      <Breadcrumbs
+        items={[
+          { label: 'Настройки', to: '/service' },
+          { label: 'Источники книг' },
+        ]}
+      />
+      <h1 className="mb-4 text-[25px] leading-tight font-semibold">
+        Источники книг
+      </h1>
 
       <div className="rounded-2xl border bg-card px-3.5 py-3">
         <p className="text-sm font-semibold">Откуда берутся данные о книгах</p>

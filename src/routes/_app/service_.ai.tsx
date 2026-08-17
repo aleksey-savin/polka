@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
-import { AiTabs, ServiceTabs } from '@/components/layout/ServiceTabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,20 +12,14 @@ import {
   listAiModelsFn,
   saveAiSettingsFn,
 } from '@/server/ai'
-import { pendingAiReviewFn } from '@/server/aiRecognize'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 
 /**
  * Подключение ИИ (M24). Только доступность модели: ключ, каталог, модель,
  * проверка связи, суточный лимит. Функции придут дальше по одной.
  */
 export const Route = createFileRoute('/_app/service_/ai')({
-  loader: async () => {
-    const [settings, pending] = await Promise.all([
-      getAiSettingsFn(),
-      pendingAiReviewFn(),
-    ])
-    return { ...settings, pending }
-  },
+  loader: () => getAiSettingsFn(),
   component: AiPage,
 })
 
@@ -38,7 +31,7 @@ const PROVIDERS = [
 ]
 
 function AiPage() {
-  const { settings, usage, pending } = Route.useLoaderData()
+  const { settings, usage } = Route.useLoaderData()
   const router = useRouter()
 
   const [form, setForm] = useState({
@@ -138,9 +131,10 @@ function AiPage() {
 
   return (
     <div className="mx-auto max-w-[580px] pb-6">
-      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
-      <ServiceTabs isAdmin />
-      <AiTabs pending={pending} />
+      <Breadcrumbs
+        items={[{ label: 'Настройки', to: '/service' }, { label: 'ИИ' }]}
+      />
+      <h1 className="mb-4 text-[25px] leading-tight font-semibold">ИИ</h1>
 
       <div
         className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 ${

@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { ServiceTabs } from '@/components/layout/ServiceTabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { dateHuman } from '@/lib/dates'
 import { moderationLogFn } from '@/server/moderation'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 
 /** Журнал модерации: кто, что, когда и почему (M21). */
 export const Route = createFileRoute('/_app/service_/log')({
@@ -27,8 +27,15 @@ function LogPage() {
   const rows = Route.useLoaderData()
   return (
     <div className="mx-auto max-w-[640px] pb-6">
-      <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
-      <ServiceTabs isAdmin={false} />
+      <Breadcrumbs
+        items={[
+          { label: 'Настройки', to: '/service' },
+          { label: 'Журнал решений' },
+        ]}
+      />
+      <h1 className="mb-4 text-[25px] leading-tight font-semibold">
+        Журнал решений
+      </h1>
       <h2 className="text-[17px] font-semibold">Журнал модерации</h2>
 
       {rows.length === 0 ? (

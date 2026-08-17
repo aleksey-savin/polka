@@ -109,3 +109,53 @@ export const reportContentFn = createServerFn({ method: 'POST' })
   .handler(({ data }) =>
     report(data.kind, data.targetId, data.reason, data.note, null),
   )
+
+/**
+ * Сводка для списка разделов настроек (M26.5): состояние каждого — прямо в
+ * списке, чтобы «Google без ключа» или «ИИ выключен» было видно не заходя.
+ */
+export const serviceOverviewFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const account = await accountOf(context.user.id)
+    const isAdmin = account.role === 'admin'
+    const [pending, aiPending] = await Promise.all([
+      pendingCount(context.user.id),
+      import('@/services/aiRecognize').then((m) => m.pendingAiReview()),
+    ])
+    if (!isAdmin) {
+      return {
+        isAdmin,
+        pending,
+        aiPending,
+        ai: null,
+        mail: null,
+        sources: null,
+        users: null,
+      }
+    }
+    const [ai, mail, sources, users] = await Promise.all([
+      import('@/services/ai').then((m) => m.getAiSettings()),
+      import('@/services/mail').then((m) => m.getMailSettings()),
+      import('@/services/sources').then((m) =>
+        m.getSourceSettings(context.user.id),
+      ),
+      listUsers(context.user.id),
+    ])
+    return {
+      isAdmin,
+      pending,
+      aiPending,
+      ai: {
+        enabled: ai.enabled,
+        configured: ai.configured,
+        failed: ai.lastResult?.startsWith('ошибка') ?? false,
+      },
+      mail: { configured: mail.configured },
+      sources: {
+        hasGoogleKey: sources.hasGoogleKey,
+        webEnabled: sources.web.enabled,
+      },
+      users: { count: users.length, role: account.role },
+    }
+  })
