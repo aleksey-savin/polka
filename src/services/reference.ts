@@ -431,6 +431,8 @@ export async function fetchWorkEditions(
     return getWorkView(userId, workId)
   }
 
+  if (process.env.NODE_ENV === 'test') return getWorkView(userId, workId)
+
   const { POLKA_USER_AGENT } = await import('./userAgent')
   const res = await fetch(
     `https://api.fantlab.ru/work/${work.sourceId}/extended`,

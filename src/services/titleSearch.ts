@@ -160,6 +160,8 @@ interface FantlabMatch {
 
 /** FantLab: он хорошо знает русскую классику, в том числе издания 90-х. */
 async function searchFantlab(query: string): Promise<Array<TitleHitWork>> {
+  // в тестах наружу не ходим: источник капризен, а прогон должен быть герметичным
+  if (process.env.NODE_ENV === 'test') return []
   const started = performance.now()
   try {
     const url = `https://api.fantlab.ru/search-works?q=${encodeURIComponent(query)}&page=1`
