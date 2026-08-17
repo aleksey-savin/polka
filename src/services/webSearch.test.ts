@@ -81,3 +81,27 @@ describe('выдача без сниппетов', () => {
     ).toBe(true)
   })
 })
+
+describe('тело запроса', () => {
+  test('значения перечислений — те, что принимает API', async () => {
+    // 400 «invalid value GROUPING_MODE_FLAT» уже ловили на проде: имена
+    // перечислений сверены с protobuf-описанием searchapi v2
+    const source = await Bun.file(
+      new URL('./webSearch.ts', import.meta.url).pathname,
+    ).text()
+    for (const value of [
+      'SEARCH_TYPE_RU',
+      'FAMILY_MODE_NONE',
+      'FIX_TYPO_MODE_OFF',
+      'GROUP_MODE_FLAT',
+      'LOCALIZATION_RU',
+      'FORMAT_XML',
+      'ROLE_USER',
+    ]) {
+      expect(source).toContain(`'${value}'`)
+    }
+    expect(source).not.toContain("'GROUPING_MODE_FLAT'")
+    // без сниппетов номеру негде встретиться — правило приёмки не сработает
+    expect(source).toContain('maxPassages')
+  })
+})

@@ -154,7 +154,8 @@ export async function searchWeb(query: string): Promise<Array<WebHit>> {
       fixTypoMode: 'FIX_TYPO_MODE_OFF',
     },
     groupSpec: {
-      groupMode: 'GROUPING_MODE_FLAT',
+      // строго GROUP_MODE_FLAT: близкое по смыслу имя API отвергает с 400
+      groupMode: 'GROUP_MODE_FLAT',
       groupsOnPage: '10',
       docsInGroup: '1',
     },
