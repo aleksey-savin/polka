@@ -20,6 +20,7 @@ import { normalizeForSearch } from './search'
 import { resolveSeriesByName } from './series'
 import { adoptExternalWork, searchByTitle } from './titleSearch'
 import {
+  fetchOpenGraph,
   genSearch,
   mentionsIsbn,
   searchWeb,
@@ -277,7 +278,20 @@ export async function recognizeBook(
       fromPrefix,
       refBookId: hit.refBookId,
       workId: hit.workId,
-      confirmed: hit.refBookId ? await confirmedFields(hit.refBookId) : null,
+      confirmed: hit.refBookId
+        ? await confirmedFields(hit.refBookId)
+        : hit.title
+          ? {
+              title: hit.title,
+              authors: hit.authors ?? '',
+              publisher: hit.publisher,
+              year: hit.year,
+              pages: hit.pages,
+              seriesName: hit.seriesName,
+              coverUrl: hit.coverUrl,
+              annotation: hit.annotation,
+            }
+          : null,
       cached: true,
       askedModel: false,
       sources: [],
@@ -523,6 +537,28 @@ async function webLookup(
   const via = mode === 'generative' ? 'web-generative' : 'web-extract'
   const settings = await getAiSettings()
 
+  // В сниппетах нет ни обложки, ни описания. По названию и автору их отдаёт
+  // Google Books; если и он молчит — берём открытые теги найденной страницы.
+  const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
+  const byTitle = await fetchGoogleByTitle(guess.title, guess.authors)
+  const page =
+    box.proof && !byTitle?.coverUrl
+      ? await fetchOpenGraph(box.proof.url)
+      : { image: null, description: null }
+  const extra = {
+    pages: byTitle?.pages ?? null,
+    annotation: byTitle?.annotation ?? page.description ?? null,
+    coverUrl: byTitle?.coverUrl ?? page.image ?? null,
+  }
+  if (extra.coverUrl || extra.annotation) {
+    log.info('web', 'добрали обложку и описание', {
+      isbn: isbn13,
+      from: byTitle ? 'google-by-title' : 'страница',
+      cover: Boolean(extra.coverUrl),
+      annotation: Boolean(extra.annotation),
+    })
+  }
+
   await db
     .insert(aiIsbnGuess)
     .values({
@@ -534,6 +570,9 @@ async function webLookup(
       publisher: guess.publisher ?? fromPrefix,
       year: guess.year,
       seriesName: guess.seriesName,
+      pages: extra.pages,
+      annotation: extra.annotation,
+      coverUrl: extra.coverUrl,
       refBookId: checked.refBookId,
       workId: checked.workId,
       model: settings.model,
@@ -553,7 +592,16 @@ async function webLookup(
     workId: checked.workId,
     confirmed: checked.refBookId
       ? await confirmedFields(checked.refBookId)
-      : null,
+      : {
+          title: guess.title,
+          authors: guess.authors ?? '',
+          publisher: guess.publisher ?? fromPrefix,
+          year: guess.year,
+          pages: extra.pages,
+          seriesName: guess.seriesName,
+          coverUrl: extra.coverUrl,
+          annotation: extra.annotation,
+        },
     cached: false,
     askedModel: true,
     via,
@@ -604,7 +652,19 @@ export async function applyRecognition(
     )
   }
 
-  const fields = hit.refBookId ? await confirmedFields(hit.refBookId) : null
+  const fields = hit.refBookId
+    ? await confirmedFields(hit.refBookId)
+    : // веб-находка: данные лежат в самой записи
+      {
+        title: hit.title ?? '',
+        authors: hit.authors ?? '',
+        publisher: hit.publisher,
+        year: hit.year,
+        pages: hit.pages,
+        seriesName: hit.seriesName,
+        coverUrl: hit.coverUrl,
+        annotation: hit.annotation,
+      }
   const title = (fields?.title ?? hit.title ?? '').trim()
   if (!title) throw new AppError('Нечего применять: названия нет', 'invalid')
   const authors = (fields?.authors ?? hit.authors ?? '').trim()

@@ -199,6 +199,10 @@ export const aiIsbnGuess = sqliteTable('ai_isbn_guess', {
   publisher: text('publisher'),
   year: integer('year'),
   seriesName: text('series_name'),
+  /** Добрано по названию и автору: аннотация, объём, обложка (M26.1). */
+  pages: integer('pages'),
+  annotation: text('annotation'),
+  coverUrl: text('cover_url'),
   /** Что подтвердилось: издание в эталоне и/или произведение. */
   refBookId: text('ref_book_id'),
   workId: text('work_id'),

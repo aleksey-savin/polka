@@ -162,6 +162,13 @@
       "when": 1786954004314,
       "tag": "0022_peaceful_tyrannus",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1786961732348,
+      "tag": "0023_strange_owl",
+      "breakpoints": true
     }
   ]
 }

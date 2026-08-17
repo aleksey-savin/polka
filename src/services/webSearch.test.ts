@@ -7,7 +7,8 @@ import { describe, expect, test } from 'bun:test'
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-web-'))
 process.env.BETTER_AUTH_SECRET = 'test-secret-for-web-search'
 
-const { parseSearchXml, mentionsIsbn, bareIsbn } = await import('./webSearch')
+const { parseSearchXml, mentionsIsbn, bareIsbn, parseOpenGraph } =
+  await import('./webSearch')
 
 /** Выдача Yandex Search API приходит XML внутри base64. */
 const XML = `<?xml version="1.0" encoding="utf-8"?>
@@ -103,5 +104,32 @@ describe('тело запроса', () => {
     expect(source).not.toContain("'GROUPING_MODE_FLAT'")
     // без сниппетов номеру негде встретиться — правило приёмки не сработает
     expect(source).toContain('maxPassages')
+  })
+})
+
+describe('открытые теги страницы', () => {
+  test('обложка и описание вытаскиваются из og-тегов', () => {
+    const html = `<html><head>
+      <meta property="og:image" content="https://cdn.market.ru/cover.jpg" />
+      <meta property="og:description" content="Культурная история женских ягодиц" />
+    </head></html>`
+    const og = parseOpenGraph(html)
+    expect(og.image).toBe('https://cdn.market.ru/cover.jpg')
+    expect(og.description).toBe('Культурная история женских ягодиц')
+  })
+
+  test('падает на обычные meta, если og нет', () => {
+    const og = parseOpenGraph(
+      `<meta name="description" content="Книга про историю"><meta name="twitter:image" content="/x.jpg">`,
+    )
+    expect(og.description).toBe('Книга про историю')
+    expect(og.image).toBe('/x.jpg')
+  })
+
+  test('без тегов — пусто, без исключений', () => {
+    expect(parseOpenGraph('<html></html>')).toEqual({
+      image: null,
+      description: null,
+    })
   })
 })

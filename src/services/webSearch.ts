@@ -367,3 +367,50 @@ export async function checkWebSearch(
     }
   }
 }
+
+/** Открытые теги страницы: у магазинов там обложка и краткое описание. */
+export function parseOpenGraph(html: string): {
+  image: string | null
+  description: string | null
+} {
+  const meta = (names: Array<string>): string | null => {
+    for (const name of names) {
+      const pattern = new RegExp(
+        `<meta[^>]+(?:property|name)=["']${name}["'][^>]*>`,
+        'i',
+      )
+      const tag = pattern.exec(html)?.[0]
+      const value = tag ? /content=["']([^"']+)["']/i.exec(tag)?.[1] : null
+      if (value?.trim()) return value.trim()
+    }
+    return null
+  }
+  return {
+    image: meta(['og:image', 'twitter:image']),
+    description: meta(['og:description', 'description']),
+  }
+}
+
+/** Читаем страницу, на которой встретился номер. Best-effort. */
+export async function fetchOpenGraph(url: string): Promise<{
+  image: string | null
+  description: string | null
+}> {
+  if (process.env.NODE_ENV === 'test') return { image: null, description: null }
+  try {
+    const res = await fetch(url, {
+      headers: {
+        // без человекоподобного агента магазины отдают заглушку
+        'user-agent':
+          'Mozilla/5.0 (compatible; PolkaBot/1.0; +https://polka.saviny.ru)',
+        accept: 'text/html',
+      },
+      signal: AbortSignal.timeout(7000),
+    })
+    if (!res.ok) return { image: null, description: null }
+    const html = (await res.text()).slice(0, 200_000)
+    return parseOpenGraph(html)
+  } catch {
+    return { image: null, description: null }
+  }
+}

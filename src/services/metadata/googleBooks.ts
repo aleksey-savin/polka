@@ -96,3 +96,42 @@ export async function fetchGoogleBooks(
     return null
   }
 }
+
+/**
+ * Поиск по названию и автору. Нужен, когда номер нашёлся в интернете, но
+ * аннотации и обложки в сниппетах нет: у Google они есть почти всегда.
+ */
+export async function fetchGoogleByTitle(
+  title: string,
+  authors: string | null,
+): Promise<MetadataDraft | null> {
+  if (process.env.NODE_ENV === 'test') return null
+  try {
+    const author = authors?.split(/[,;]/)[0]?.trim()
+    const query = [
+      `intitle:${JSON.stringify(title.slice(0, 80))}`,
+      author ? `inauthor:${JSON.stringify(author)}` : '',
+    ]
+      .filter(Boolean)
+      .join('+')
+    const stored = await googleBooksKey()
+    const key = stored ? `&key=${stored}` : ''
+    let res: Response | null = null
+    for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+      res = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&country=RU${key}`,
+        {
+          headers: { referer: `${env.APP_URL}/` },
+          signal: AbortSignal.timeout(TIMEOUT),
+        },
+      )
+      if (res.ok || !RETRY_STATUS.has(res.status)) break
+      if (attempt < ATTEMPTS)
+        await new Promise((r) => setTimeout(r, attempt * 400))
+    }
+    if (!res?.ok) return null
+    return parseGoogleBooks(await res.json())
+  } catch {
+    return null
+  }
+}
