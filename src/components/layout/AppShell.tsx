@@ -39,6 +39,20 @@ export function AppShell({
 }) {
   const router = useRouter()
   const navigating = useRouterState({ select: (s) => s.isLoading })
+  const path = useRouterState({ select: (s) => s.location.pathname })
+
+  /*
+   * Страховка от залипшего оверлея. Radix (под vaul) вешает на body
+   * pointer-events: none, пока диалог открыт, и снимает при закрытии — но
+   * если во время закрытия страница сменилась, снимать оказывается некому:
+   * приложение выглядит живым и не реагирует на касания. Известная беда
+   * radix-ui/primitives#1241; после каждого перехода приводим body в чувство.
+   */
+  useEffect(() => {
+    if (document.body.style.pointerEvents === 'none') {
+      document.body.style.pointerEvents = ''
+    }
+  }, [path])
   const [pendingRequests, setPendingRequests] = useState(0)
   const [account, setAccount] = useState<{ role: string } | null>(null)
   const [pendingModeration, setPendingModeration] = useState(0)

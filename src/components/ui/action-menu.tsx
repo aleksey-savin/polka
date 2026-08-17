@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 
 import {
   Drawer,
@@ -23,10 +23,7 @@ export interface ActionMenuItem {
   /** Подстрока-пояснение — показывается только в мобильной шторке. */
   sub?: string
   danger?: boolean
-  /**
-   * Переход — ссылкой, а не программной навигацией: клик по кнопке совпадал
-   * с закрытием шторки, и на тяжёлых страницах переход терялся.
-   */
+  /** Переход: выполняется после закрытия шторки, как и любое действие. */
   to?: string
   params?: Record<string, string>
   search?: Record<string, unknown>
@@ -71,6 +68,9 @@ export function ActionMenu({
 }) {
   const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
+  // Переход выполняем после полного закрытия: vaul оставляет на body
+  // pointer-events: none, пока идёт анимация, и переход «проглатывается».
+  const [pending, setPending] = useState<(() => void) | null>(null)
 
   if (!isMobile) {
     return (
@@ -115,7 +115,18 @@ export function ActionMenu({
   }
 
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
+    <Drawer
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next && pending) {
+          const run = pending
+          setPending(null)
+          // ждём конца анимации закрытия, иначе клик уходит в никуда
+          setTimeout(run, 220)
+        }
+      }}
+    >
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent
         aria-describedby={undefined}
@@ -142,7 +153,10 @@ export function ActionMenu({
             <MobileRow
               key={entry.key}
               entry={entry}
-              onDone={() => setOpen(false)}
+              onRun={(run) => {
+                setPending(() => run)
+                setOpen(false)
+              }}
             />
           ),
         )}
@@ -151,14 +165,19 @@ export function ActionMenu({
   )
 }
 
-/** Строка мобильной шторки: переход — ссылкой, действие — кнопкой. */
+/**
+ * Строка мобильной шторки. И переход, и действие выполняются одинаково —
+ * после закрытия: ссылка внутри закрывающейся шторки теряет клик так же,
+ * как программная навигация.
+ */
 function MobileRow({
   entry,
-  onDone,
+  onRun,
 }: {
   entry: ActionMenuItem
-  onDone: () => void
+  onRun: (run: () => void) => void
 }) {
+  const router = useRouter()
   const className = `flex min-h-[52px] w-full items-center gap-3.5 rounded-xl px-3 text-left text-[16px] font-medium active:bg-background [&_svg]:size-[21px] [&_svg]:flex-none ${
     entry.danger ? 'text-destructive' : '[&_svg]:text-muted-foreground'
   }`
@@ -176,32 +195,26 @@ function MobileRow({
     </>
   )
 
-  if (entry.to) {
-    return (
-      <Link
-        to={entry.to as never}
-        params={entry.params as never}
-        search={(entry.search ?? {}) as never}
-        className={className}
-        onClick={onDone}
-      >
-        {body}
-      </Link>
-    )
-  }
-
   return (
     <button
       type="button"
       className={className}
-      onClick={() => {
-        onDone()
-        // шторка закрывается с анимацией — действие ждёт кадр, иначе
-        // vaul успевает погасить клики на странице
-        requestAnimationFrame(() => entry.onSelect?.())
-      }}
+      onClick={() => onRun(() => runEntry(entry, router))}
     >
       {body}
     </button>
   )
+}
+
+/** Пункт делает одно из двух: уводит на страницу или запускает действие. */
+function runEntry(entry: ActionMenuItem, router: ReturnType<typeof useRouter>) {
+  if (entry.to) {
+    void router.navigate({
+      to: entry.to as never,
+      params: entry.params as never,
+      search: (entry.search ?? {}) as never,
+    })
+    return
+  }
+  entry.onSelect?.()
 }
