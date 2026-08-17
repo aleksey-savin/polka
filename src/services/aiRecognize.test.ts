@@ -305,6 +305,51 @@ describe('искать дальше', () => {
   })
 })
 
+describe('история вариантов', () => {
+  test('варианты копятся, листаются и сохраняется выбранный', async () => {
+    const isbn = '9785496012706'
+    await db.insert(refBook).values({
+      source: 'fantlab',
+      sourceRef: 'edition-var',
+      isbn13: isbn,
+      title: 'Vzglyad nazad',
+      titleNorm: 'vzglyad nazad',
+      authors: 'Radke',
+      publisher: 'Piter',
+    })
+    const id = await unrecognizedBook(isbn)
+
+    const first = await recognizeBook(ME, id)
+    expect(first.variants.length).toBe(1)
+    expect(first.variants[0]?.via).toBe('sources')
+
+    // «промазал»: отверг хороший вариант, модель дала второй
+    answer =
+      '{"known":true,"title":"Взгляд назад","authors":"Хизер Радке","year":2025}'
+    const second = await nextVariant(ME, id)
+    expect(second.variants.length).toBe(2)
+    expect(second.variants.map((v) => v.via)).toEqual(['sources', 'model'])
+
+    // тупика нет: сохранить можно и отвергнутый первый вариант
+    await applyRecognition(ME, id, undefined, 'sources')
+    const [saved] = await db.select().from(book).where(eq(book.id, id))
+    expect(saved?.title).toBe('Vzglyad nazad')
+    expect(saved?.publisher).toBe('Piter')
+  })
+
+  test('«начать заново» стирает историю', async () => {
+    const isbn = '9785496012706'
+    const id = (
+      await db.select({ id: book.id }).from(book).where(eq(book.isbn13, isbn))
+    )[0]!.id
+    answer = '{"known":false}'
+    const fresh = await recognizeBook(ME, id, { force: true })
+    // эталонная запись снова находится первой ступенью, история новая
+    expect(fresh.variants.length).toBe(1)
+    expect(fresh.via).toBe('sources')
+  })
+})
+
 describe('старый кэш без via', () => {
   test('«Искать дальше» не зацикливается на записи до колонки via', async () => {
     const isbn = '9785970439517'

@@ -1,0 +1,1 @@
+ALTER TABLE `ai_isbn_guess` ADD `variants` text;

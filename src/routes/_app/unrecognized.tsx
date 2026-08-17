@@ -33,6 +33,13 @@ export const Route = createFileRoute('/_app/unrecognized')({
   component: UnrecognizedPage,
 })
 
+const VIA_LABEL: Record<string, string> = {
+  sources: 'Каталоги',
+  'web-extract': 'Яндекс Поиск',
+  'web-generative': 'Нейропоиск',
+  model: 'Модель',
+}
+
 function UnrecognizedPage() {
   const { rows, isAdmin } = Route.useLoaderData()
   const router = useRouter()
@@ -43,6 +50,7 @@ function UnrecognizedPage() {
     {},
   )
   const [annOpen, setAnnOpen] = useState<Record<string, boolean>>({})
+  const [varIdx, setVarIdx] = useState<Record<string, number>>({})
   const [batch, setBatch] = useState<{
     done: number
     total: number
@@ -50,11 +58,15 @@ function UnrecognizedPage() {
   } | null>(null)
   const [stop, setStop] = useState(false)
 
-  async function find(bookId: string) {
+  async function find(bookId: string, force = false) {
     setBusyId(bookId)
     try {
-      const { result } = await recognizeBookFn({ data: { bookId } })
+      const { result } = await recognizeBookFn({
+        data: { bookId, force: force || undefined },
+      })
       setFound((f) => ({ ...f, [bookId]: result }))
+      setVarIdx((v) => ({ ...v, [bookId]: result.variantIndex }))
+      setChosenCover((c) => ({ ...c, [bookId]: null }))
       return result
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Не получилось')
@@ -79,11 +91,15 @@ function UnrecognizedPage() {
     }
   }
 
-  async function save(bookId: string) {
+  async function save(bookId: string, variantVia?: string) {
     setBusyId(`save:${bookId}`)
     try {
       await applyRecognitionFn({
-        data: { bookId, coverUrl: chosenCover[bookId] ?? undefined },
+        data: {
+          bookId,
+          coverUrl: chosenCover[bookId] ?? undefined,
+          variantVia,
+        },
       })
       toast.success('Сохранили')
       void router.invalidate()
@@ -100,6 +116,13 @@ function UnrecognizedPage() {
     try {
       const { result } = await nextVariantFn({ data: { bookId } })
       setFound((f) => ({ ...f, [bookId]: result }))
+      setVarIdx((v) => ({
+        ...v,
+        [bookId]: result.guess.title
+          ? result.variantIndex
+          : Math.max(0, result.variants.length - 1),
+      }))
+      setChosenCover((c) => ({ ...c, [bookId]: null }))
       if (!result.guess.title) {
         toast.info(
           result.exhausted
@@ -205,7 +228,23 @@ function UnrecognizedPage() {
         <div className="mt-4">
           {rows.map((row) => {
             const result = found[row.id]
-            const empty = result && !result.guess.title
+            const variants = result?.variants ?? []
+            const idx = Math.min(
+              varIdx[row.id] ?? result?.variantIndex ?? 0,
+              Math.max(0, variants.length - 1),
+            )
+            const shown = variants[idx] ?? null
+            const empty = result && !shown
+            const flip = (delta: number) => {
+              setVarIdx((v) => ({
+                ...v,
+                [row.id]: Math.min(
+                  variants.length - 1,
+                  Math.max(0, idx + delta),
+                ),
+              }))
+              setChosenCover((c) => ({ ...c, [row.id]: null }))
+            }
             return (
               <div key={row.id} className="border-t py-3 first:border-t-0">
                 <div className="flex items-center gap-3">
@@ -237,55 +276,81 @@ function UnrecognizedPage() {
                   )}
                 </div>
 
-                {result && !empty && (
+                {result && shown && (
                   <div
                     className={`mt-2.5 rounded-2xl border p-3.5 shadow-[0_10px_26px_-20px_rgba(35,43,56,.5)] ${
-                      result.verdict === 'confirmed'
+                      shown.verdict === 'confirmed'
                         ? 'border-primary/30 bg-card'
                         : 'border-destructive/25 bg-card'
                     }`}
                   >
+                    {variants.length > 1 && (
+                      <div className="mb-2.5 flex items-center gap-2.5">
+                        <span className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+                          вариант {idx + 1} из {variants.length}
+                        </span>
+                        <span className="rounded-full bg-stamp/10 px-2.5 py-0.5 text-[11px] font-semibold text-stamp">
+                          {VIA_LABEL[shown.via] ?? shown.via}
+                        </span>
+                        <span className="ml-auto flex gap-1.5">
+                          <button
+                            type="button"
+                            aria-label="Предыдущий вариант"
+                            disabled={idx === 0}
+                            className="grid size-10 place-items-center rounded-xl border bg-card text-[16px] disabled:opacity-35"
+                            onClick={() => flip(-1)}
+                          >
+                            ‹
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Следующий вариант"
+                            disabled={idx >= variants.length - 1}
+                            className="grid size-10 place-items-center rounded-xl border bg-card text-[16px] disabled:opacity-35"
+                            onClick={() => flip(1)}
+                          >
+                            ›
+                          </button>
+                        </span>
+                      </div>
+                    )}
                     <div className="flex gap-[15px]">
                       <CoverSwiper
-                        urls={result.coverOptions}
-                        fallback={result.confirmed?.coverUrl ?? null}
+                        key={`${row.id}:${shown.via}`}
+                        urls={shown.coverOptions}
+                        fallback={shown.coverUrl}
                         onChoose={(url) =>
                           setChosenCover((c) => ({ ...c, [row.id]: url }))
                         }
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-[16.5px] leading-[1.22] font-semibold text-balance">
-                          {result.confirmed?.title ?? result.guess.title}
+                          {shown.title}
                         </p>
-                        {(result.confirmed?.authors ||
-                          result.guess.authors) && (
+                        {shown.authors && (
                           <p className="mt-0.5 text-[13.5px] text-muted-foreground">
-                            {result.confirmed?.authors || result.guess.authors}
+                            {shown.authors}
                           </p>
                         )}
                         <p className="mt-1 font-mono text-[11.5px] text-muted-foreground">
                           {[
-                            result.confirmed?.publisher ??
-                              result.guess.publisher ??
-                              result.fromPrefix,
-                            result.confirmed?.year ?? result.guess.year,
-                            result.confirmed?.pages
-                              ? `${result.confirmed.pages} с.`
-                              : null,
+                            shown.publisher ?? result.fromPrefix,
+                            shown.year,
+                            shown.pages ? `${shown.pages} с.` : null,
                           ]
                             .filter(Boolean)
                             .join(' · ')}
                         </p>
-                        {result.confirmed?.annotation && (
+                        {shown.annotation && (
                           <>
                             <p
                               className={`mt-1.5 text-[12.5px] leading-[1.5] text-muted-foreground ${
                                 annOpen[row.id] ? '' : 'line-clamp-3'
                               }`}
                             >
-                              {result.confirmed.annotation}
+                              {shown.annotation}
                             </p>
-                            {result.confirmed.annotation.length > 160 && (
+                            {shown.annotation.length > 160 && (
                               <button
                                 type="button"
                                 className="mt-0.5 text-[12px] text-accent-foreground"
@@ -302,22 +367,22 @@ function UnrecognizedPage() {
                           </>
                         )}
                         <p className="mt-2.5">
-                          {result.proof ? (
+                          {shown.proofUrl ? (
                             <a
-                              href={result.proof.url}
+                              href={shown.proofUrl}
                               target="_blank"
                               rel="noreferrer noopener"
                               className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent/40 py-[3.5px] pr-3 pl-2 text-[11.5px] text-accent-foreground"
                             >
                               <span aria-hidden>✓</span> ISBN совпал ·{' '}
                               <b className="font-semibold">
-                                {hostOf(result.proof.url)}
+                                {hostOf(shown.proofUrl)}
                               </b>
                             </a>
-                          ) : result.verdict === 'confirmed' ? (
+                          ) : shown.verdict === 'confirmed' ? (
                             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent/40 py-[3.5px] pr-3 pl-2 text-[11.5px] text-accent-foreground">
                               <span aria-hidden>✓</span>
-                              {result.via === 'sources'
+                              {shown.via === 'sources'
                                 ? 'нашлось в каталогах'
                                 : 'подтверждено каталогом'}
                             </span>
@@ -341,7 +406,7 @@ function UnrecognizedPage() {
                         : 'Ничего не нашлось.'}
                     </b>{' '}
                     {result.exhausted
-                      ? 'Все пути перепробованы — остаётся ручная форма.'
+                      ? 'Новых путей не осталось.'
                       : 'Ни в каталогах, ни в поиске.'}
                     {row.publisher && ` Издательство: ${row.publisher}.`}
                   </div>
@@ -349,37 +414,48 @@ function UnrecognizedPage() {
 
                 {result && (
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                    {!empty && (
+                    {shown && (
                       <>
                         <Button
                           variant={
-                            result.verdict === 'confirmed'
+                            shown.verdict === 'confirmed'
                               ? 'default'
                               : 'outline'
                           }
                           loading={busyId === `save:${row.id}`}
-                          onClick={() => void save(row.id)}
+                          onClick={() => void save(row.id, shown.via)}
                         >
                           Сохранить
                         </Button>
-                        <Button
-                          variant="outline"
-                          loading={busyId === `next:${row.id}`}
-                          onClick={() => void next(row.id)}
-                        >
-                          Искать дальше
-                        </Button>
+                        {!result.exhausted && (
+                          <Button
+                            variant="outline"
+                            loading={busyId === `next:${row.id}`}
+                            onClick={() => void next(row.id)}
+                          >
+                            Искать дальше
+                          </Button>
+                        )}
                       </>
                     )}
                     {empty && (
-                      <Button asChild>
-                        <Link
-                          to="/books/$bookId/edit"
-                          params={{ bookId: row.id }}
+                      <>
+                        <Button asChild>
+                          <Link
+                            to="/books/$bookId/edit"
+                            params={{ bookId: row.id }}
+                          >
+                            Заполнить руками
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          loading={busyId === row.id}
+                          onClick={() => void find(row.id, true)}
                         >
-                          Заполнить руками
-                        </Link>
-                      </Button>
+                          Начать заново
+                        </Button>
+                      </>
                     )}
                     <button
                       type="button"
@@ -468,17 +544,27 @@ function CoverSwiper({
     }
   }
 
+  function step(delta: number) {
+    const el = scroller.current
+    if (!el) return
+    el.scrollTo({
+      left:
+        Math.min(alive.length - 1, Math.max(0, index + delta)) * el.clientWidth,
+      behavior: 'smooth',
+    })
+  }
+
   if (alive.length === 0) {
     return (
       <span
         aria-hidden
-        className="aspect-[7/10] w-[96px] flex-none rounded-[5px] bg-patina-old/40 shadow-[inset_3px_0_0_rgba(255,255,255,.25)]"
+        className="aspect-[7/10] w-[128px] flex-none rounded-[5px] bg-patina-old/40 shadow-[inset_3px_0_0_rgba(255,255,255,.25)]"
       />
     )
   }
 
   return (
-    <div className="w-[96px] flex-none">
+    <div className="w-[128px] flex-none">
       <div className="relative">
         <div
           ref={scroller}
@@ -490,7 +576,8 @@ function CoverSwiper({
               key={url}
               src={url}
               alt=""
-              className="aspect-[7/10] w-[96px] flex-none snap-center object-cover"
+              // snap-always = scroll-snap-stop: инерция не пролистывает по две
+              className="aspect-[7/10] w-[128px] flex-none snap-center snap-always object-cover"
               onError={() => {
                 setDead((d) => ({ ...d, [url]: true }))
                 onChoose(alive.filter((u) => u !== url)[0] ?? null)
@@ -499,9 +586,29 @@ function CoverSwiper({
           ))}
         </div>
         {alive.length > 1 && (
-          <span className="absolute top-1.5 right-1.5 rounded-full bg-foreground/70 px-1.5 py-0.5 font-mono text-[10px] text-background">
-            {index + 1} из {alive.length}
-          </span>
+          <>
+            <button
+              type="button"
+              aria-label="Предыдущая обложка"
+              disabled={index === 0}
+              className="absolute top-1/2 left-0 grid h-11 w-[26px] -translate-y-1/2 place-items-center rounded-l-[5px] bg-gradient-to-r from-foreground/45 to-transparent text-[15px] text-background disabled:opacity-0"
+              onClick={() => step(-1)}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              aria-label="Следующая обложка"
+              disabled={index >= alive.length - 1}
+              className="absolute top-1/2 right-0 grid h-11 w-[26px] -translate-y-1/2 place-items-center rounded-r-[5px] bg-gradient-to-l from-foreground/45 to-transparent text-[15px] text-background disabled:opacity-0"
+              onClick={() => step(1)}
+            >
+              ›
+            </button>
+            <span className="absolute top-1.5 right-1.5 rounded-full bg-foreground/70 px-1.5 py-0.5 font-mono text-[10px] text-background">
+              {index + 1} из {alive.length}
+            </span>
+          </>
         )}
         <span
           aria-hidden
@@ -513,7 +620,7 @@ function CoverSwiper({
           {alive.map((url, i) => (
             <i
               key={url}
-              className={`size-[5px] rounded-full ${
+              className={`size-[7px] rounded-full ${
                 i === index ? 'bg-muted-foreground' : 'bg-border'
               }`}
             />

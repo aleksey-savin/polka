@@ -38,9 +38,20 @@ export const recognizeBookFn = createServerFn({ method: 'POST' })
 
 export const applyRecognitionFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
-  .validator(z.object({ bookId: z.string(), coverUrl: z.string().optional() }))
+  .validator(
+    z.object({
+      bookId: z.string(),
+      coverUrl: z.string().optional(),
+      variantVia: z.string().optional(),
+    }),
+  )
   .handler(({ context, data }) =>
-    applyRecognition(context.user.id, data.bookId, data.coverUrl),
+    applyRecognition(
+      context.user.id,
+      data.bookId,
+      data.coverUrl,
+      data.variantVia,
+    ),
   )
 
 export const revertRecognitionFn = createServerFn({ method: 'POST' })

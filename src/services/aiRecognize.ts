@@ -56,6 +56,25 @@ export interface SourceReport {
   detail: string | null
 }
 
+/** Найденный вариант: хранится в истории по номеру, листается без запросов. */
+export interface FoundVariant {
+  via: string
+  verdict: Verdict
+  title: string
+  authors: string | null
+  publisher: string | null
+  year: number | null
+  pages: number | null
+  seriesName: string | null
+  annotation: string | null
+  coverUrl: string | null
+  coverOptions: Array<string>
+  refBookId: string | null
+  workId: string | null
+  proofUrl: string | null
+  proofTitle: string | null
+}
+
 export interface RecognizeResult {
   bookId: string
   isbn13: string
@@ -86,6 +105,9 @@ export interface RecognizeResult {
   exhausted: boolean
   /** Кандидаты обложек для свайпа: первым — самый надёжный. */
   coverOptions: Array<string>
+  /** Вся история находок: листается стрелками бесплатно. */
+  variants: Array<FoundVariant>
+  variantIndex: number
   /** Каким путём получено: sources · web-extract · web-generative · model. */
   via: string
   /** Страница, на которой встретился номер. */
@@ -244,6 +266,33 @@ const parseRejected = (raw: string | null | undefined): Array<string> => {
   }
 }
 
+export function parseVariants(
+  raw: string | null | undefined,
+): Array<FoundVariant> {
+  try {
+    const parsed = JSON.parse(raw ?? '[]') as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(
+      (v): v is FoundVariant =>
+        typeof v === 'object' &&
+        v !== null &&
+        typeof (v as FoundVariant).via === 'string' &&
+        typeof (v as FoundVariant).title === 'string',
+    )
+  } catch {
+    return []
+  }
+}
+
+/** Вариант с той же ступени заменяется, с новой — добавляется в конец. */
+export function upsertVariant(
+  list: Array<FoundVariant>,
+  variant: FoundVariant,
+): Array<FoundVariant> {
+  const rest = list.filter((v) => v.via !== variant.via)
+  return [...rest, variant]
+}
+
 /** Снимок ответа в кэш; список отвергнутых путей не трогаем. */
 async function writeGuess(
   values: typeof aiIsbnGuess.$inferInsert,
@@ -323,11 +372,13 @@ export async function recognizeIsbn(
 
   let hit = await cached(isbn13)
   const rejected = parseRejected(hit?.rejectedVias)
+  let variants = parseVariants(hit?.variants)
 
   if (hit && options.force) {
     await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn13))
     hit = null
     rejected.length = 0
+    variants = []
   }
   if (hit) {
     // «не знаю», полученное до включения поиска, — не приговор
@@ -381,6 +432,11 @@ export async function recognizeIsbn(
       askedModel: false,
       sources: [],
       coverOptions: parseRejected(hit.coverOptions),
+      variants,
+      variantIndex: Math.max(
+        0,
+        variants.findIndex((v) => v.via === (hit.via ?? 'model')),
+      ),
       exhausted: hit.verdict === 'unknown' && rejected.length > 0,
       via: hit.via ?? 'model',
       proof: hit.proofUrl
@@ -425,6 +481,23 @@ export async function recognizeIsbn(
         pages: direct.draft.pages ?? null,
         proofUrl: null,
       })
+      variants = upsertVariant(variants, {
+        via: 'sources',
+        verdict: 'confirmed',
+        title: direct.draft.title,
+        authors: direct.draft.authors ?? null,
+        publisher: direct.draft.publisher ?? null,
+        year: direct.draft.year ?? null,
+        pages: extra.pages,
+        seriesName: direct.draft.seriesName ?? null,
+        annotation: extra.annotation,
+        coverUrl: extra.coverUrl,
+        coverOptions: extra.coverOptions,
+        refBookId,
+        workId: null,
+        proofUrl: null,
+        proofTitle: null,
+      })
       await writeGuess({
         isbn13,
         verdict: 'confirmed',
@@ -441,6 +514,7 @@ export async function recognizeIsbn(
         workId: null,
         via: 'sources',
         rejectedVias: rejectedJson,
+        variants: JSON.stringify(variants),
       })
       log.info('ai', 'разбор: хватило источников', {
         isbn: isbn13,
@@ -474,6 +548,8 @@ export async function recognizeIsbn(
         askedModel: false,
         sources,
         coverOptions: extra.coverOptions,
+        variants,
+        variantIndex: variants.length - 1,
         exhausted: false,
         via: 'sources',
         proof: null,
@@ -503,6 +579,7 @@ export async function recognizeIsbn(
         mode,
         fromPrefix,
         rejectedJson,
+        variants,
       )
       if (found) {
         sources.push({
@@ -549,6 +626,25 @@ export async function recognizeIsbn(
           pages: null,
         }
 
+    if (guess.title) {
+      variants = upsertVariant(variants, {
+        via: 'model',
+        verdict: checked.verdict,
+        title: guess.title,
+        authors: guess.authors,
+        publisher: guess.publisher ?? fromPrefix,
+        year: guess.year,
+        pages: extra.pages,
+        seriesName: guess.seriesName,
+        annotation: extra.annotation,
+        coverUrl: extra.coverUrl,
+        coverOptions: extra.coverOptions,
+        refBookId: checked.refBookId,
+        workId: checked.workId,
+        proofUrl: null,
+        proofTitle: null,
+      })
+    }
     await writeGuess({
       isbn13,
       verdict: checked.verdict,
@@ -567,6 +663,7 @@ export async function recognizeIsbn(
       via: 'model',
       rawJson: answer.text.slice(0, 2000),
       rejectedVias: rejectedJson,
+      variants: JSON.stringify(variants),
     })
     log.info('ai', 'разбор нераспознанного', {
       isbn: isbn13,
@@ -598,6 +695,8 @@ export async function recognizeIsbn(
       askedModel: true,
       sources,
       coverOptions: extra.coverOptions,
+      variants,
+      variantIndex: guess.title ? variants.length - 1 : 0,
       exhausted: !guess.title && rejected.length > 0,
       via: 'model',
       proof: null,
@@ -630,6 +729,8 @@ export async function recognizeIsbn(
     askedModel: false,
     sources,
     coverOptions: [],
+    variants,
+    variantIndex: 0,
     exhausted: true,
     via: 'model',
     proof: null,
@@ -726,6 +827,7 @@ async function webLookup(
   mode: 'extract' | 'generative',
   fromPrefix: string | null,
   rejectedJson: string,
+  knownVariants: Array<FoundVariant>,
 ): Promise<Omit<
   RecognizeResult,
   'bookId' | 'isbn13' | 'fromPrefix' | 'sources'
@@ -806,6 +908,24 @@ async function webLookup(
     proofUrl: box.proof?.url ?? null,
   })
 
+  const variants = upsertVariant(knownVariants, {
+    via,
+    verdict: checked.refBookId ? 'confirmed' : 'unconfirmed',
+    title: guess.title,
+    authors: guess.authors,
+    publisher: guess.publisher ?? fromPrefix,
+    year: guess.year,
+    pages: extra.pages,
+    seriesName: guess.seriesName,
+    annotation: extra.annotation,
+    coverUrl: extra.coverUrl,
+    coverOptions: extra.coverOptions,
+    refBookId: checked.refBookId,
+    workId: checked.workId,
+    proofUrl: box.proof?.url ?? null,
+    proofTitle: box.proof?.title ?? null,
+  })
+
   await writeGuess({
     isbn13,
     // страница с номером — подтверждение не хуже каталога
@@ -827,6 +947,7 @@ async function webLookup(
     proofTitle: box.proof?.title ?? null,
     rawJson: answer.text.slice(0, 2000),
     rejectedVias: rejectedJson,
+    variants: JSON.stringify(variants),
   })
 
   log.info('web', 'номер найден в интернете', { isbn: isbn13, via })
@@ -851,6 +972,8 @@ async function webLookup(
     cached: false,
     askedModel: true,
     coverOptions: extra.coverOptions,
+    variants,
+    variantIndex: variants.length - 1,
     exhausted: false,
     via,
     proof: box.proof,
@@ -879,13 +1002,14 @@ export async function applyRecognition(
   userId: string,
   bookId: string,
   chosenCover?: string,
+  variantVia?: string,
 ): Promise<{ verdict: Verdict }> {
   const [row] = await db.select().from(book).where(eq(book.id, bookId))
   if (!row) throw new AppError('Книга не найдена', 'not_found')
   await assertBookAccess(userId, row)
   if (!row.isbn13) throw new AppError('У книги нет ISBN', 'invalid')
 
-  const hit = await cached(row.isbn13)
+  let hit = await cached(row.isbn13)
   if (!hit) {
     // Источники справились сами — это обычное дозаполнение, а не работа ИИ:
     // пометку «заполнил ИИ» и очередь модератора здесь ставить не за что.
@@ -893,6 +1017,28 @@ export async function applyRecognition(
     const result = await retryLookup(userId, [bookId])
     if (result.resolved > 0) return { verdict: 'confirmed' }
     throw new AppError('Сначала разберите книгу', 'invalid')
+  }
+
+  // человек пролистал историю: сохраняем показанный вариант, а не последний
+  if (variantVia) {
+    const chosen = parseVariants(hit.variants).find((v) => v.via === variantVia)
+    if (chosen) {
+      hit = {
+        ...hit,
+        verdict: chosen.verdict,
+        title: chosen.title,
+        authors: chosen.authors,
+        publisher: chosen.publisher,
+        year: chosen.year,
+        pages: chosen.pages,
+        seriesName: chosen.seriesName,
+        annotation: chosen.annotation,
+        coverUrl: chosen.coverUrl,
+        refBookId: chosen.refBookId,
+        workId: chosen.workId,
+        via: chosen.via,
+      }
+    }
   }
   if (hit.verdict === 'unknown') {
     throw new AppError(

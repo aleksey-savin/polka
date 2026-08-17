@@ -213,6 +213,8 @@ export const aiIsbnGuess = sqliteTable('ai_isbn_guess', {
   via: text('via'),
   /** Пути, которые человек отверг кнопкой «Искать дальше» (JSON-массив). */
   rejectedVias: text('rejected_vias'),
+  /** Все найденные варианты (JSON-массив) — листаются без новых запросов. */
+  variants: text('variants'),
   /** Страница, на которой встретился сам номер. */
   proofUrl: text('proof_url'),
   proofTitle: text('proof_title'),
