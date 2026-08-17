@@ -120,8 +120,8 @@ export function AppShell({
                           ? `${pendingModeration} в очереди`
                           : undefined,
                       icon: <ShieldCheck />,
-                      onSelect: () =>
-                        void router.navigate({ to: '/service', search: {} }),
+                      to: '/service',
+                      search: {},
                     },
                   ] as const)
                 : []),
@@ -129,7 +129,7 @@ export function AppShell({
                 key: 'settings',
                 label: 'Настройки',
                 icon: <Settings />,
-                onSelect: () => void router.navigate({ to: '/settings' }),
+                to: '/settings',
               },
               {
                 key: 'signout',

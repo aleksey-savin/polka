@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
+import { Link } from '@tanstack/react-router'
 
 import {
   Drawer,
@@ -22,7 +23,14 @@ export interface ActionMenuItem {
   /** Подстрока-пояснение — показывается только в мобильной шторке. */
   sub?: string
   danger?: boolean
-  onSelect: () => void
+  /**
+   * Переход — ссылкой, а не программной навигацией: клик по кнопке совпадал
+   * с закрытием шторки, и на тяжёлых страницах переход терялся.
+   */
+  to?: string
+  params?: Record<string, string>
+  search?: Record<string, unknown>
+  onSelect?: () => void
 }
 /** Произвольный элемент в меню — например переключатель темы (M23). */
 export interface ActionMenuCustom {
@@ -80,10 +88,24 @@ export function ActionMenu({
               <DropdownMenuItem
                 key={entry.key}
                 className={entry.danger ? 'text-destructive' : undefined}
-                onSelect={entry.onSelect}
+                asChild={Boolean(entry.to)}
+                onSelect={entry.to ? undefined : entry.onSelect}
               >
-                {entry.icon}
-                {entry.label}
+                {entry.to ? (
+                  <Link
+                    to={entry.to as never}
+                    params={entry.params as never}
+                    search={(entry.search ?? {}) as never}
+                  >
+                    {entry.icon}
+                    {entry.label}
+                  </Link>
+                ) : (
+                  <>
+                    {entry.icon}
+                    {entry.label}
+                  </>
+                )}
               </DropdownMenuItem>
             ),
           )}
@@ -117,32 +139,69 @@ export function ActionMenu({
               {entry.custom}
             </div>
           ) : (
-            <button
+            <MobileRow
               key={entry.key}
-              type="button"
-              className={`flex min-h-[52px] w-full items-center gap-3.5 rounded-xl px-3 text-left text-[16px] font-medium active:bg-background [&_svg]:size-[21px] [&_svg]:flex-none ${
-                entry.danger
-                  ? 'text-destructive'
-                  : '[&_svg]:text-muted-foreground'
-              }`}
-              onClick={() => {
-                setOpen(false)
-                entry.onSelect()
-              }}
-            >
-              {entry.icon}
-              <span className="min-w-0">
-                {entry.label}
-                {entry.sub && (
-                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                    {entry.sub}
-                  </span>
-                )}
-              </span>
-            </button>
+              entry={entry}
+              onDone={() => setOpen(false)}
+            />
           ),
         )}
       </DrawerContent>
     </Drawer>
+  )
+}
+
+/** Строка мобильной шторки: переход — ссылкой, действие — кнопкой. */
+function MobileRow({
+  entry,
+  onDone,
+}: {
+  entry: ActionMenuItem
+  onDone: () => void
+}) {
+  const className = `flex min-h-[52px] w-full items-center gap-3.5 rounded-xl px-3 text-left text-[16px] font-medium active:bg-background [&_svg]:size-[21px] [&_svg]:flex-none ${
+    entry.danger ? 'text-destructive' : '[&_svg]:text-muted-foreground'
+  }`
+  const body = (
+    <>
+      {entry.icon}
+      <span className="min-w-0">
+        {entry.label}
+        {entry.sub && (
+          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+            {entry.sub}
+          </span>
+        )}
+      </span>
+    </>
+  )
+
+  if (entry.to) {
+    return (
+      <Link
+        to={entry.to as never}
+        params={entry.params as never}
+        search={(entry.search ?? {}) as never}
+        className={className}
+        onClick={onDone}
+      >
+        {body}
+      </Link>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      onClick={() => {
+        onDone()
+        // шторка закрывается с анимацией — действие ждёт кадр, иначе
+        // vaul успевает погасить клики на странице
+        requestAnimationFrame(() => entry.onSelect?.())
+      }}
+    >
+      {body}
+    </button>
   )
 }

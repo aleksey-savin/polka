@@ -138,11 +138,8 @@ function ListPage() {
               key: 'edit',
               label: 'Редактировать',
               icon: <Pencil />,
-              onSelect: () =>
-                void router.navigate({
-                  to: '/lists/$listId/edit',
-                  params: { listId: list.id },
-                }),
+              to: '/lists/$listId/edit',
+              params: { listId: list.id },
             },
           ]}
         />
