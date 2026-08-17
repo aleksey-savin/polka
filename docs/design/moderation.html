@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Полка — роли и модерация, макет</title>
+<title>Полка — очередь модерации, макет</title>
 </head>
 <body>
 <style>
@@ -42,16 +42,15 @@
 
   :root {
     --paper: #fafaf6;
+    --card: #ffffff;
     --ink: #232b38;
     --ink-soft: #5c6472;
     --line: #e6e4dc;
-    --card: #ffffff;
     --lamp: #2f6b4f;
     --lamp-deep: #275c43;
     --lamp-tint: #eaf2ed;
     --stamp: #4353a5;
     --alarm: #a2543a;
-    --alarm-tint: #f6ece7;
     --sans: 'Golos Text', 'Segoe UI', system-ui, sans-serif;
     --mono: 'IBM Plex Mono', Consolas, monospace;
   }
@@ -74,12 +73,11 @@
   }
   button,
   input,
-  textarea,
   select {
     font-family: var(--sans);
   }
   .page {
-    max-width: 620px;
+    max-width: 580px;
     margin: 0 auto;
     padding: 18px 18px 60px;
   }
@@ -128,11 +126,11 @@
   }
   .tabs button {
     flex: 1;
-    min-height: 38px;
+    min-height: 36px;
     border: 0;
     border-radius: 999px;
     background: transparent;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--ink-soft);
     cursor: pointer;
@@ -142,263 +140,288 @@
     background: var(--ink);
     color: #fff;
   }
-  .tabs .count {
-    font-family: var(--mono);
-    font-size: 11.5px;
-  }
 
-  .item {
+  .switch-row {
     display: flex;
+    align-items: center;
     gap: 12px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: var(--card);
-    padding: 12px;
-    margin-top: 10px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
   }
-  .item.flag {
-    border-color: color-mix(in oklab, var(--alarm) 45%, transparent);
-    background: color-mix(in oklab, var(--alarm-tint) 60%, var(--card));
+  .switch-row:first-of-type {
+    border-top: 0;
   }
-  .cover {
-    flex: none;
-    width: 54px;
-    height: 78px;
-    border-radius: 4px;
-    background: var(--c, #d9cdb8);
-    box-shadow: inset 2px 0 0 rgba(255, 255, 255, 0.3);
-  }
-  .item .body {
+  .switch-row .body {
     min-width: 0;
     flex: 1;
   }
-  .kind {
-    display: inline-block;
-    border: 1.5px solid color-mix(in oklab, var(--ink-soft) 50%, transparent);
-    border-radius: 3px;
-    padding: 0 5px;
-    font-family: var(--mono);
-    font-size: 9.5px;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-  }
-  .kind.report {
-    border-color: var(--alarm);
-    color: var(--alarm);
-  }
-  .item h3 {
-    margin: 6px 0 0;
-    font-size: 15.5px;
+  .switch-row .t {
+    font-size: 14.5px;
     font-weight: 600;
   }
-  .item .meta {
-    margin: 2px 0 0;
+  .switch-row .s {
     font-size: 12.5px;
     color: var(--ink-soft);
   }
-  .item .quote {
-    margin: 8px 0 0;
-    border-left: 2px solid var(--line);
-    padding-left: 8px;
-    font-size: 12.5px;
-    color: var(--ink-soft);
+  .sw {
+    width: 46px;
+    height: 26px;
+    border-radius: 999px;
+    background: var(--line);
+    position: relative;
+    flex: none;
+    border: 0;
+    cursor: pointer;
   }
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
+  .sw.on {
+    background: var(--lamp);
+  }
+  .sw::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(35, 43, 56, 0.3);
+    transition: transform 0.15s;
+  }
+  .sw.on::after {
+    transform: translateX(20px);
+  }
+
+  .field {
+    display: grid;
     gap: 6px;
-    margin-top: 10px;
+    margin-top: 14px;
   }
-  .btn {
-    height: 34px;
-    padding: 0 11px;
-    border-radius: 10px;
+  .field label {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .field .hint {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .ctl {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
     border: 1px solid var(--line);
     background: var(--card);
-    font-size: 12.5px;
+    padding: 0 13px;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .ctl.mono {
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--lamp-deep);
+  }
+  .status .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--lamp);
+    flex: none;
+  }
+  .status.bad {
+    color: var(--alarm);
+  }
+  .status.bad .dot {
+    background: var(--alarm);
+  }
+  .btn {
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    font-size: 14px;
     font-weight: 600;
     color: var(--ink);
     cursor: pointer;
   }
-  .btn.ok {
+  .btn.main {
     border-color: transparent;
     background: var(--lamp);
     color: #fff;
   }
-  .btn.danger {
-    border-color: color-mix(in oklab, var(--alarm) 45%, transparent);
-    color: var(--alarm);
-  }
-  .btn.lg {
-    height: 42px;
-    padding: 0 16px;
-    font-size: 14px;
-    border-radius: 12px;
-  }
-
-  .reason {
-    margin-top: 10px;
-    display: grid;
-    gap: 6px;
-  }
-  .reason label {
+  .btn.sm {
+    height: 34px;
+    padding: 0 11px;
     font-size: 12.5px;
-    font-weight: 600;
-  }
-  .reason select,
-  .reason textarea {
-    width: 100%;
     border-radius: 10px;
-    border: 1px solid var(--line);
-    background: var(--paper);
-    padding: 9px 11px;
-    font-size: 14px;
-    color: var(--ink);
+  }
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
   }
 
-  /* пользователи */
-  .user-row {
+  /* выпадающий список моделей с поиском */
+  .picker {
+    position: relative;
+  }
+  .picker-list {
+    margin-top: 6px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    overflow: hidden;
+    box-shadow: 0 12px 28px -18px rgba(35, 43, 56, 0.5);
+  }
+  .picker-search {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 11px 2px;
-    border-top: 1px solid var(--line);
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 13px;
   }
-  .user-row:first-of-type {
-    border-top: 0;
+  .picker-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+    cursor: pointer;
   }
-  .avatar {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+  .picker-item.on {
     background: var(--lamp-tint);
     color: var(--lamp-deep);
     font-weight: 600;
   }
-  .role {
-    flex: none;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    padding: 2px 9px;
-    font-size: 12px;
-    color: var(--ink-soft);
-    background: var(--card);
-  }
-  .role.mod {
-    border-color: color-mix(in oklab, var(--stamp) 40%, transparent);
-    color: var(--stamp);
-  }
-  .role.admin {
-    border-color: color-mix(in oklab, var(--lamp) 45%, transparent);
-    color: var(--lamp-deep);
-  }
-  .role.banned {
-    border-color: color-mix(in oklab, var(--alarm) 45%, transparent);
-    color: var(--alarm);
-  }
-
-  /* плашка владельцу */
-  .notice {
-    border: 1px solid color-mix(in oklab, var(--alarm) 40%, transparent);
-    background: var(--alarm-tint);
-    border-radius: 14px;
-    padding: 12px 14px;
-  }
-  .notice b {
-    display: block;
-    font-size: 14.5px;
-  }
-  .notice p {
-    margin: 4px 0 0;
-    font-size: 13px;
-    color: var(--ink-soft);
-  }
-
-  /* журнал */
-  .log {
-    display: flex;
-    gap: 10px;
-    padding: 8px 2px;
-    border-top: 1px solid var(--line);
-    font-size: 12.5px;
-  }
-  .log:first-of-type {
-    border-top: 0;
-  }
-  .log .when {
-    flex: none;
-    width: 96px;
-    font-family: var(--mono);
+  .picker-item .tag {
+    font-family: var(--sans);
     font-size: 11px;
     color: var(--ink-soft);
   }
 
-  .sheet {
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    background: var(--card);
-    padding: 10px 16px 16px;
-    box-shadow: 0 10px 28px -18px rgba(35, 43, 56, 0.45);
+  /* предложение ИИ */
+  .suggest {
+    border: 1px solid color-mix(in oklab, var(--stamp) 35%, transparent);
+    background: color-mix(in oklab, var(--stamp) 5%, var(--card));
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-top: 12px;
   }
-  .grip {
-    width: 36px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--line);
-    margin: 0 auto 10px;
-  }
-  .sheet h3 {
-    margin: 0;
-    font-size: 17px;
+  .suggest .head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
     font-weight: 600;
+    color: var(--stamp);
   }
-  .sheet .sub {
-    margin: 2px 0 10px;
+  .suggest p {
+    margin: 8px 0 0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .chip {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--card);
+    padding: 4px 11px;
+    font-size: 12.5px;
+  }
+  .applied {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    border: 1px dashed color-mix(in oklab, var(--ink-soft) 40%, transparent);
+    border-radius: 12px;
+    padding: 9px 12px;
     font-size: 12.5px;
     color: var(--ink-soft);
   }
-  .radio {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    width: 100%;
-    min-height: 46px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--card);
-    padding: 10px 12px;
-    text-align: left;
-    margin-top: 8px;
-    font-size: 14px;
+  .applied b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .undo {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--lamp-deep);
     cursor: pointer;
   }
-  .radio.on {
-    border-color: color-mix(in oklab, var(--alarm) 45%, transparent);
-    background: var(--alarm-tint);
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
   }
-  .radio .dot {
+  .row:first-of-type {
+    border-top: 0;
+  }
+  .mini {
+    flex: none;
+    width: 32px;
+    height: 48px;
+    border-radius: 3px;
+    background: var(--c, #d9cdb8);
+  }
+  .row .t {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .row .s {
+    margin: 1px 0 0;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .box {
     flex: none;
     display: grid;
     place-items: center;
-    width: 18px;
-    height: 18px;
-    margin-top: 1px;
-    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
     border: 1.5px solid var(--line);
+    font-size: 13px;
+    color: transparent;
   }
-  .radio.on .dot {
-    border-color: var(--alarm);
+  .box.on {
+    border-color: var(--lamp);
+    background: var(--lamp);
+    color: #fff;
   }
-  .radio.on .dot::after {
-    content: '';
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--alarm);
+  .limit {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
   }
 
   .mock-notes {
@@ -423,211 +446,971 @@
   .mock-note:last-child {
     margin-bottom: 0;
   }
+
+  /* разбор нераспознанных */
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    padding: 12px 14px;
+  }
+  .card + .card {
+    margin-top: 8px;
+  }
+  .pick {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+  }
+  .box {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    border-radius: 7px;
+    border: 1.5px solid var(--line);
+    margin-top: 2px;
+  }
+  .box.on {
+    background: var(--lamp);
+    border-color: var(--lamp);
+    position: relative;
+  }
+  .box.on::after {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .isbn {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .meta {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 14px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 12px;
+    margin-top: 10px;
+  }
+  .bar b {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .verdict {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    border-radius: 12px;
+    padding: 9px 11px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    margin-top: 10px;
+  }
+  .verdict .mark {
+    flex: none;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+  .verdict.yes {
+    background: var(--lamp-tint);
+    color: var(--lamp-deep);
+  }
+  .verdict.maybe {
+    background: #f6efe2;
+    color: #6f5227;
+  }
+  .verdict.no {
+    background: #f7ebe6;
+    color: var(--alarm);
+  }
+  .guess {
+    display: grid;
+    gap: 3px;
+  }
+  .guess .t {
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .guess .a {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .prog {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+    margin: 10px 0 6px;
+  }
+  .prog span {
+    display: block;
+    height: 100%;
+    width: 58%;
+    background: var(--lamp);
+  }
+  .queue-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .stat {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .diff {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 9px;
+    font-size: 12.5px;
+  }
+  .diff div {
+    border-radius: 10px;
+    padding: 8px 10px;
+    background: color-mix(in oklab, var(--ink-soft) 6%, transparent);
+  }
+  .diff b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 3px;
+  }
+  .tag {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 2px 9px;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .tag.ai {
+    background: color-mix(in oklab, var(--stamp) 12%, transparent);
+    color: var(--stamp);
+  }
+  .tag.ref {
+    background: var(--lamp-tint);
+    color: var(--lamp-deep);
+  }
+
+  /* карточка находки v2 */
+  .hit {
+    border: 1px solid color-mix(in oklab, var(--lamp) 26%, transparent);
+    background: var(--card);
+    border-radius: 18px;
+    padding: 14px;
+    margin-top: 10px;
+    box-shadow: 0 10px 26px -20px rgba(35, 43, 56, 0.5);
+  }
+  .hit-top {
+    display: flex;
+    gap: 15px;
+  }
+  .cov-wrap {
+    width: 96px;
+    flex: none;
+    position: relative;
+  }
+  .cov-view {
+    display: flex;
+    overflow: hidden;
+    border-radius: 5px;
+    box-shadow:
+      inset 3px 0 0 rgba(255, 255, 255, 0.25),
+      0 10px 20px -10px rgba(35, 43, 56, 0.55);
+  }
+  .cov-view .slide {
+    width: 96px;
+    aspect-ratio: 7 / 10;
+    flex: none;
+    background: linear-gradient(160deg, #d8433f, #8e1f1c);
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 10px;
+    text-align: center;
+    padding: 8px;
+  }
+  .cov-view.shifted .slide:first-child {
+    margin-left: -76px;
+  }
+  .cov-view .slide.v2 {
+    background: linear-gradient(160deg, #3c6e8f, #17384d);
+  }
+  .cov-view .slide.v3 {
+    background: linear-gradient(160deg, #b98a2e, #6e4c0d);
+  }
+  .cov-count {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    border-radius: 999px;
+    background: rgba(35, 43, 56, 0.72);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+  .cov-shelf {
+    position: absolute;
+    left: -8px;
+    right: -8px;
+    bottom: -7px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(#e3d3ae, #cbb686);
+  }
+  .cov-dots {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 13px;
+  }
+  .cov-dots i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--line);
+  }
+  .cov-dots i.on {
+    background: var(--ink-soft);
+  }
+  .hit-body {
+    min-width: 0;
+    flex: 1;
+  }
+  .hit-title {
+    margin: 0;
+    font-size: 16.5px;
+    line-height: 1.22;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  .hit-author {
+    margin: 3px 0 0;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+  }
+  .hit-facts {
+    margin: 5px 0 0;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  .hit-ann {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    line-height: 1.52;
+    color: var(--ink-soft);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .hit-ann-more {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 12px;
+    color: var(--lamp-deep);
+    cursor: pointer;
+    margin-top: 2px;
+  }
+  .hit-proof {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    border: 1px solid color-mix(in oklab, var(--lamp) 30%, transparent);
+    background: var(--lamp-tint);
+    border-radius: 999px;
+    padding: 3.5px 11px 3.5px 8px;
+    font-size: 11.5px;
+    color: var(--lamp-deep);
+  }
+  .hit-proof b {
+    font-weight: 600;
+  }
+  .hit-proof.warn {
+    border-color: color-mix(in oklab, var(--alarm) 32%, transparent);
+    background: color-mix(in oklab, var(--alarm) 7%, transparent);
+    color: var(--alarm);
+  }
+  .hit-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 13px;
+    flex-wrap: wrap;
+  }
+  .hit-actions .more {
+    margin-left: auto;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .swipe-hint {
+    position: absolute;
+    inset: 0;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(
+      90deg,
+      transparent 55%,
+      rgba(35, 43, 56, 0.35)
+    );
+  }
+  .swipe-hint span {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 15px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+
+  /* переключатель вариантов */
+  .var-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .var-head .lbl {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .var-nav {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .var-nav button {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    font-size: 16px;
+    color: var(--ink);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .var-nav button:disabled {
+    opacity: 0.35;
+  }
+  .var-tag {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    background: color-mix(in oklab, var(--stamp) 10%, transparent);
+    color: var(--stamp);
+  }
+  /* крупная обложка */
+  .cov-wrap.big {
+    width: 128px;
+  }
+  .cov-wrap.big .cov-view .slide {
+    width: 128px;
+  }
+  .cov-arr {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: linear-gradient(90deg, rgba(35, 43, 56, 0.45), transparent);
+    color: #fff;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 5px 0 0 5px;
+  }
+  .cov-arr.r {
+    right: 0;
+    border-radius: 0 5px 5px 0;
+    background: linear-gradient(270deg, rgba(35, 43, 56, 0.45), transparent);
+  }
+  .cov-arr.l {
+    left: 0;
+  }
+  .cov-dots.big i {
+    width: 7px;
+    height: 7px;
+  }
+  .redo {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  /* страница профиля */
+  .sec {
+    margin-top: 26px;
+  }
+  .sec-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .sec-head span {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .sec-head::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .who {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--card);
+    padding: 14px;
+  }
+  .who .ava {
+    width: 56px;
+    height: 56px;
+    flex: none;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--lamp-tint);
+    color: var(--lamp-deep);
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .who .nm {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .who .ml {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+  }
+  .who .role {
+    display: inline-block;
+    margin-top: 5px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--stamp) 10%, transparent);
+    color: var(--stamp);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1.5px 9px;
+  }
+  .rowlink {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 56px;
+    border: 0;
+    border-top: 1px solid var(--line);
+    background: transparent;
+    padding: 8px 2px;
+    font: inherit;
+    font-size: 15.5px;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+  }
+  .rowlink:first-of-type {
+    border-top: 0;
+  }
+  .rowlink .ic {
+    width: 22px;
+    flex: none;
+    color: var(--ink-soft);
+    font-size: 15px;
+    text-align: center;
+  }
+  .rowlink .sub {
+    display: block;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-top: 1px;
+  }
+  .rowlink .chev {
+    margin-left: auto;
+    color: var(--ink-soft);
+    font-size: 17px;
+  }
+  .rowlink.danger {
+    color: var(--alarm);
+  }
+  .rowlink.danger .ic {
+    color: var(--alarm);
+  }
+  .hintline {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .sheet2 {
+    max-width: 380px;
+    margin: 0 auto;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: var(--card);
+    padding: 0 16px 18px;
+  }
+  .sheet2 .grip {
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--line);
+    margin: 10px auto 14px;
+  }
+  .sheet2 h3 {
+    margin: 0 0 12px;
+    font-size: 19px;
+    font-weight: 600;
+  }
+  .stack2 {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .cap {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--lamp-deep);
+  }
+
+  .badge-n {
+    margin-left: auto;
+    margin-right: 8px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--alarm);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    display: inline-grid;
+    place-items: center;
+  }
+  .state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+  .state .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .state .dot.ok {
+    background: var(--lamp);
+  }
+  .state .dot.bad {
+    background: var(--alarm);
+  }
+  .state .dot.off {
+    background: var(--ink-soft);
+    opacity: 0.5;
+  }
+  .tabs-bad {
+    display: flex;
+    gap: 2px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--card);
+    padding: 4px;
+    overflow: hidden;
+  }
+  .tabs-bad span {
+    flex: 1;
+    min-height: 34px;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .tabs-bad span.on {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 999px;
+  }
+
+  .qtabs {
+    display: flex;
+    gap: 3px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--card);
+    padding: 4px;
+  }
+  .qtabs button {
+    flex: 1;
+    min-height: 40px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .qtabs button.on {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .qtabs .n {
+    font-family: var(--mono);
+    font-size: 11px;
+    opacity: 0.8;
+  }
+  .qcard {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--card);
+    padding: 12px;
+    margin-top: 10px;
+  }
+  .qtop {
+    display: flex;
+    gap: 12px;
+  }
+  .qcov {
+    width: 54px;
+    flex: none;
+    aspect-ratio: 7/10;
+    border-radius: 4px;
+    background: linear-gradient(160deg, #e2ddd0, #cdc6b4);
+  }
+  .qbody {
+    min-width: 0;
+    flex: 1;
+  }
+  .qkind {
+    display: inline-block;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .qkind.ai {
+    border-color: color-mix(in oklab, var(--stamp) 35%, transparent);
+    color: var(--stamp);
+  }
+  .qtitle {
+    margin: 5px 0 0;
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+  .qmeta {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+  }
+  .qacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 10px;
+  }
+  .qacts .b {
+    min-height: 38px;
+    font-size: 13px;
+    padding: 0 12px;
+  }
+  .qdone {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 9px;
+    font-size: 12.5px;
+  }
+  .qdone.ok {
+    color: var(--lamp-deep);
+  }
+  .qdone.no {
+    color: var(--alarm);
+  }
+  .more-btn {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    margin-top: 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 12.5px;
+  }
+  .split > div {
+    border-radius: 12px;
+    padding: 9px 11px;
+  }
+  .split .mine {
+    background: color-mix(in oklab, var(--ink-soft) 7%, transparent);
+  }
+  .split .draft {
+    background: var(--lamp-tint);
+    color: var(--lamp-deep);
+  }
+  .split b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+    opacity: 0.85;
+  }
 </style>
 
 <div class="page">
-  <h1 class="mock-h">Роли и пост-модерация</h1>
+  <h1 class="mock-h">Очередь модерации</h1>
   <p class="lead">
-    Модерируем общий слой: загруженные обложки, эталонный каталог, публичные
-    витрины. Личные рецензии и заметки — нет.
+    Одна очередь, решения с подтверждением и отменой, правки — в копию.
   </p>
 
-  <div class="demo-label">1 · Очередь модератора</div>
-  <div class="tabs">
-    <button type="button" class="on">
-      Жалобы <span class="count">· 2</span>
-    </button>
-    <button type="button">На проверке <span class="count">· 14</span></button>
-    <button type="button">Разобрано</button>
-  </div>
-
-  <div class="item flag">
-    <span class="cover" style="--c: #6d2f2f"></span>
-    <div class="body">
-      <span class="kind report">жалоба · 3</span>
-      <h3>Обложка книги</h3>
-      <p class="meta">
-        загружена 16 августа · показывается на витрине «Полка у окна»
-      </p>
-      <p class="quote">
-        «Картинка со свастикой вместо обложки» — гость, 16 августа
-      </p>
-      <div class="actions">
-        <button class="btn ok" type="button">В порядке</button>
-        <button class="btn danger" type="button">Удалить файл</button>
-        <button class="btn danger" type="button">Снять с публикации</button>
-        <button class="btn" type="button">Открыть</button>
-      </div>
+  <div class="demo-label">1 · Табы со счётчиками</div>
+  <div class="phone" style="max-width: 100%; border-radius: 16px">
+    <p style="margin: 0 0 10px; font-size: 13px; color: var(--ink-soft)">
+      <span style="text-decoration: underline; text-underline-offset: 2px"
+        >Настройки</span
+      >
+      / Очередь модерации
+    </p>
+    <h2 style="margin: 0 0 12px; font-size: 25px; font-weight: 600">
+      Очередь модерации
+    </h2>
+    <div class="qtabs">
+      <button type="button">Жалобы <span class="n">2</span></button>
+      <button class="on" type="button">На проверке <span class="n">16</span></button>
+      <button type="button">Разобрано <span class="n">43</span></button>
     </div>
-  </div>
-
-  <div class="item flag">
-    <span class="cover" style="--c: #35506b"></span>
-    <div class="body">
-      <span class="kind report">жалоба · 1</span>
-      <h3>Подборка «Читаем на карантине»</h3>
-      <p class="meta">публичная ссылка · 12 книг · автор Пётр</p>
-      <p class="quote">«В описании ссылка на казино» — Оля, 15 августа</p>
-      <div class="actions">
-        <button class="btn ok" type="button">В порядке</button>
-        <button class="btn danger" type="button">Снять с публикации</button>
-        <button class="btn" type="button">Открыть</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="item">
-    <span class="cover" style="--c: #8d9aab"></span>
-    <div class="body">
-      <span class="kind">эталон · издание</span>
-      <h3>Собрание сочинений в семи томах. Том 6</h3>
-      <p class="meta">Лексика · 1994 · попало в каталог 16 августа</p>
-      <div class="actions">
-        <button class="btn ok" type="button">В порядке</button>
-        <button class="btn danger" type="button">Снять с публикации</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="demo-label">2 · Снятие: причина обязательна</div>
-  <p class="note-inline">
-    Причина уходит владельцу и в журнал — без неё кнопка не работает.
-  </p>
-  <div class="item" style="margin-top: 0">
-    <span class="cover" style="--c: #6d2f2f"></span>
-    <div class="body">
-      <h3>Обложка книги</h3>
-      <div class="reason">
-        <label>Причина</label>
-        <select>
-          <option>Запрещённая символика</option>
-          <option>Порнография</option>
-          <option>Оскорбления и травля</option>
-          <option>Реклама и спам</option>
-          <option>Чужие права (пиратский скан)</option>
-          <option>Другое — опишу</option>
-        </select>
-        <textarea rows="2" placeholder="Комментарий владельцу (необязательно)"></textarea>
-      </div>
-      <div class="actions">
-        <button class="btn danger lg" type="button">Снять и удалить файл</button>
-        <button class="btn lg" type="button">Отмена</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="demo-label">3 · Пользователи (админ)</div>
-  <div>
-    <div class="user-row">
-      <span class="avatar">А</span>
-      <div style="min-width: 0; flex: 1">
-        <p style="margin: 0; font-weight: 600">Алексей</p>
-        <p style="margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft)">
-          aleksey@example.ru · 22 книги
-        </p>
-      </div>
-      <span class="role admin">админ</span>
-      <button class="btn" type="button">···</button>
-    </div>
-    <div class="user-row">
-      <span class="avatar">О</span>
-      <div style="min-width: 0; flex: 1">
-        <p style="margin: 0; font-weight: 600">Оля</p>
-        <p style="margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft)">
-          olya@example.ru · 40 книг
-        </p>
-      </div>
-      <span class="role mod">модератор</span>
-      <button class="btn" type="button">···</button>
-    </div>
-    <div class="user-row">
-      <span class="avatar">П</span>
-      <div style="min-width: 0; flex: 1">
-        <p style="margin: 0; font-weight: 600">Пётр</p>
-        <p style="margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft)">
-          petr@example.ru · 3 книги · 2 снятия
-        </p>
-      </div>
-      <span class="role banned">без публикаций</span>
-      <button class="btn" type="button">···</button>
-    </div>
-  </div>
-  <p class="note-inline" style="margin-top: 10px">
-    В меню «···»: назначить модератором, запретить публиковать, заблокировать
-    аккаунт — каждое с причиной.
-  </p>
-
-  <div class="demo-label">4 · Что видит владелец</div>
-  <div class="notice">
-    <b>Подборка снята с публикации</b>
-    <p>
-      Причина: реклама и спам. Ссылка не работает, книги остались у вас.
-      Поправьте описание и включите ссылку заново.
+    <p class="note-inline" style="margin: 10px 0 0">
+      Счётчики приходят отдельным дешёвым запросом, а не из числа загруженных
+      строк — потому и «16» раньше не сходилось.
     </p>
   </div>
 
-  <div class="demo-label">5 · Жалоба с витрины (гость)</div>
-  <div class="sheet">
+  <div class="demo-label">2 · Запись: провал и действия</div>
+  <div class="phone" style="max-width: 100%; border-radius: 16px">
+    <div class="qcard" style="margin-top: 0">
+      <div class="qtop">
+        <span class="qcov" aria-hidden></span>
+        <div class="qbody">
+          <span class="qkind">эталон · издание</span>
+          <span class="qkind ai" style="margin-left: 5px">нашёл ИИ</span>
+          <p class="qtitle">
+            Читаем, пишем, говорим по-японски. В 2-х частях. Часть 1
+          </p>
+          <p class="qmeta">
+            Елена Стругова, Наталия Шефтелевич · Восточная книга, 2015
+          </p>
+          <p class="qmeta">добавил Алексей · 17 августа</p>
+        </div>
+      </div>
+      <div class="qacts">
+        <span class="b primary">Одобрить…</span>
+        <span class="b danger">Заблокировать…</span>
+        <span class="b">Открыть</span>
+        <span class="b">Поправить</span>
+      </div>
+    </div>
+    <p class="note-inline" style="margin: 10px 0 0">
+      «Открыть» ведёт к самому объекту — книге или записи эталона; вернуться
+      крошкой. Длинное название переносится, а не уезжает за край.
+    </p>
+  </div>
+
+  <div class="demo-label">3 · Подтверждение одобрения</div>
+  <div class="sheet2">
     <div class="grip"></div>
-    <h3>Пожаловаться</h3>
-    <p class="sub">Подборка «Читаем на карантине»</p>
-    <button class="radio on" type="button"><span class="dot"></span> Запрещённая символика или экстремизм</button>
-    <button class="radio" type="button"><span class="dot"></span> Порнография</button>
-    <button class="radio" type="button"><span class="dot"></span> Реклама, спам, мошенничество</button>
-    <button class="radio" type="button"><span class="dot"></span> Другое</button>
-    <textarea
-      rows="2"
-      style="width: 100%; margin-top: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); padding: 9px 11px; font-size: 14px"
-      placeholder="Что не так (необязательно)"
-    ></textarea>
-    <div class="actions" style="margin-top: 12px">
-      <button class="btn ok lg" type="button" style="flex: 1">Отправить</button>
-      <button class="btn lg" type="button">Отмена</button>
+    <h3>Одобрить запись?</h3>
+    <p style="margin: 0 0 12px; font-size: 13.5px; color: var(--ink-soft)">
+      «Читаем, пишем, говорим по-японски» останется видимой для всех. Решение
+      можно отменить в «Разобрано».
+    </p>
+    <div class="switch-row" style="border-top: 0">
+      <div class="body">
+        <div class="t">Внести в эталон</div>
+        <div class="s">
+          Копия записи станет общей — по этому ISBN книга найдётся у всех
+        </div>
+      </div>
+      <button class="sw on" type="button" aria-label="Внести в эталон"></button>
+    </div>
+    <div class="stack2">
+      <span class="b primary wide">Одобрить</span>
+      <span class="b wide">Отмена</span>
     </div>
   </div>
 
-  <div class="demo-label">6 · Журнал модерации</div>
-  <div>
-    <div class="log">
-      <span class="when">16.08 14:22</span>
-      <span>
-        <b>Оля</b> сняла обложку книги · запрещённая символика · файл удалён
-      </span>
+  <div class="demo-label">4 · Правки идут в копию</div>
+  <div class="phone" style="max-width: 100%; border-radius: 16px">
+    <div class="split">
+      <div class="mine">
+        <b>у владельца</b>Читаем, пишем, говорим по-японски. В 2-х частях.
+        Часть 1
+      </div>
+      <div class="draft">
+        <b>копия для эталона</b>Читаем, пишем, говорим по-японски. Часть 1
+      </div>
     </div>
-    <div class="log">
-      <span class="when">16.08 14:19</span>
-      <span><b>Оля</b> пометила издание «Лексика, 1994» как в порядке</span>
+    <p class="note-inline" style="margin: 10px 0 0">
+      Модератор правит только копию: карточка владельца остаётся его. В эталон
+      уходит копия, не оригинал.
+    </p>
+  </div>
+
+  <div class="demo-label">5 · Разобрано: отмена решения</div>
+  <div class="phone" style="max-width: 100%; border-radius: 16px">
+    <div class="qcard" style="margin-top: 0">
+      <div class="qtop">
+        <span class="qcov" aria-hidden></span>
+        <div class="qbody">
+          <span class="qkind">обложка</span>
+          <p class="qtitle">Головокружение</p>
+          <p class="qmeta">2012 · добавил Алексей</p>
+        </div>
+      </div>
+      <p class="qdone ok"><span aria-hidden>✓</span> Одобрено · 17 августа · в эталоне</p>
+      <div class="qacts">
+        <span class="b">Отменить решение…</span>
+        <span class="b">Открыть</span>
+      </div>
     </div>
-    <div class="log">
-      <span class="when">15.08 09:40</span>
-      <span>
-        <b>Алексей</b> запретил публиковать пользователю Пётр · повторная
-        реклама
-      </span>
+    <div class="qcard">
+      <div class="qtop">
+        <span class="qcov" aria-hidden></span>
+        <div class="qbody">
+          <span class="qkind">публичная ссылка</span>
+          <p class="qtitle">Полка Алексея</p>
+          <p class="qmeta">снял Алексей · причина: чужие права</p>
+        </div>
+      </div>
+      <p class="qdone no"><span aria-hidden>✕</span> Заблокировано · ссылка не работает</p>
+      <div class="qacts">
+        <span class="b">Отменить решение…</span>
+      </div>
     </div>
+    <button class="more-btn" type="button">Показать ещё 20</button>
+    <p class="note-inline" style="margin: 10px 0 0">
+      Отмена возвращает запись в очередь и снимает последствия: обложка и
+      ссылка снова работают, из эталона копия убирается. Всё — в журнал.
+    </p>
   </div>
 
   <aside class="mock-notes">
     <h2 class="mock-notes-title">Примечания</h2>
     <p class="mock-note">
-      · Пост-модерация: ссылка работает сразу, объект просто попадает в
-      очередь. Жалоба поднимает его наверх и подсвечивает карточку.
+      · «Проверка находок» как отдельный раздел исчезает: это те же записи
+      эталона, только пришедшие от ИИ. Остаётся отметка «нашёл ИИ» на карточке и
+      один список с тремя фильтрами.
     </p>
     <p class="mock-note">
-      · Снятие всегда с причиной: она уходит владельцу плашкой и в журнал.
-      Причины — из короткого списка плюс свободный комментарий.
+      · Главное правило: <b>модерация не трогает карточку владельца</b>. Правки
+      идут в копию, из копии же формируется запись эталона. Так спор о «моей
+      книге» невозможен в принципе.
     </p>
     <p class="mock-note">
-      · Модератор видит содержимое, но не личные рецензии и заметки — они не
-      попадают в очередь вообще.
+      · Любое решение обратимо. «Отменить решение» возвращает в очередь,
+      восстанавливает обложку или ссылку и убирает копию из эталона; отмена
+      пишется в журнал наравне с решением.
     </p>
     <p class="mock-note">
-      · «Снять с публикации» не удаляет книги у владельца: перестаёт работать
-      ссылка. Отдельно есть «Удалить файл» — для обложки.
-    </p>
-    <p class="mock-note">
-      · Экран модерации виден только модератору и админу, «Пользователи» —
-      только админу; вход из меню под именем.
+      · Списки грузятся по 20 записей с «Показать ещё», курсором по дате — offset
+      сбивается, когда во время просмотра приходят новые жалобы. Счётчики
+      считаются запросом COUNT, отдельно от списка. То же для журнала и
+      пользователей.
     </p>
   </aside>
 </div>
