@@ -1043,22 +1043,47 @@ export async function proposeForBook(
   if (!row) throw new AppError('Книга не найдена', 'not_found')
   await assertBookAccess(userId, row)
 
-  const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
-  let draft = await fetchGoogleByTitle(row.title, row.authors)
+  // 1. что уже известно по номеру: веб-находка хранит и страницу-доказательство
+  const webHit = row.isbn13 ? await cached(row.isbn13) : null
 
-  // по номеру данные точнее: там наше конкретное издание
+  // 2. каталоги по номеру — там наше конкретное издание
+  let draft: Record<string, unknown> = {}
   if (row.isbn13) {
     const { lookupIsbn } = await import('./metadata/lookup')
     const byIsbn = await lookupIsbn(userId, row.isbn13).catch(() => null)
-    if (byIsbn?.draft.title) {
-      draft = { ...draft, ...byIsbn.draft }
+    if (byIsbn?.draft.title) draft = { ...byIsbn.draft }
+  }
+
+  // 3. обложка и аннотация: Google по названию, затем страница из веб-находки
+  const title =
+    (draft.title as string | undefined) ?? webHit?.title ?? row.title
+  const authors =
+    (draft.authors as string | undefined) ?? webHit?.authors ?? row.authors
+  if (!draft.coverUrl || !draft.annotation) {
+    const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
+    const byTitle = await fetchGoogleByTitle(title, authors)
+    draft = {
+      ...byTitle,
+      ...Object.fromEntries(
+        Object.entries(draft).filter(([, v]) => v !== null && v !== undefined),
+      ),
     }
   }
-  if (!draft?.title) return null
+  if ((!draft.coverUrl || !draft.annotation) && webHit?.proofUrl) {
+    const page = await fetchOpenGraph(webHit.proofUrl)
+    draft.coverUrl = draft.coverUrl ?? page.image ?? undefined
+    draft.annotation = draft.annotation ?? page.description ?? undefined
+  }
+  // данные веб-находки — как основа, если каталоги промолчали
+  draft.publisher = draft.publisher ?? webHit?.publisher ?? undefined
+  draft.year = draft.year ?? webHit?.year ?? undefined
+  draft.pages = draft.pages ?? webHit?.pages ?? undefined
+  draft.annotation = draft.annotation ?? webHit?.annotation ?? undefined
+  draft.coverUrl = draft.coverUrl ?? webHit?.coverUrl ?? undefined
 
   const fills: Proposal['fills'] = []
   const patch: Record<string, unknown> = {}
-  const put = (field: string, value: string | number | null | undefined) => {
+  const put = (field: string, value: unknown) => {
     if (value === null || value === undefined || value === '') return
     const current = (row as unknown as Record<string, unknown>)[field]
     if (current !== null && current !== undefined && current !== '') return
@@ -1069,7 +1094,7 @@ export async function proposeForBook(
       value: String(value).slice(0, 120),
     })
   }
-  put('authors', draft.authors)
+  put('authors', authors === row.authors ? null : authors)
   put('publisher', draft.publisher)
   put('year', draft.year)
   put('pages', draft.pages)
@@ -1094,15 +1119,22 @@ export async function proposeForBook(
     .returning({ id: aiSuggestion.id })
   if (!created) throw new AppError('Не удалось сохранить предложение')
 
+  log.info('ai', 'дозаполнение предложено', {
+    bookId,
+    fields: fills.map((f) => f.field).join(','),
+  })
+
   return {
     suggestionId: created.id,
     fills,
-    title: draft.title,
-    authors: draft.authors ?? row.authors,
-    coverUrl: draft.coverUrl ?? null,
-    annotation: draft.annotation ?? null,
-    proof: null,
-    via: 'sources',
+    title,
+    authors,
+    coverUrl: (draft.coverUrl as string | undefined) ?? null,
+    annotation: (draft.annotation as string | undefined) ?? null,
+    proof: webHit?.proofUrl
+      ? { url: webHit.proofUrl, title: webHit.proofTitle ?? webHit.proofUrl }
+      : null,
+    via: webHit ? (webHit.via ?? 'model') : 'sources',
   }
 }
 

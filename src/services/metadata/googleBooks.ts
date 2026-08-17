@@ -100,20 +100,40 @@ export async function fetchGoogleBooks(
 /**
  * Поиск по названию и автору. Нужен, когда номер нашёлся в интернете, но
  * аннотации и обложки в сниппетах нет: у Google они есть почти всегда.
+ *
+ * Пробуем от строгого запроса к мягкому: полное название с подзаголовком в
+ * intitle не находится, а inauthor капризен к порядку «Имя Фамилия» — поэтому
+ * берём название до двоеточия и одно слово из автора, а последним заходом
+ * ищем свободной строкой.
  */
 export async function fetchGoogleByTitle(
   title: string,
   authors: string | null,
 ): Promise<MetadataDraft | null> {
   if (process.env.NODE_ENV === 'test') return null
+  const short = title.split(/[:—]/)[0]?.trim() ?? title
+  const surname =
+    authors
+      ?.split(/[,;]/)[0]
+      ?.trim()
+      .split(/\s+/)
+      .sort((a, b) => b.length - a.length)[0] ?? ''
+  const queries = [
+    surname
+      ? `intitle:${JSON.stringify(short.slice(0, 60))}+inauthor:${JSON.stringify(surname)}`
+      : `intitle:${JSON.stringify(short.slice(0, 60))}`,
+    `${JSON.stringify(short.slice(0, 60))} ${authors ?? ''} книга`.trim(),
+  ]
+  for (const query of queries) {
+    const draft = await googleQuery(query)
+    // без обложки и аннотации ответ бесполезен — ради них и ходим
+    if (draft && (draft.coverUrl || draft.annotation)) return draft
+  }
+  return null
+}
+
+async function googleQuery(query: string): Promise<MetadataDraft | null> {
   try {
-    const author = authors?.split(/[,;]/)[0]?.trim()
-    const query = [
-      `intitle:${JSON.stringify(title.slice(0, 80))}`,
-      author ? `inauthor:${JSON.stringify(author)}` : '',
-    ]
-      .filter(Boolean)
-      .join('+')
     const stored = await googleBooksKey()
     const key = stored ? `&key=${stored}` : ''
     let res: Response | null = null

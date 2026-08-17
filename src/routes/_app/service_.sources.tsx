@@ -175,19 +175,23 @@ function SourcesPage() {
       )}
 
       <h2 className="mt-7 text-[17px] font-semibold">Поиск в интернете</h2>
+      <p className="mt-1 text-[12.5px] text-muted-foreground">
+        Порядок всегда один: свой эталон → каталоги → Яндекс Поиск → Нейропоиск.
+      </p>
       <div className="mt-2 flex items-center gap-3 border-t py-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[14.5px] font-semibold">Искать по ISBN</p>
+          <p className="text-[14.5px] font-semibold">Яндекс Поиск</p>
           <p className="text-[12.5px] text-muted-foreground">
-            Yandex Search API · ключ и каталог из вкладки «ИИ» · нужна роль
-            search-api.webSearch.user
+            Ищет номер на страницах магазинов и библиотек, когда каталоги
+            молчат. Ключ и каталог — из вкладки «ИИ», сервисному аккаунту нужна
+            роль search-api.webSearch.user.
           </p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={web.enabled}
-          aria-label="Искать по ISBN в интернете"
+          aria-label="Яндекс Поиск"
           className={`relative h-7 w-[46px] flex-none rounded-full transition-colors ${
             web.enabled ? 'bg-primary' : 'bg-border'
           }`}
@@ -211,19 +215,18 @@ function SourcesPage() {
 
       <div className="flex items-center gap-3 border-t py-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[14.5px] font-semibold">
-            Платный поиск, если не нашлось
-          </p>
+          <p className="text-[14.5px] font-semibold">Нейропоиск</p>
           <p className="text-[12.5px] text-muted-foreground">
-            Генеративный ответ с источниками · ≈5 ₽ за книгу · вторым заходом,
-            когда бесплатный путь пуст
+            Генеративный ответ Яндекса со ссылками на источники. Подключается
+            вторым заходом, когда обычная выдача пуста. Тарифицируется Search
+            API отдельно — дороже обычного поиска.
           </p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={web.paidFallback}
-          aria-label="Платный поиск, если не нашлось"
+          aria-label="Нейропоиск"
           className={`relative h-7 w-[46px] flex-none rounded-full transition-colors ${
             web.paidFallback ? 'bg-primary' : 'bg-border'
           }`}
@@ -241,7 +244,7 @@ function SourcesPage() {
       </div>
 
       <div className="mt-3 grid gap-1.5">
-        <Label htmlFor="web-limit">Поисков в сутки</Label>
+        <Label htmlFor="web-limit">Запросов к поиску в сутки</Label>
         <Input
           id="web-limit"
           inputMode="numeric"
@@ -252,15 +255,16 @@ function SourcesPage() {
           }
         />
         <p className="text-[12.5px] text-muted-foreground">
-          Отдельно от лимита модели. Сегодня истрачено {settings.web.used}.
+          Считается отдельно от запросов к модели. Сегодня истрачено{' '}
+          {settings.web.used}.
           {!settings.web.enabled &&
-            ' Тумблер вступит в силу после «Сохранить поиск».'}
+            ' Переключатели вступают в силу после «Сохранить».'}
         </p>
       </div>
 
       {settings.web.lastResult && (
         <p className="mt-2 truncate text-[12.5px] text-muted-foreground">
-          Поиск: {settings.web.lastResult}
+          Последний запрос: {settings.web.lastResult}
           {settings.web.lastResultAt &&
             ` · ${dateHuman(settings.web.lastResultAt)}`}
         </p>
@@ -272,7 +276,7 @@ function SourcesPage() {
           loading={busy === 'web'}
           onClick={() => void saveWeb()}
         >
-          Сохранить поиск
+          Сохранить
         </Button>
         <Button
           variant="outline"
@@ -281,7 +285,7 @@ function SourcesPage() {
           disabled={!settings.web.ready}
           onClick={() => void checkWeb()}
         >
-          Проверить поиск
+          Проверить
         </Button>
       </div>
 
