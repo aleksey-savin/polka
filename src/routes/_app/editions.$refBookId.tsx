@@ -6,6 +6,8 @@ import { ListBadges } from '@/components/book/ListBadges'
 import { Button } from '@/components/ui/button'
 import { getRefBookViewFn } from '@/server/reference'
 import { spineFor } from '@/services/spine'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
+import { originCrumb } from '@/lib/origin'
 
 /** Страница издания эталона: обложка, выходные данные, состав, действие. */
 export const Route = createFileRoute('/_app/editions/$refBookId')({
@@ -23,12 +25,16 @@ function EditionPage() {
 
   return (
     <div className="mx-auto max-w-[640px] pb-6">
-      <p className="mb-4 truncate text-[13px] text-muted-foreground">
-        <Link to="/books" search={{}} className="hover:text-foreground">
-          Каталог
-        </Link>{' '}
-        / Издание
-      </p>
+      <Breadcrumbs
+        items={[
+          originCrumb('/editions/$refBookId') ?? {
+            label: 'Каталог',
+            to: '/books',
+            search: {},
+          },
+          { label: 'Издание' },
+        ]}
+      />
 
       <div className="flex items-start gap-4">
         {view.coverPath ? (

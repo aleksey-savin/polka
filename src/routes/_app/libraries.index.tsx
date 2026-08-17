@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 
@@ -8,6 +9,7 @@ import {
 } from '@/components/library/dialogs'
 import { ShelfSection } from '@/components/shelf/ShelfSection'
 import { Button } from '@/components/ui/button'
+import { rememberLibrary, useAsOrigin } from '@/lib/origin'
 import { Card, CardContent } from '@/components/ui/card'
 import { plural } from '@/lib/plural'
 import { getLibrariesHomeFn } from '@/server/libraries'
@@ -22,6 +24,18 @@ export const Route = createFileRoute('/_app/libraries/')({
 
 function LibrariesPage() {
   const { libraries, overview } = Route.useLoaderData()
+  useAsOrigin(
+    overview
+      ? {
+          label: overview.name,
+          to: '/libraries',
+          search: { lib: overview.id },
+        }
+      : null,
+  )
+  useEffect(() => {
+    rememberLibrary(overview?.id)
+  }, [overview?.id])
   const router = useRouter()
   const navigate = Route.useNavigate()
   const refresh = () => void router.invalidate()

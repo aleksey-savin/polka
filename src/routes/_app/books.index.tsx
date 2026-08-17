@@ -6,6 +6,7 @@ import { SlidersHorizontal } from 'lucide-react'
 
 import { BatchBar } from '@/components/book/BatchBar'
 import { BookRow } from '@/components/book/BookRow'
+import { useAsOrigin } from '@/lib/origin'
 import {
   CatalogFiltersSheet,
   READING_FILTER_LABEL,
@@ -89,6 +90,8 @@ export const Route = createFileRoute('/_app/books/')({
 function CatalogPage() {
   const data = Route.useLoaderData()
   const search = Route.useSearch()
+  // каталог — источник для карточек: крошки и возврат ведут сюда
+  useAsOrigin({ label: 'Каталог', to: '/books', search })
   const navigate = Route.useNavigate()
   const router = useRouter()
   const [query, setQuery] = useState(search.q ?? '')

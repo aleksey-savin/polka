@@ -22,6 +22,7 @@ import {
 import { dateRu } from '@/lib/dates'
 import { plural } from '@/lib/plural'
 import type { GiftRow } from '@/services/listShares'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 
 export const Route = createFileRoute('/_app/lists/$listId')({
   loader: ({ params }) => getListFn({ data: { listId: params.listId } }),
@@ -72,12 +73,12 @@ function ListPage() {
 
   return (
     <div className="mx-auto max-w-[640px] pb-6">
-      <p className="mb-4 truncate text-[13px] text-muted-foreground">
-        <Link to="/reading" className="hover:text-foreground">
-          Чтение
-        </Link>{' '}
-        / {isWishlist ? 'Вишлисты' : 'Подборки'}
-      </p>
+      <Breadcrumbs
+        items={[
+          { label: 'Чтение', to: '/reading' },
+          { label: isWishlist ? 'Вишлисты' : 'Подборки' },
+        ]}
+      />
 
       <p className="font-mono text-[11px] tracking-[0.1em] text-stamp uppercase">
         {isWishlist ? 'Вишлист' : 'Подборка'}

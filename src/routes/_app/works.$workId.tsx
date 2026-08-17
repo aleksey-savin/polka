@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 
 import { AddToListButton } from '@/components/book/AddToListButton'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
+import { originCrumb } from '@/lib/origin'
 import { AddToShelfButton } from '@/components/book/AddToShelfButton'
 import { ListBadges } from '@/components/book/ListBadges'
 import { SectionLabel } from '@/components/layout/SectionLabel'
@@ -48,12 +50,16 @@ function WorkPage() {
 
   return (
     <div className="mx-auto max-w-[640px] pb-6">
-      <p className="mb-4 truncate text-[13px] text-muted-foreground">
-        <Link to="/books" search={{}} className="hover:text-foreground">
-          Каталог
-        </Link>{' '}
-        / {view.authorName || 'Произведение'}
-      </p>
+      <Breadcrumbs
+        items={[
+          originCrumb('/works/$workId') ?? {
+            label: 'Каталог',
+            to: '/books',
+            search: {},
+          },
+          { label: view.authorName || 'Произведение' },
+        ]}
+      />
 
       <h1 className="text-[25px] leading-[1.16] font-semibold tracking-[-0.015em]">
         {view.title}

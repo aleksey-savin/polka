@@ -19,6 +19,7 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { authClient } from '@/lib/auth-client'
 import { countPendingRequestsFn } from '@/server/shares'
 import { myAccountFn, pendingModerationFn } from '@/server/moderation'
+import { lastLibrary } from '@/lib/origin'
 
 const sections = [
   { to: '/reading', label: 'Чтение' },
@@ -171,6 +172,8 @@ export function AppShell({
         </Link>
         <TabLink
           to="/libraries"
+          // возвращаемся в ту библиотеку, где были в прошлый раз
+          search={{ lib: lastLibrary() ?? undefined }}
           label="Библиотека"
           icon={<Library className="size-5" />}
         />
@@ -188,14 +191,17 @@ function TabLink({
   to,
   label,
   icon,
+  search,
 }: {
   to: string
   label: string
   icon: ReactNode
+  search?: Record<string, unknown>
 }) {
   return (
     <Link
       to={to}
+      search={search as never}
       className="grid justify-items-center gap-0.5 py-1 text-[10.5px] text-muted-foreground"
       activeProps={{
         className:

@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import {
   Ellipsis,
@@ -15,8 +15,11 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ReactNode } from 'react'
+import type { Crumb } from '@/components/layout/Breadcrumbs'
 
 import { AddToListButton } from '@/components/book/AddToListButton'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
+import { currentOrigin, originCrumb, rememberLibrary } from '@/lib/origin'
 import { ExpandableText } from '@/components/book/ExpandableText'
 import { ListBadges } from '@/components/book/ListBadges'
 import { MoveDialog } from '@/components/book/MoveDialog'
@@ -94,6 +97,42 @@ function BookCardPage() {
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const refresh = () => void router.invalidate()
 
+  // запоминаем библиотеку книги: следующий переход должен попасть в неё
+  useEffect(() => {
+    if (book.libraryId) rememberLibrary(book.libraryId)
+  }, [book.libraryId])
+
+  const placeCrumbs: Array<Crumb> = book.libraryId
+    ? [
+        {
+          label: book.libraryName ?? 'Библиотека',
+          to: '/libraries',
+          search: { lib: book.libraryId },
+        },
+        book.shelfId
+          ? {
+              label: book.shelfName ?? 'Полка',
+              to: '/shelves/$shelfId',
+              params: { shelfId: book.shelfId },
+            }
+          : {
+              label: 'Неразобранное',
+              to: '/unsorted',
+              search: { lib: book.libraryId },
+            },
+      ]
+    : [{ label: 'Хочу', to: '/wishlist' }]
+
+  // если пришли из списка (каталог, подборка, автор) — показываем и его
+  const cameFrom = originCrumb()
+  const crumbs: Array<Crumb> = [
+    ...(cameFrom && !placeCrumbs.some((c) => c.to === cameFrom.to)
+      ? [cameFrom]
+      : []),
+    ...placeCrumbs,
+    { label: book.title },
+  ]
+
   const look = spineFor(book.title, book.pages)
   const activeLoan = loans.find((l) => l.returnedAt === null) ?? null
   const canCirculate = book.status === 'in_library' && !activeLoan
@@ -146,7 +185,18 @@ function BookCardPage() {
 
   async function removeBook() {
     await deleteBookFn({ data: { bookId: book.id } })
-    await navigate({ to: '/books', search: {} })
+    // возвращаем туда, откуда пришли: в каталог сваливать неправильно
+    const back = currentOrigin() ?? {
+      to: placeCrumbs[placeCrumbs.length - 1]?.to ?? '/books',
+      params: placeCrumbs[placeCrumbs.length - 1]?.params,
+      search: placeCrumbs[placeCrumbs.length - 1]?.search ?? {},
+      label: '',
+    }
+    await navigate({
+      to: back.to as never,
+      params: back.params as never,
+      search: (back.search ?? {}) as never,
+    })
   }
 
   const incomplete =
@@ -304,46 +354,7 @@ function BookCardPage() {
           )}
         </div>
       )}
-      <p className="mb-5 overflow-hidden text-[13px] whitespace-nowrap text-ellipsis text-muted-foreground">
-        {book.libraryId ? (
-          <>
-            <Link
-              to="/libraries"
-              search={{ lib: book.libraryId }}
-              className="hover:text-foreground"
-            >
-              {book.libraryName}
-            </Link>
-            {' / '}
-            {book.shelfId ? (
-              <Link
-                to="/shelves/$shelfId"
-                params={{ shelfId: book.shelfId }}
-                className="hover:text-foreground"
-              >
-                {book.shelfName}
-              </Link>
-            ) : (
-              <Link
-                to="/unsorted"
-                search={{ lib: book.libraryId }}
-                className="hover:text-foreground"
-              >
-                Неразобранное
-              </Link>
-            )}
-            {' / '}
-          </>
-        ) : (
-          <>
-            <Link to="/wishlist" className="hover:text-foreground">
-              Хочу
-            </Link>
-            {' / '}
-          </>
-        )}
-        {book.title}
-      </p>
+      <Breadcrumbs items={crumbs} />
 
       {/* ── Книга-объект ──
           Длинное название разъезжается на шесть строк и утаскивает обложку

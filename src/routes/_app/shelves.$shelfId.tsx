@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 
 import { Ellipsis, Pencil, Trash2 } from 'lucide-react'
 
 import { BatchBar } from '@/components/book/BatchBar'
 import { BookRow } from '@/components/book/BookRow'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
+import { rememberLibrary, useAsOrigin } from '@/lib/origin'
 import { ShelfColorSheet } from '@/components/shelf/ShelfColorSheet'
 import { ShelfSection } from '@/components/shelf/ShelfSection'
 import { ActionMenu } from '@/components/ui/action-menu'
@@ -30,6 +32,14 @@ type SortKey = 'shelf' | 'author' | 'year' | 'title'
 
 function ShelfPage() {
   const shelf = Route.useLoaderData()
+  useAsOrigin({
+    label: shelf.name,
+    to: '/shelves/$shelfId',
+    params: { shelfId: shelf.id },
+  })
+  useEffect(() => {
+    rememberLibrary(shelf.libraryId)
+  }, [shelf.libraryId])
   const router = useRouter()
   const navigate = Route.useNavigate()
   const [selected, setSelected] = useState<Array<string>>([])
@@ -63,16 +73,16 @@ function ShelfPage() {
 
   return (
     <div>
-      <p className="mb-3.5 text-[13px] text-muted-foreground">
-        <Link
-          to="/libraries"
-          search={{ lib: shelf.libraryId }}
-          className="hover:text-foreground"
-        >
-          {shelf.libraryName}
-        </Link>{' '}
-        / {shelf.name}
-      </p>
+      <Breadcrumbs
+        items={[
+          {
+            label: shelf.libraryName,
+            to: '/libraries',
+            search: { lib: shelf.libraryId },
+          },
+          { label: shelf.name },
+        ]}
+      />
 
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
         <h1 className="text-3xl font-semibold">{shelf.name}</h1>

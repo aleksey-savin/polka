@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 
 import { BatchBar } from '@/components/book/BatchBar'
 import { BookRow } from '@/components/book/BookRow'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
+import { rememberLibrary, useAsOrigin } from '@/lib/origin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { plural } from '@/lib/plural'
@@ -29,6 +31,10 @@ export const Route = createFileRoute('/_app/unsorted')({
 function UnsortedPage() {
   const { rows, unrecognized } = Route.useLoaderData()
   const search = Route.useSearch()
+  useAsOrigin({ label: 'Неразобранное', to: '/unsorted', search })
+  useEffect(() => {
+    rememberLibrary(search.lib)
+  }, [search.lib])
   const router = useRouter()
   const navigate = Route.useNavigate()
   const [selected, setSelected] = useState<Array<string>>([])
@@ -52,6 +58,16 @@ function UnsortedPage() {
 
   return (
     <div className="mx-auto max-w-[640px]">
+      <Breadcrumbs
+        items={[
+          {
+            label: 'Библиотека',
+            to: '/libraries',
+            search: { lib: search.lib },
+          },
+          { label: 'Неразобранное' },
+        ]}
+      />
       <h1 className="text-3xl font-semibold">Разбор книг</h1>
       {rows.length > 0 && (
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
