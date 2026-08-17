@@ -305,6 +305,28 @@ describe('искать дальше', () => {
   })
 })
 
+describe('старый кэш без via', () => {
+  test('«Искать дальше» не зацикливается на записи до колонки via', async () => {
+    const isbn = '9785970439517'
+    const id = await unrecognizedBook(isbn)
+    await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn))
+    // так выглядит запись, сделанная до веб-поиска: via отсутствует
+    await db.insert(aiIsbnGuess).values({
+      isbn13: isbn,
+      verdict: 'unconfirmed',
+      title: 'Психиатрия',
+      authors: 'Бухановский',
+      via: null,
+    })
+
+    answer = '{"known":false}'
+    const next = await nextVariant(ME, id)
+    // старый вариант не вернулся: путь «model» отвергнут, дальше пусто
+    expect(next.guess.title).not.toBe('Психиатрия')
+    expect(next.guess.title).toBeNull()
+  })
+})
+
 describe('права', () => {
   test('чужую книгу разобрать нельзя', async () => {
     await db.insert(user).values({

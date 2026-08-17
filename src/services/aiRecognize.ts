@@ -345,7 +345,7 @@ export async function recognizeIsbn(
       hit = null
     }
   }
-  if (hit && hit.via && rejected.includes(hit.via)) hit = null
+  if (hit && rejected.includes(hit.via ?? 'model')) hit = null
 
   if (hit) {
     const cachedTitle = hit.title ? cleanFoundTitle(hit.title) : hit.title
@@ -681,9 +681,12 @@ export async function nextVariant(
   if (!row.isbn13) throw new AppError('У книги нет ISBN', 'invalid')
 
   const hit = await cached(row.isbn13)
-  if (hit?.via && hit.verdict !== 'unknown') {
+  if (hit && hit.verdict !== 'unknown') {
+    // записи до появления колонки via — модельные: колонка появилась вместе
+    // с веб-поиском, раньше путь был один
+    const via = hit.via ?? 'model'
     const rejected = parseRejected(hit.rejectedVias)
-    if (!rejected.includes(hit.via)) rejected.push(hit.via)
+    if (!rejected.includes(via)) rejected.push(via)
     await db
       .update(aiIsbnGuess)
       .set({
