@@ -27,6 +27,7 @@ import type { ListBadge } from './lists'
  */
 
 const SOURCE_PRIORITY: Array<MetadataSource> = [
+  'manual',
   'fantlab',
   'google',
   'openlibrary',
@@ -134,7 +135,7 @@ export async function persistLookup(
 }
 
 export async function ensureRefWork(
-  source: 'fantlab' | 'openlibrary',
+  source: 'fantlab' | 'openlibrary' | 'manual',
   sourceId: string,
   title: string,
   year?: number | null,

@@ -212,7 +212,10 @@ export const refWork = sqliteTable(
   'ref_work',
   {
     id: id(),
-    source: text('source', { enum: ['fantlab', 'openlibrary'] }).notNull(),
+    source: text('source', {
+      // manual — завёл модератор после разбора ИИ (M25)
+      enum: ['fantlab', 'openlibrary', 'manual'],
+    }).notNull(),
     sourceId: text('source_id').notNull(),
     title: text('title').notNull(),
     titleNorm: text('title_norm').notNull(),
@@ -300,7 +303,8 @@ export const refBook = sqliteTable(
   {
     id: id(),
     source: text('source', {
-      enum: ['fantlab', 'google', 'openlibrary'],
+      // manual — утверждено модератором после разбора ИИ (M25)
+      enum: ['fantlab', 'google', 'openlibrary', 'manual'],
     }).notNull(),
     sourceRef: text('source_ref').notNull(),
     isbn13: text('isbn13'),

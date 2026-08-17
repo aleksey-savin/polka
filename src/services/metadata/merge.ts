@@ -7,9 +7,15 @@ export interface MergedLookup {
 }
 
 /** Приоритет библиографических полей: FantLab → Google → Open Library. */
-const BIB_ORDER: Array<MetadataSource> = ['fantlab', 'google', 'openlibrary']
+const BIB_ORDER: Array<MetadataSource> = [
+  'manual',
+  'fantlab',
+  'google',
+  'openlibrary',
+]
 /** Аннотация обычно лучше у Google. */
 const ANNOTATION_ORDER: Array<MetadataSource> = [
+  'manual',
   'google',
   'fantlab',
   'openlibrary',

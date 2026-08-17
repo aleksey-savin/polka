@@ -141,6 +141,13 @@
       "when": 1786878208754,
       "tag": "0019_glorious_runaways",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1786931689854,
+      "tag": "0020_equal_whiplash",
+      "breakpoints": true
     }
   ]
 }

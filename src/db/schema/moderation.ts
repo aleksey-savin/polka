@@ -8,6 +8,7 @@ import {
 } from 'drizzle-orm/sqlite-core'
 
 import { user } from './auth'
+import { book } from './catalog'
 
 /**
  * Роли и пост-модерация (M21).
@@ -178,4 +179,74 @@ export const aiUsage = sqliteTable(
     tokens: integer('tokens').notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.userId, t.day] })],
+)
+
+/**
+ * Ответы модели по ISBN (M25). Кэш общий: второй раз тот же номер модели не
+ * уходит — ни у этого человека, ни у другого. Храним и «не знаю».
+ */
+export const aiIsbnGuess = sqliteTable('ai_isbn_guess', {
+  isbn13: text('isbn13').primaryKey(),
+  /** confirmed — каталог нашёл издание с этим ISBN; work-only — нашлось только
+      произведение; unconfirmed — слова модели; unknown — модель не знает. */
+  verdict: text('verdict', {
+    enum: ['confirmed', 'work-only', 'unconfirmed', 'unknown'],
+  }).notNull(),
+  title: text('title'),
+  authors: text('authors'),
+  publisher: text('publisher'),
+  year: integer('year'),
+  seriesName: text('series_name'),
+  /** Что подтвердилось: издание в эталоне и/или произведение. */
+  refBookId: text('ref_book_id'),
+  workId: text('work_id'),
+  model: text('model'),
+  rawJson: text('raw_json'),
+  askedAt: integer('asked_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+})
+
+/**
+ * Применение разбора к книге: хранит прежние значения (для отката) и живёт до
+ * решения модератора. В эталон запись уходит только после проверки человеком.
+ */
+export const aiSuggestion = sqliteTable(
+  'ai_suggestion',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    bookId: text('book_id')
+      .notNull()
+      .references(() => book.id, { onDelete: 'cascade' }),
+    isbn13: text('isbn13').notNull(),
+    verdict: text('verdict', {
+      enum: ['confirmed', 'work-only', 'unconfirmed', 'unknown'],
+    }).notNull(),
+    /** applied — стоит в карточке и ждёт модератора; approved — ушло в эталон. */
+    status: text('status', {
+      enum: ['applied', 'reverted', 'approved', 'rejected'],
+    })
+      .notNull()
+      .default('applied'),
+    /** Снимок карточки до применения — им и откатываем. */
+    beforeJson: text('before_json').notNull(),
+    afterJson: text('after_json').notNull(),
+    appliedBy: text('applied_by').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    appliedAt: integer('applied_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    reviewedBy: text('reviewed_by').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
+    reviewNote: text('review_note'),
+  },
+  (t) => [
+    index('ai_suggestion_book_idx').on(t.bookId),
+    index('ai_suggestion_status_idx').on(t.status),
+  ],
 )

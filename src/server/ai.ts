@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import {
+  aiReady,
   checkAi,
   getAiSettings,
   listModels,
@@ -54,3 +55,8 @@ export const listAiModelsFn = createServerFn({ method: 'GET' })
     await requireAdmin(context.user.id)
     return listModels()
   })
+
+/** Доступен ли ИИ — от этого зависят кнопки разбора. Нужен всем, не только админу. */
+export const aiReadyFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(() => aiReady())

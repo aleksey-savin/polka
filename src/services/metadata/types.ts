@@ -21,7 +21,7 @@ export interface MetadataDraft {
   fantlabWorks?: Array<{ id: number; title: string; author?: string }>
 }
 
-export type MetadataSource = 'fantlab' | 'google' | 'openlibrary'
+export type MetadataSource = 'manual' | 'fantlab' | 'google' | 'openlibrary'
 
 export interface SourceResult {
   source: MetadataSource
@@ -29,6 +29,7 @@ export interface SourceResult {
 }
 
 export const SOURCE_LABEL: Record<MetadataSource, string> = {
+  manual: 'проверено вручную',
   fantlab: 'FantLab',
   google: 'Google Books',
   openlibrary: 'Open Library',

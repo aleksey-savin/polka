@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
-import { ServiceTabs } from '@/components/layout/ServiceTabs'
+import { AiTabs, ServiceTabs } from '@/components/layout/ServiceTabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,13 +13,20 @@ import {
   listAiModelsFn,
   saveAiSettingsFn,
 } from '@/server/ai'
+import { pendingAiReviewFn } from '@/server/aiRecognize'
 
 /**
  * Подключение ИИ (M24). Только доступность модели: ключ, каталог, модель,
  * проверка связи, суточный лимит. Функции придут дальше по одной.
  */
 export const Route = createFileRoute('/_app/service_/ai')({
-  loader: () => getAiSettingsFn(),
+  loader: async () => {
+    const [settings, pending] = await Promise.all([
+      getAiSettingsFn(),
+      pendingAiReviewFn(),
+    ])
+    return { ...settings, pending }
+  },
   component: AiPage,
 })
 
@@ -31,7 +38,7 @@ const PROVIDERS = [
 ]
 
 function AiPage() {
-  const { settings, usage } = Route.useLoaderData()
+  const { settings, usage, pending } = Route.useLoaderData()
   const router = useRouter()
 
   const [form, setForm] = useState({
@@ -133,6 +140,7 @@ function AiPage() {
     <div className="mx-auto max-w-[580px] pb-6">
       <h1 className="mb-4 text-[25px] leading-tight font-semibold">Сервис</h1>
       <ServiceTabs isAdmin />
+      <AiTabs pending={pending} />
 
       <div
         className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 ${
@@ -177,8 +185,8 @@ function AiPage() {
         <div className="min-w-0 flex-1">
           <p className="text-[14.5px] font-semibold">Использовать ИИ</p>
           <p className="text-[12.5px] text-muted-foreground">
-            Пока ничего не делает: открывает доступ к модели, функции появятся
-            дальше.
+            Открывает доступ к модели. Сейчас работает разбор нераспознанных;
+            остальное появится дальше.
           </p>
         </div>
         <button
@@ -403,13 +411,20 @@ function AiPage() {
       )}
 
       <h2 className="mt-7 text-[17px] font-semibold">Функции</h2>
-      <div className="mt-2 rounded-2xl border border-dashed p-3.5">
-        <p className="text-sm font-semibold">Функций пока нет</p>
+      <div className="mt-2 rounded-2xl border p-3.5">
+        <p className="text-sm font-semibold">Разбор нераспознанных</p>
         <p className="mt-1.5 text-[13px] text-muted-foreground">
-          Здесь появятся переключатели по мере внедрения: аннотация · тэги и
-          жанры · разбор нераспознанных · дозаполнение карточек · раскладка по
-          полкам · описания подборок · подсказки модератору. Каждая — отдельно,
-          и каждая только предлагает: применяете вы, откатить можно в один тап.
+          На странице «Не распознано» появляется «Разобрать с ИИ». Модель только
+          предлагает: данные берутся из каталога, если он подтвердил номер, а
+          проверенное модератором уходит в общий эталон — и следующий такой ISBN
+          находится уже без модели.
+        </p>
+      </div>
+      <div className="mt-2 rounded-2xl border border-dashed p-3.5">
+        <p className="text-sm font-semibold">Дальше по одной</p>
+        <p className="mt-1.5 text-[13px] text-muted-foreground">
+          Аннотация · тэги и жанры · дозаполнение карточек · раскладка по полкам
+          · описания подборок · подсказки модератору.
         </p>
       </div>
     </div>

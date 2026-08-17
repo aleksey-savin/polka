@@ -3,6 +3,7 @@ import { and, count, desc, eq, inArray, isNotNull, or } from 'drizzle-orm'
 import { db } from '@/db'
 import { book, library, shelf } from '@/db/schema/catalog'
 import { AppError } from './errors'
+import { isbnOrigin } from './isbnPrefix'
 import { memberLibraryIds } from './members'
 import { normalizeForSearch } from './search'
 import { syncBookAuthors } from './authors'
@@ -19,6 +20,8 @@ export interface UnrecognizedRow {
   createdAt: Date
   libraryName: string | null
   shelfName: string | null
+  /** Издательство из префикса номера — известно без всяких источников. */
+  publisher: string | null
 }
 
 async function accessibleCondition(userId: string) {
@@ -46,7 +49,10 @@ export async function listUnrecognized(
     .leftJoin(shelf, eq(shelf.id, book.shelfId))
     .where(and(accessible, eq(book.unrecognized, true)))
     .orderBy(desc(book.createdAt))
-  return rows
+  return rows.map((row) => ({
+    ...row,
+    publisher: isbnOrigin(row.isbn13).publisher,
+  }))
 }
 
 export async function countUnrecognized(userId: string): Promise<number> {

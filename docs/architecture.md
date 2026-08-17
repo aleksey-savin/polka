@@ -238,6 +238,28 @@ ai_usage (user_id + day)  calls · tokens   -- лимит на человека 
 - Лимит проверяется до запроса, счётчик растёт только после удачного ответа:
   отказ сервиса не должен съедать чужие запросы.
 
+## Разбор нераспознанных (M25)
+
+```
+ai_isbn_guess (isbn13 PK)   verdict · title · authors · publisher · year
+                            ref_book_id · work_id · model · raw_json
+ai_suggestion               book_id · isbn13 · verdict · status
+                            before_json · after_json · applied_by · reviewed_by
+```
+
+- `services/aiRecognize.ts`: `recognizeBook` (кэш → `ask` → проверка каталогом),
+  `applyRecognition` / `revertRecognition` (снимок «до» лежит в `before_json`),
+  `listAiReview` / `approveToReference` / `rejectRecognition` — модерация.
+- Проверка гипотезы: `searchByTitle` по «название + автор», при нужде
+  `adoptExternalWork`, затем `fetchWorkEditions` подтягивает издания с FantLab —
+  и `bestRefBookIdForIsbn` смотрит, появился ли наш номер. FantLab часто молчит
+  на поиск по ISBN, но отдаёт то же издание в списке произведения.
+- `services/isbnPrefix.ts`: издательство по префиксу, самое длинное совпадение.
+- `ref_book.source` и `ref_work.source` получили значение `manual` — запись,
+  утверждённую модератором; в приоритете источников она стоит первой.
+- Доступ: разбор и откат — только для своих книг и книг своих библиотек;
+  очередь и утверждение — `requireModerator`.
+
 ## Подводные камни, на которые уже наступили
 
 Список не для истории, а чтобы не наступить снова:

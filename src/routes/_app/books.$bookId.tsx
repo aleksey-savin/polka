@@ -43,6 +43,7 @@ import {
 } from '@/server/books'
 import { dateHuman, dateRu, dateShort } from '@/lib/dates'
 import { removeCoverFn, uploadCoverFn } from '@/server/covers'
+import { aiMarkFn, revertRecognitionFn } from '@/server/aiRecognize'
 import { bookCycleFn } from '@/server/cycles'
 import { bookLoanHistoryFn, returnLoanFn } from '@/server/loans'
 import { listBookPersonalFn } from '@/server/personal'
@@ -50,13 +51,14 @@ import { spineFor } from '@/services/spine'
 
 export const Route = createFileRoute('/_app/books/$bookId')({
   loader: async ({ params }) => {
-    const [book, personal, loans, cycle] = await Promise.all([
+    const [book, personal, loans, cycle, aiMark] = await Promise.all([
       getBookCardFn({ data: { bookId: params.bookId } }),
       listBookPersonalFn({ data: { bookId: params.bookId } }),
       bookLoanHistoryFn({ data: { bookId: params.bookId } }),
       bookCycleFn({ data: { bookId: params.bookId } }),
+      aiMarkFn({ data: { bookId: params.bookId } }),
     ])
-    return { book, personal, loans, cycle }
+    return { book, personal, loans, cycle, aiMark }
   },
   component: BookCardPage,
 })
@@ -67,7 +69,7 @@ const LANG_LABEL: Record<string, string> = {
 }
 
 function BookCardPage() {
-  const { book, personal, loans, cycle } = Route.useLoaderData()
+  const { book, personal, loans, cycle, aiMark } = Route.useLoaderData()
   const router = useRouter()
   const navigate = Route.useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -227,6 +229,40 @@ function BookCardPage() {
 
   return (
     <div className="mx-auto max-w-[640px]">
+      {aiMark && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[color-mix(in_oklab,var(--stamp)_35%,transparent)] bg-[color-mix(in_oklab,var(--stamp)_6%,transparent)] px-3 py-2 text-[12.5px]">
+          <span className="font-semibold text-stamp">
+            {aiMark.approved
+              ? 'Заполнил ИИ · проверено'
+              : aiMark.verdict === 'confirmed'
+                ? 'Заполнил ИИ · подтверждено каталогом'
+                : 'Заполнил ИИ · не проверено'}
+          </span>
+          <span className="text-muted-foreground">
+            {dateHuman(aiMark.appliedAt)}
+          </span>
+          {!aiMark.approved && (
+            <button
+              type="button"
+              className="ml-auto rounded-full border px-2.5 py-1 text-[12px] font-semibold"
+              onClick={() => {
+                void revertRecognitionFn({ data: { bookId: book.id } })
+                  .then(() => {
+                    toast.success('Откатили — книга снова в нераспознанных')
+                    void router.invalidate()
+                  })
+                  .catch((e: unknown) =>
+                    toast.error(
+                      e instanceof Error ? e.message : 'Не получилось',
+                    ),
+                  )
+              }}
+            >
+              Откатить
+            </button>
+          )}
+        </div>
+      )}
       <p className="mb-5 overflow-hidden text-[13px] whitespace-nowrap text-ellipsis text-muted-foreground">
         {book.libraryId ? (
           <>
