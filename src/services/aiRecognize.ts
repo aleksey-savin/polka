@@ -326,6 +326,14 @@ export async function recognizeBook(
 
   // Поиск в интернете: номер лежит на страницах магазинов и библиотек.
   const web = await webSettings()
+  if (!web.enabled) {
+    // молчаливо пропущенный шаг выглядел как «нигде не нашлось»
+    sources.push({
+      name: 'Поиск в интернете',
+      outcome: 'молчит',
+      detail: 'выключен в настройках источников',
+    })
+  }
   if (web.enabled) {
     const found = await webLookup(userId, isbn13, web.mode, fromPrefix)
     if (found) {

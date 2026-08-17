@@ -63,3 +63,21 @@ describe('правило приёмки', () => {
     expect(bareIsbn('978-5-444-80717-0')).toBe('9785444807170')
   })
 })
+
+describe('выдача без сниппетов', () => {
+  test('текст берётся из заголовка, номер в нём находится', () => {
+    const xml = `<yandexsearch><response><results><grouping><group><doc>
+      <url>https://m.onlinetrade.ru/catalogue/knigi-c14/vzglyad_nazad-1.html</url>
+      <title>Книга Взгляд назад (Радке Хизер) 9785001396666 — купить</title>
+    </doc></group></grouping></results></response></yandexsearch>`
+    const hits = parseSearchXml(xml)
+    expect(hits.length).toBe(1)
+    expect(mentionsIsbn(hits[0]?.title ?? '', '9785001396666')).toBe(true)
+  })
+
+  test('номер в сниппете маркета с точкой после ISBN', () => {
+    expect(
+      mentionsIsbn('ISBN. 9785001396666. Автор. Радке Хизер.', '9785001396666'),
+    ).toBe(true)
+  })
+})

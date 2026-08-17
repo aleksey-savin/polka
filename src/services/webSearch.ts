@@ -150,12 +150,17 @@ export async function searchWeb(query: string): Promise<Array<WebHit>> {
       queryText: query,
       familyMode: 'FAMILY_MODE_NONE',
       page: '0',
+      // иначе опечаточник «исправит» цифры номера на похожие
+      fixTypoMode: 'FIX_TYPO_MODE_OFF',
     },
     groupSpec: {
       groupMode: 'GROUPING_MODE_FLAT',
-      groupsOnPage: '8',
+      groupsOnPage: '10',
       docsInGroup: '1',
     },
+    // без этого выдача приходит без сниппетов, и номеру негде встретиться
+    maxPassages: '5',
+    l10n: 'LOCALIZATION_RU',
     folderId: creds.folderId,
     responseFormat: 'FORMAT_XML',
   }

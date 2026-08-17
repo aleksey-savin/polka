@@ -304,18 +304,19 @@ function UnrecognizedPage() {
                           : ' · хватило источников'}
                       </p>
                     )}
-                    {result.sources.some(
-                      (src) => src.name === 'Google Books' && src.detail,
-                    ) &&
-                      isAdmin && (
+                    {isAdmin &&
+                      result.sources.some(
+                        (src) =>
+                          src.detail?.includes('выключен') ||
+                          (src.name === 'Google Books' && src.detail),
+                      ) && (
                         <p className="mt-1 text-[11.5px]">
                           <Link
                             to="/service/sources"
                             className="underline underline-offset-2"
                           >
-                            Проверить источники
-                          </Link>{' '}
-                          — без ключа Google молчит на любой номер.
+                            Настроить источники
+                          </Link>
                         </p>
                       )}
                     <div className="mt-2 flex flex-wrap gap-2">
