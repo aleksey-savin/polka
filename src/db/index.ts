@@ -87,25 +87,26 @@ if (existsSync(migrationsFolder)) {
       )
   }
 
-  // акцентные цвета старых обложек (динамический импорт — от цикла)
-  background('бэкфилл цветов обложек', () =>
-    import('@/services/coverColors').then((m) => m.backfillCoverColors()),
-  )
-  // авторы из денормализованных строк (M13)
-  background('бэкфилл авторов', () =>
-    import('@/services/authors').then((m) => m.backfillAuthors()),
-  )
-  // первый зарегистрированный — админ, иначе некому разбирать очередь (M21)
-  background('назначение первого админа', () =>
-    import('@/services/moderation').then((m) => m.ensureFirstAdmin()),
-  )
-  // переезд старого виш-листа в список «Хочу почитать» (M17)
-  background('переезд виш-листа', () =>
-    import('@/services/lists').then((m) => m.backfillWishlists()),
-  )
-  // фоновое наполнение эталона (M15) — медленный воркер, CRAWL_ENABLED=0 выключает;
-  // в тестах не поднимаем: он ходит в сеть
+  // Фоновые задачи старта не нужны тестам: они переживают сам прогон и на
+  // медленной машине падают уже по закрытой базе — CI валился именно так.
   if (process.env.NODE_ENV !== 'test') {
+    // акцентные цвета старых обложек (динамический импорт — от цикла)
+    background('бэкфилл цветов обложек', () =>
+      import('@/services/coverColors').then((m) => m.backfillCoverColors()),
+    )
+    // авторы из денормализованных строк (M13)
+    background('бэкфилл авторов', () =>
+      import('@/services/authors').then((m) => m.backfillAuthors()),
+    )
+    // первый зарегистрированный — админ, иначе некому разбирать очередь (M21)
+    background('назначение первого админа', () =>
+      import('@/services/moderation').then((m) => m.ensureFirstAdmin()),
+    )
+    // переезд старого виш-листа в список «Хочу почитать» (M17)
+    background('переезд виш-листа', () =>
+      import('@/services/lists').then((m) => m.backfillWishlists()),
+    )
+    // фоновое наполнение эталона (M15) — медленный воркер, CRAWL_ENABLED=0 выключает
     background('запуск краулера', () =>
       import('@/services/crawl').then((m) => m.startCrawlWorker()),
     )
