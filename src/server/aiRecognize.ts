@@ -4,6 +4,7 @@ import { z } from 'zod'
 import {
   aiMarkFor,
   applyProposal,
+  nextVariant,
   applyRecognition,
   dismissProposal,
   dismissRecognition,
@@ -117,3 +118,12 @@ export const dismissProposalFn = createServerFn({ method: 'POST' })
   .handler(({ context, data }) =>
     dismissProposal(context.user.id, data.suggestionId),
   )
+
+/** «Искать дальше»: отвергнуть показанный вариант и продолжить цепочку. */
+export const nextVariantFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ bookId: z.string() }))
+  .handler(async ({ context, data }) => {
+    const result = await nextVariant(context.user.id, data.bookId)
+    return { result, usage: await usageToday(context.user.id) }
+  })

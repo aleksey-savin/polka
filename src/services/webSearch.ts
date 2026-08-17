@@ -417,3 +417,61 @@ export async function fetchOpenGraph(url: string): Promise<{
     return { image: null, description: null }
   }
 }
+
+/** Разбор выдачи Яндекс Картинок: ссылки на сами изображения. */
+export function parseImageXml(xml: string): Array<string> {
+  const urls: Array<string> = []
+  for (const match of xml.matchAll(
+    /<image-link>([\s\S]*?)<\/image-link>|<original[^>]*\surl="([^"]+)"/g,
+  )) {
+    const raw = (match[1] ?? match[2] ?? '').replace(/&amp;/g, '&').trim()
+    if (raw.startsWith('http')) urls.push(raw)
+  }
+  return urls
+}
+
+/**
+ * Обложка через Яндекс Картинки — последний шанс, когда ни каталоги, ни
+ * страница-доказательство обложку не дали. Best-effort: любая ошибка — null.
+ */
+export async function searchCoverImage(query: string): Promise<string | null> {
+  if (process.env.NODE_ENV === 'test') return null
+  const creds = await aiCredentials()
+  if (!creds) return null
+  try {
+    const res = await fetch(`${SEARCH_HOST}/v2/image/search`, {
+      method: 'POST',
+      headers: {
+        authorization: `Api-Key ${creds.key}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: { searchType: 'SEARCH_TYPE_RU', queryText: query, page: '0' },
+        folderId: creds.folderId,
+        responseFormat: 'FORMAT_XML',
+      }),
+      signal: AbortSignal.timeout(12_000),
+    })
+    const raw = await res.text()
+    if (!res.ok) {
+      log.info('web', 'картинки недоступны', {
+        status: res.status,
+        body: raw.slice(0, 160),
+      })
+      return null
+    }
+    const data = JSON.parse(raw) as {
+      rawData?: string
+      response?: { rawData?: string }
+    }
+    const xml = data.response?.rawData ?? data.rawData
+    if (!xml) return null
+    const urls = parseImageXml(Buffer.from(xml, 'base64').toString('utf8'))
+    return urls[0] ?? null
+  } catch (error) {
+    log.info('web', 'картинки не ответили', {
+      message: error instanceof Error ? error.message : String(error),
+    })
+    return null
+  }
+}

@@ -8,7 +8,7 @@ import { dateHuman } from '@/lib/dates'
 import { plural } from '@/lib/plural'
 import {
   applyRecognitionFn,
-  dismissRecognitionFn,
+  nextVariantFn,
   recognizeBookFn,
 } from '@/server/aiRecognize'
 import { myAccountFn } from '@/server/moderation'
@@ -88,16 +88,19 @@ function UnrecognizedPage() {
     }
   }
 
-  async function dismiss(bookId: string) {
+  /** «Искать дальше»: отвергнуть вариант и продолжить цепочку. */
+  async function next(bookId: string) {
     setBusyId(bookId)
     try {
-      await dismissRecognitionFn({ data: { bookId } })
-      setFound((f) => {
-        const next = { ...f }
-        delete next[bookId]
-        return next
-      })
-      toast.success('Отклонили — книга осталась в списке')
+      const { result } = await nextVariantFn({ data: { bookId } })
+      setFound((f) => ({ ...f, [bookId]: result }))
+      if (!result.guess.title) {
+        toast.info(
+          result.exhausted
+            ? 'Вариантов больше нет — остаётся ручная форма'
+            : 'Дальше ничего не нашлось',
+        )
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Не получилось')
     } finally {
@@ -293,8 +296,14 @@ function UnrecognizedPage() {
 
                 {empty && (
                   <div className="mt-2.5 rounded-xl border px-3 py-2.5 text-[12.5px] text-muted-foreground">
-                    <b className="text-foreground">Ничего не нашлось.</b> Ни в
-                    каталогах, ни в поиске.
+                    <b className="text-foreground">
+                      {result.exhausted
+                        ? 'Вариантов больше нет.'
+                        : 'Ничего не нашлось.'}
+                    </b>{' '}
+                    {result.exhausted
+                      ? 'Все пути перепробованы — остаётся ручная форма.'
+                      : 'Ни в каталогах, ни в поиске.'}
                     {row.publisher && ` Издательство: ${row.publisher}.`}
                   </div>
                 )}
@@ -312,9 +321,9 @@ function UnrecognizedPage() {
                         <Button
                           variant="outline"
                           loading={busyId === row.id}
-                          onClick={() => void dismiss(row.id)}
+                          onClick={() => void next(row.id)}
                         >
-                          Не то
+                          Искать дальше
                         </Button>
                       </>
                     )}

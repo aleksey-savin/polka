@@ -209,6 +209,8 @@ export const aiIsbnGuess = sqliteTable('ai_isbn_guess', {
   model: text('model'),
   /** Каким путём получено: sources · web-extract · web-generative · model. */
   via: text('via'),
+  /** Пути, которые человек отверг кнопкой «Искать дальше» (JSON-массив). */
+  rejectedVias: text('rejected_vias'),
   /** Страница, на которой встретился сам номер. */
   proofUrl: text('proof_url'),
   proofTitle: text('proof_title'),

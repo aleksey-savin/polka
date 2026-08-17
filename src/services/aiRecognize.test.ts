@@ -21,6 +21,7 @@ const { userAccount } = await import('@/db/schema/moderation')
 const {
   applyRecognition,
   dismissRecognition,
+  nextVariant,
   proposeForBook,
   approveToReference,
   listAiReview,
@@ -264,6 +265,42 @@ describe('решение человека', () => {
     const [row] = await db.select().from(book).where(eq(book.id, created.id))
     // и ничего не затёрлось
     expect(row?.publisher).toBe('Своё издательство')
+  })
+})
+
+describe('искать дальше', () => {
+  test('отвергнутый источник не возвращается, цепочка идёт к модели', async () => {
+    const isbn = '9785389215566'
+    await db.insert(refBook).values({
+      source: 'fantlab',
+      sourceRef: 'edition-next',
+      isbn13: isbn,
+      title: 'Vzglyad nazad',
+      titleNorm: 'vzglyad nazad',
+      authors: 'Radke',
+    })
+    const id = await unrecognizedBook(isbn)
+
+    const first = await recognizeBook(ME, id)
+    expect(first.via).toBe('sources')
+    expect(first.guess.title).toBe('Vzglyad nazad')
+
+    // латиница не устроила — идём дальше; веб в тестах выключен, модель отвечает
+    answer =
+      '{"known":true,"title":"Взгляд назад","authors":"Хизер Радке","year":2025}'
+    const second = await nextVariant(ME, id)
+    expect(second.via).toBe('model')
+    expect(second.guess.title).toBe('Взгляд назад')
+
+    // и по кругу не ходим: повторный разбор отдаёт из кэша модельный вариант
+    const third = await recognizeBook(ME, id)
+    expect(third.cached).toBe(true)
+    expect(third.via).toBe('model')
+
+    // отвергли и модель — вариантов больше нет
+    const done = await nextVariant(ME, id)
+    expect(done.guess.title).toBeNull()
+    expect(done.exhausted).toBe(true)
   })
 })
 
