@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { deleteListFn, getListFn, updateListFn } from '@/server/lists'
-import { afterClose } from '@/lib/nav'
 
 export const Route = createFileRoute('/_app/lists_/$listId/edit')({
   loader: ({ params }) => getListFn({ data: { listId: params.listId } }),
@@ -55,9 +54,7 @@ function EditListPage() {
     await deleteListFn({ data: { listId: list.id } })
     toast.success(`«${list.title}» удалён`)
     setDeleteOpen(false)
-    afterClose(() => {
-      void navigate({ to: '/reading' })
-    })
+    await navigate({ to: '/reading' })
   }
 
   return (

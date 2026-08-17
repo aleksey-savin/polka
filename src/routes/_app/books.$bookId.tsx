@@ -60,7 +60,6 @@ import { bookCycleFn } from '@/server/cycles'
 import { bookLoanHistoryFn, returnLoanFn } from '@/server/loans'
 import { listBookPersonalFn } from '@/server/personal'
 import { spineFor } from '@/services/spine'
-import { afterClose } from '@/lib/nav'
 
 export const Route = createFileRoute('/_app/books/$bookId')({
   loader: async ({ params }) => {
@@ -194,12 +193,10 @@ function BookCardPage() {
       label: '',
     }
     setDeleteOpen(false)
-    afterClose(() => {
-      void navigate({
-        to: back.to as never,
-        params: back.params as never,
-        search: (back.search ?? {}) as never,
-      })
+    await navigate({
+      to: back.to as never,
+      params: back.params as never,
+      search: (back.search ?? {}) as never,
     })
   }
 

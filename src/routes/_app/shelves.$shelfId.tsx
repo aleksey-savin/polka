@@ -22,7 +22,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { plural } from '@/lib/plural'
 import { deleteShelfFn, getShelfViewFn, updateShelfFn } from '@/server/shelves'
-import { afterClose } from '@/lib/nav'
 
 export const Route = createFileRoute('/_app/shelves/$shelfId')({
   loader: ({ params }) => getShelfViewFn({ data: { shelfId: params.shelfId } }),
@@ -70,9 +69,7 @@ function ShelfPage() {
   async function removeShelf() {
     await deleteShelfFn({ data: { shelfId: shelf.id } })
     setDeleteOpen(false)
-    afterClose(() => {
-      void navigate({ to: '/libraries', search: { lib: shelf.libraryId } })
-    })
+    await navigate({ to: '/libraries', search: { lib: shelf.libraryId } })
   }
 
   return (
