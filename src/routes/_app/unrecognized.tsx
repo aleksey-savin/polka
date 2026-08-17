@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ExpandableText } from '@/components/book/ExpandableText'
 import { dateHuman } from '@/lib/dates'
 import { plural } from '@/lib/plural'
 import {
@@ -58,7 +59,6 @@ function UnrecognizedPage() {
   const [chosenCover, setChosenCover] = useState<Record<string, string | null>>(
     {},
   )
-  const [annOpen, setAnnOpen] = useState<Record<string, boolean>>({})
   const [varIdx, setVarIdx] = useState<Record<string, number>>({})
   const [batch, setBatch] = useState<{
     done: number
@@ -358,29 +358,13 @@ function UnrecognizedPage() {
                             .join(' · ')}
                         </p>
                         {shown.annotation && (
-                          <>
-                            <p
-                              className={`mt-1.5 text-[12.5px] leading-[1.5] text-muted-foreground ${
-                                annOpen[row.id] ? '' : 'line-clamp-3'
-                              }`}
-                            >
-                              {shown.annotation}
-                            </p>
-                            {shown.annotation.length > 160 && (
-                              <button
-                                type="button"
-                                className="mt-0.5 text-[12px] text-accent-foreground"
-                                onClick={() =>
-                                  setAnnOpen((a) => ({
-                                    ...a,
-                                    [row.id]: !a[row.id],
-                                  }))
-                                }
-                              >
-                                {annOpen[row.id] ? 'свернуть' : 'развернуть'}
-                              </button>
-                            )}
-                          </>
+                          <div className="mt-1.5 text-muted-foreground">
+                            <ExpandableText
+                              text={shown.annotation}
+                              lines={3}
+                              size="sm"
+                            />
+                          </div>
                         )}
                         <p className="mt-2.5">
                           {shown.proofUrl ? (

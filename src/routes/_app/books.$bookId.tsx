@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import type { ReactNode } from 'react'
 
 import { AddToListButton } from '@/components/book/AddToListButton'
+import { ExpandableText } from '@/components/book/ExpandableText'
 import { ListBadges } from '@/components/book/ListBadges'
 import { MoveDialog } from '@/components/book/MoveDialog'
 import { CycleRow, CycleSheet } from '@/components/book/CycleSheet'
@@ -88,7 +89,6 @@ function BookCardPage() {
   const [lendOpen, setLendOpen] = useState(false)
   const [giftOpen, setGiftOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [annotationOpen, setAnnotationOpen] = useState(false)
   const [cycleOpen, setCycleOpen] = useState(false)
   const [coverBusy, setCoverBusy] = useState(false)
   const [busyAction, setBusyAction] = useState<string | null>(null)
@@ -659,22 +659,11 @@ function BookCardPage() {
         <section className="mt-7">
           <SectionLabel>{book.annotation ? 'Аннотация' : 'Тэги'}</SectionLabel>
           {book.annotation && (
-            <>
-              <p
-                className={`max-w-[60ch] text-[15px] leading-[1.65] whitespace-pre-line ${annotationOpen ? '' : 'line-clamp-4'}`}
-              >
-                {book.annotation}
-              </p>
-              {book.annotation.length > 280 && (
-                <button
-                  type="button"
-                  className="mt-1.5 text-[13.5px] font-medium text-accent-foreground"
-                  onClick={() => setAnnotationOpen((v) => !v)}
-                >
-                  {annotationOpen ? 'Свернуть' : 'Развернуть'}
-                </button>
-              )}
-            </>
+            <ExpandableText
+              text={book.annotation}
+              lines={4}
+              className="max-w-[60ch]"
+            />
           )}
           {book.tags.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">

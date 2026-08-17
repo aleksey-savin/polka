@@ -30,7 +30,8 @@ export function BookRow({
     year: number | null
     pages?: number | null
     status?: string
-    seriesName?: string | null
+    /** Цикл, а не издательская серия: в списках показываем именно его. */
+    cycleTitle?: string | null
     coverPath?: string | null
     lentTo?: string | null
     coverColor?: string | null
@@ -49,7 +50,7 @@ export function BookRow({
   const look = spineFor(book.title, book.pages ?? null)
   const hasMeta = Boolean(
     place ||
-    book.seriesName ||
+    book.cycleTitle ||
     book.year ||
     after ||
     book.lentTo ||
@@ -159,12 +160,12 @@ export function BookRow({
                 скрыта
               </span>
             )}
-            {book.seriesName && (
+            {book.cycleTitle && (
               <Badge
                 variant="outline"
                 className="max-w-full min-w-0 border-stamp/30 text-stamp"
               >
-                <span className="truncate">{book.seriesName}</span>
+                <span className="truncate">{book.cycleTitle}</span>
               </Badge>
             )}
             {book.year && (

@@ -21,6 +21,7 @@ const { userAccount } = await import('@/db/schema/moderation')
 const {
   applyRecognition,
   cleanFoundTitle,
+  cleanPublisher,
   dismissRecognition,
   nextVariant,
   proposeForBook,
@@ -461,5 +462,21 @@ describe('чистка названий', () => {
     expect(cleanFoundTitle('А зори здесь тихие...')).toBe(
       'А зори здесь тихие...',
     )
+  })
+})
+
+describe('чистка издательства', () => {
+  test('кавычки и форма собственности снимаются', () => {
+    expect(cleanPublisher('"Манн, Иванов и Фербер"')).toBe(
+      'Манн, Иванов и Фербер',
+    )
+    expect(cleanPublisher('«Азбука»')).toBe('Азбука')
+    expect(cleanPublisher('ООО Эксмо')).toBe('Эксмо')
+  })
+
+  test('нормальное название не портится', () => {
+    expect(cleanPublisher('Альпина нон-фикшн')).toBe('Альпина нон-фикшн')
+    expect(cleanPublisher(null)).toBeNull()
+    expect(cleanPublisher('  ')).toBeNull()
   })
 })

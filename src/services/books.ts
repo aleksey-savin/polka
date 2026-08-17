@@ -1,4 +1,15 @@
-import { and, asc, eq, gte, inArray, like, lte, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  like,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm'
 
 import { db } from '@/db'
 import {
@@ -387,6 +398,8 @@ export interface CatalogRow {
   status: string
   coverPath: string | null
   seriesName: string | null
+  /** Цикл — его и показываем бейджем в списках (издательская серия не в счёт). */
+  cycleTitle: string | null
   libraryId: string | null
   libraryName: string | null
   shelfId: string | null
@@ -482,7 +495,13 @@ export async function listBooks(
     .where(and(...conditions))
     .orderBy(asc(book.titleNorm))
     .limit(CATALOG_LIMIT)
-  return { rows, total: rows.length }
+  // бейдж цикла в списках: одним запросом на всю страницу
+  const { cycleTitlesForBooks } = await import('./cycles')
+  const cycles = await cycleTitlesForBooks(rows.map((r) => r.id))
+  return {
+    rows: rows.map((row) => ({ ...row, cycleTitle: cycles[row.id] ?? null })),
+    total: rows.length,
+  }
 }
 
 // ── Переходы владения ──────────────────────────────────────────────────
@@ -558,4 +577,28 @@ export async function setBookHidden(
     .update(book)
     .set({ hidden, updatedAt: new Date() })
     .where(eq(book.id, bookId))
+}
+
+/**
+ * Разовая чистка издательств: источники отдают их закавыченными, и это уже
+ * попало в карточки. Правим только те строки, где кавычки действительно есть.
+ */
+export async function backfillPublishers(): Promise<number> {
+  const { cleanPublisher } = await import('./aiRecognize')
+  const rows = await db
+    .select({ id: book.id, publisher: book.publisher })
+    .from(book)
+    .where(isNotNull(book.publisher))
+  let fixed = 0
+  for (const row of rows) {
+    const cleaned = cleanPublisher(row.publisher)
+    if (cleaned !== null && cleaned !== row.publisher) {
+      await db
+        .update(book)
+        .set({ publisher: cleaned })
+        .where(eq(book.id, row.id))
+      fixed++
+    }
+  }
+  return fixed
 }

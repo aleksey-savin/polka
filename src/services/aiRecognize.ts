@@ -136,6 +136,18 @@ export function cleanFoundTitle(raw: string): string {
     .trim()
 }
 
+/** Издатель в источниках часто закавычен: «"Манн, Иванов и Фербер"». */
+export function cleanPublisher(raw: string | null): string | null {
+  if (!raw) return raw
+  const cleaned = raw
+    .trim()
+    .replace(/^["'«„]+/, '')
+    .replace(/["'»“]+$/, '')
+    .replace(/\s*(?:ООО|ЗАО|ОАО|АО|ИП)\s+(?=\S)/i, '')
+    .trim()
+  return cleaned.length > 0 ? cleaned : null
+}
+
 /** Достаём объект из ответа: модели любят обрамлять JSON текстом и ```. */
 export function parseGuess(text: string): Guess {
   const empty: Guess = {
@@ -168,7 +180,7 @@ export function parseGuess(text: string): Guess {
     known: o.known === true && title !== null,
     title,
     authors: str(o.authors),
-    publisher: str(o.publisher),
+    publisher: cleanPublisher(str(o.publisher)),
     year: Number.isFinite(year) && year > 1400 && year < 2100 ? year : null,
     seriesName: str(o.series) ?? str(o.seriesName),
   }
@@ -1072,7 +1084,7 @@ export async function applyRecognition(
   const after = {
     title,
     authors,
-    publisher: fields?.publisher ?? hit.publisher,
+    publisher: cleanPublisher(fields?.publisher ?? hit.publisher),
     year: fields?.year ?? hit.year,
     pages: fields?.pages ?? row.pages,
     annotation: fields?.annotation ?? row.annotation,

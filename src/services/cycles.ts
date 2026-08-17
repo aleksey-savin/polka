@@ -320,3 +320,73 @@ export async function authorCycles(
     .orderBy(asc(refWork.title))
   return rows
 }
+
+/**
+ * Названия циклов для списка книг — одним проходом (M16, правка M26.4).
+ *
+ * В списках показываем цикл, а не издательскую серию: серия — свойство
+ * издания, цикл — то, как читатель видит книгу. Ищем только по связям
+ * эталона: поиск по названию здесь был бы дорог на сотнях строк.
+ */
+export async function cycleTitlesForBooks(
+  bookIds: Array<string>,
+): Promise<Record<string, string>> {
+  if (bookIds.length === 0) return {}
+  const rows = await db
+    .select({
+      id: book.id,
+      refBookId: book.refBookId,
+      refWorkId: book.refWorkId,
+    })
+    .from(book)
+    .where(inArray(book.id, bookIds))
+
+  // произведение → книги, которые на него ссылаются
+  const byWork = new Map<string, Array<string>>()
+  const add = (workId: string, bookId: string) => {
+    const list = byWork.get(workId)
+    if (list) list.push(bookId)
+    else byWork.set(workId, [bookId])
+  }
+  const refBookIds = rows
+    .map((r) => r.refBookId)
+    .filter((v): v is string => v !== null)
+  for (const row of rows) {
+    if (row.refWorkId) add(row.refWorkId, row.id)
+  }
+  if (refBookIds.length > 0) {
+    const covered = await db
+      .select({ refBookId: refBookWork.refBookId, workId: refBookWork.workId })
+      .from(refBookWork)
+      .where(inArray(refBookWork.refBookId, refBookIds))
+    for (const link of covered) {
+      for (const row of rows) {
+        if (row.refBookId === link.refBookId) add(link.workId, row.id)
+      }
+    }
+  }
+  const workIds = [...byWork.keys()]
+  if (workIds.length === 0) return {}
+
+  const links = await db
+    .select({ parentId: refWorkLink.parentId, childId: refWorkLink.childId })
+    .from(refWorkLink)
+    .where(inArray(refWorkLink.childId, workIds))
+  if (links.length === 0) return {}
+
+  const parents = await db
+    .select({ id: refWork.id, title: refWork.title })
+    .from(refWork)
+    .where(inArray(refWork.id, [...new Set(links.map((l) => l.parentId))]))
+  const titleOf = new Map(parents.map((p) => [p.id, p.title]))
+
+  const out: Record<string, string> = {}
+  for (const link of links) {
+    const title = titleOf.get(link.parentId)
+    if (!title) continue
+    for (const bookId of byWork.get(link.childId) ?? []) {
+      out[bookId] ??= title
+    }
+  }
+  return out
+}
