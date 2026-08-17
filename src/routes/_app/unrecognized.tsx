@@ -8,14 +8,19 @@ import { dateHuman } from '@/lib/dates'
 import { plural } from '@/lib/plural'
 import { applyRecognitionFn, recognizeBookFn } from '@/server/aiRecognize'
 import { aiReadyFn } from '@/server/ai'
+import { myAccountFn } from '@/server/moderation'
 import { listUnrecognizedFn, retryLookupFn } from '@/server/unrecognized'
 import type { RecognizeResult } from '@/services/aiRecognize'
 
 /** Болванки из сканера: ISBN есть, названия нет — здесь их добивают (M18, M25). */
 export const Route = createFileRoute('/_app/unrecognized')({
   loader: async () => {
-    const [rows, ai] = await Promise.all([listUnrecognizedFn(), aiReadyFn()])
-    return { rows, ai }
+    const [rows, ai, account] = await Promise.all([
+      listUnrecognizedFn(),
+      aiReadyFn(),
+      myAccountFn(),
+    ])
+    return { rows, ai, isAdmin: account.role === 'admin' }
   },
   component: UnrecognizedPage,
 })
@@ -48,7 +53,7 @@ const VERDICT = {
 } as const
 
 function UnrecognizedPage() {
-  const { rows, ai } = Route.useLoaderData()
+  const { rows, ai, isAdmin } = Route.useLoaderData()
   const router = useRouter()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [found, setFound] = useState<Record<string, RecognizeResult>>({})
@@ -150,6 +155,20 @@ function UnrecognizedPage() {
         )}
       </div>
 
+      {rows.length > 0 && !ai && isAdmin && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed px-3.5 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Разбор с ИИ не подключён</p>
+            <p className="text-[12.5px] text-muted-foreground">
+              Нужны ключ, каталог и модель — и включённый тумблер в настройках.
+            </p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link to="/service/ai">Настроить</Link>
+          </Button>
+        </div>
+      )}
+
       {rows.length > 0 && ai && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border bg-card px-3.5 py-3">
           <div className="min-w-0 flex-1">
@@ -183,16 +202,16 @@ function UnrecognizedPage() {
             const verdict = result ? VERDICT[result.verdict] : null
             return (
               <div key={row.id} className="border-t py-2.5 first:border-t-0">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <span
                     aria-hidden
                     className="h-14 w-[38px] flex-none rounded-[3px] bg-[repeating-linear-gradient(135deg,#E8E4DA,#E8E4DA_5px,#DDD8CC_5px,#DDD8CC_10px)] shadow-[inset_1.5px_0_0_rgba(255,255,255,.5)]"
                   />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-[140px] flex-1">
                     <p className="font-mono text-sm font-medium">
                       {row.isbn13 ?? 'без ISBN'}
                     </p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       <span className="mr-1.5 inline-block rounded-[3px] border-[1.5px] border-destructive/70 px-1 align-[1px] font-mono text-[9.5px] tracking-[0.07em] text-destructive uppercase">
                         не распознана
                       </span>
@@ -201,38 +220,37 @@ function UnrecognizedPage() {
                       {` · ${row.shelfName ?? 'Неразобранное'}`}
                     </p>
                   </div>
-                  {ai && !result && (
+                  <div className="flex flex-none gap-2">
+                    {ai && !result && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        loading={busyId === row.id}
+                        disabled={!row.isbn13}
+                        onClick={() => void recognize(row.id)}
+                      >
+                        Спросить ИИ
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-none"
-                      loading={busyId === row.id}
+                      className="text-accent-foreground"
+                      loading={busyId === `retry-${row.id}`}
                       disabled={!row.isbn13}
-                      onClick={() => void recognize(row.id)}
+                      onClick={() => void retry([row.id], `retry-${row.id}`)}
                     >
-                      Спросить ИИ
+                      Найти снова
                     </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-none text-accent-foreground"
-                    loading={busyId === `retry-${row.id}`}
-                    disabled={!row.isbn13}
-                    onClick={() => void retry([row.id], `retry-${row.id}`)}
-                  >
-                    Найти снова
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-none"
-                    asChild
-                  >
-                    <Link to="/books/$bookId/edit" params={{ bookId: row.id }}>
-                      Заполнить
-                    </Link>
-                  </Button>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link
+                        to="/books/$bookId/edit"
+                        params={{ bookId: row.id }}
+                      >
+                        Заполнить
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
 
                 {result && verdict && (
