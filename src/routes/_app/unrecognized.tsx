@@ -80,10 +80,15 @@ function UnrecognizedPage() {
     }
   }
 
-  async function recognize(bookId: string) {
+  async function recognize(
+    bookId: string,
+    options: { force?: boolean; mode?: 'extract' | 'generative' } = {},
+  ) {
     setBusyId(bookId)
     try {
-      const { result, usage } = await recognizeBookFn({ data: { bookId } })
+      const { result, usage } = await recognizeBookFn({
+        data: { bookId, ...options },
+      })
       setFound((f) => ({ ...f, [bookId]: result }))
       setLeft(usage.left)
       return result
@@ -341,6 +346,34 @@ function UnrecognizedPage() {
                           </Link>
                         </Button>
                       )}
+                      {result.verdict !== 'confirmed' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          loading={busyId === row.id}
+                          onClick={() =>
+                            void recognize(row.id, { force: true })
+                          }
+                        >
+                          Спросить снова
+                        </Button>
+                      )}
+                      {result.verdict !== 'confirmed' &&
+                        result.via !== 'web-generative' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            loading={busyId === row.id}
+                            onClick={() =>
+                              void recognize(row.id, {
+                                force: true,
+                                mode: 'generative',
+                              })
+                            }
+                          >
+                            Спросить платно
+                          </Button>
+                        )}
                       <Button
                         size="sm"
                         variant="ghost"

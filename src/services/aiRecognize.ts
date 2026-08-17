@@ -214,6 +214,7 @@ async function verify(
 export async function recognizeBook(
   userId: string,
   bookId: string,
+  options: { force?: boolean; mode?: 'extract' | 'generative' } = {},
 ): Promise<RecognizeResult> {
   const [row] = await db
     .select({
@@ -233,7 +234,33 @@ export async function recognizeBook(
   const isbn13 = row.isbn13
   const fromPrefix = isbnOrigin(isbn13).publisher
 
-  const hit = await cached(isbn13)
+  const web = await webSettings()
+  let hit = await cached(isbn13)
+  if (hit && !options.force) {
+    // «не знаю», полученное до включения поиска, — не приговор: тогда мы просто
+    // спрашивали модель по памяти. Появился новый способ — пробуем заново.
+    const staleWithoutWeb =
+      hit.verdict === 'unknown' &&
+      web.enabled &&
+      (hit.via === null || hit.via === 'model')
+    const staleCheaper =
+      hit.verdict !== 'confirmed' &&
+      options.mode === 'generative' &&
+      hit.via !== 'web-generative'
+    if (staleWithoutWeb || staleCheaper) {
+      log.info('ai', 'старый ответ по номеру отброшен', {
+        isbn: isbn13,
+        was: hit.verdict,
+        via: hit.via,
+      })
+      await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn13))
+      hit = null
+    }
+  }
+  if (hit && options.force) {
+    await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn13))
+    hit = null
+  }
   if (hit) {
     return {
       bookId,
@@ -325,7 +352,6 @@ export async function recognizeBook(
   }
 
   // Поиск в интернете: номер лежит на страницах магазинов и библиотек.
-  const web = await webSettings()
   if (!web.enabled) {
     // молчаливо пропущенный шаг выглядел как «нигде не нашлось»
     sources.push({
@@ -335,7 +361,12 @@ export async function recognizeBook(
     })
   }
   if (web.enabled) {
-    const found = await webLookup(userId, isbn13, web.mode, fromPrefix)
+    const found = await webLookup(
+      userId,
+      isbn13,
+      options.mode ?? web.mode,
+      fromPrefix,
+    )
     if (found) {
       sources.push({
         name: 'Поиск в интернете',

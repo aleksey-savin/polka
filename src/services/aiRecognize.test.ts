@@ -10,7 +10,8 @@ process.env.BETTER_AUTH_SECRET = 'test-secret-for-ai-recognize'
 const { db } = await import('@/db')
 const { user } = await import('@/db/schema/auth')
 const { book, refBook } = await import('@/db/schema/catalog')
-const { aiIsbnGuess, aiSuggestion } = await import('@/db/schema/moderation')
+const { aiIsbnGuess, aiSuggestion, sourceSetting } =
+  await import('@/db/schema/moderation')
 const { eq } = await import('drizzle-orm')
 const { saveAiSettings } = await import('./ai')
 const { createLibrary } = await import('./libraries')
@@ -194,6 +195,27 @@ describe('разбор нераспознанного', () => {
       .from(aiSuggestion)
       .where(eq(aiSuggestion.bookId, id))
     expect(marks.length).toBe(0)
+  })
+
+  test('старое «не знаю» не хоронит книгу: с новым способом пробуем заново', async () => {
+    const isbn = '9785044444447'
+    const id = await unrecognizedBook(isbn)
+    // так выглядит запись, сделанная до появления поиска в интернете
+    await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn))
+    await db.insert(aiIsbnGuess).values({
+      isbn13: isbn,
+      verdict: 'unknown',
+      via: 'model',
+    })
+    await db.insert(sourceSetting).values({ id: 'default', webEnabled: true })
+
+    const before = calls
+    answer = '{"known":false}'
+    await recognizeBook(ME, id)
+    // модель спросили снова, а не отдали прошлогодний отказ
+    expect(calls).toBeGreaterThan(before)
+
+    await db.delete(sourceSetting)
   })
 
   test('повторный разбор того же номера модель не тревожит', async () => {

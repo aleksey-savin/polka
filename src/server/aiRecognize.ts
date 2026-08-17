@@ -16,9 +16,18 @@ import { authMiddleware } from './middleware'
 
 export const recognizeBookFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
-  .validator(z.object({ bookId: z.string() }))
+  .validator(
+    z.object({
+      bookId: z.string(),
+      force: z.boolean().optional(),
+      mode: z.enum(['extract', 'generative']).optional(),
+    }),
+  )
   .handler(async ({ context, data }) => {
-    const result = await recognizeBook(context.user.id, data.bookId)
+    const result = await recognizeBook(context.user.id, data.bookId, {
+      force: data.force,
+      mode: data.mode,
+    })
     return { result, usage: await usageToday(context.user.id) }
   })
 
