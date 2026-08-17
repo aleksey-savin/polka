@@ -1,0 +1,1 @@
+ALTER TABLE `source_setting` ADD `web_paid_fallback` integer DEFAULT false NOT NULL;

@@ -375,12 +375,18 @@ export async function recognizeBook(
     })
   }
   if (web.enabled) {
-    const found = await webLookup(
-      userId,
-      isbn13,
-      options.mode ?? web.mode,
-      fromPrefix,
-    )
+    // сначала дешёвый путь; платный — только если владелец разрешил и
+    // бесплатный ничего не дал
+    const modes: Array<'extract' | 'generative'> = options.mode
+      ? [options.mode]
+      : web.paidFallback
+        ? ['extract', 'generative']
+        : ['extract']
+    let found: Awaited<ReturnType<typeof webLookup>> = null
+    for (const mode of modes) {
+      found = await webLookup(userId, isbn13, mode, fromPrefix)
+      if (found) break
+    }
     if (found) {
       sources.push({
         name: 'Поиск в интернете',
@@ -389,6 +395,7 @@ export async function recognizeBook(
       })
       return { ...found, bookId, isbn13, fromPrefix, sources }
     }
+
     sources.push({
       name: 'Поиск в интернете',
       outcome: 'молчит',
@@ -980,4 +987,193 @@ export async function rejectRecognition(
     .set({ verdict: 'unknown', title: null, authors: null })
     .where(eq(aiIsbnGuess.isbn13, row.isbn13))
   log.info('ai', 'разбор отклонён', { isbn: row.isbn13, note: note.trim() })
+}
+
+/**
+ * «Не то»: человек посмотрел на найденное и отверг. Книга остаётся
+ * нераспознанной, а негодный ответ больше не предлагается.
+ */
+export async function dismissRecognition(
+  userId: string,
+  bookId: string,
+): Promise<void> {
+  const [row] = await db.select().from(book).where(eq(book.id, bookId))
+  if (!row) throw new AppError('Книга не найдена', 'not_found')
+  await assertBookAccess(userId, row)
+  if (!row.isbn13) return
+  await db
+    .update(aiIsbnGuess)
+    .set({ verdict: 'unknown', title: null, authors: null, coverUrl: null })
+    .where(eq(aiIsbnGuess.isbn13, row.isbn13))
+  log.info('ai', 'найденное отклонено человеком', { isbn: row.isbn13 })
+}
+
+export interface Proposal {
+  suggestionId: string
+  /** Какие поля заполнятся: показываем человеку до применения. */
+  fills: Array<{ field: string; label: string; value: string }>
+  title: string
+  authors: string
+  coverUrl: string | null
+  annotation: string | null
+  proof: { url: string; title: string } | null
+  via: string
+}
+
+const FIELD_LABEL: Record<string, string> = {
+  publisher: 'издательство',
+  year: 'год',
+  pages: 'страниц',
+  annotation: 'аннотация',
+  coverUrl: 'обложка',
+  seriesName: 'серия',
+  authors: 'авторы',
+}
+
+/**
+ * «Найти данные» для книги, у которой название уже есть: из «Не распознано»
+ * она ушла, а обложки и аннотации может не быть. Заполняем только пустые поля —
+ * введённое руками не трогаем.
+ */
+export async function proposeForBook(
+  userId: string,
+  bookId: string,
+): Promise<Proposal | null> {
+  const [row] = await db.select().from(book).where(eq(book.id, bookId))
+  if (!row) throw new AppError('Книга не найдена', 'not_found')
+  await assertBookAccess(userId, row)
+
+  const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
+  let draft = await fetchGoogleByTitle(row.title, row.authors)
+
+  // по номеру данные точнее: там наше конкретное издание
+  if (row.isbn13) {
+    const { lookupIsbn } = await import('./metadata/lookup')
+    const byIsbn = await lookupIsbn(userId, row.isbn13).catch(() => null)
+    if (byIsbn?.draft.title) {
+      draft = { ...draft, ...byIsbn.draft }
+    }
+  }
+  if (!draft?.title) return null
+
+  const fills: Proposal['fills'] = []
+  const patch: Record<string, unknown> = {}
+  const put = (field: string, value: string | number | null | undefined) => {
+    if (value === null || value === undefined || value === '') return
+    const current = (row as unknown as Record<string, unknown>)[field]
+    if (current !== null && current !== undefined && current !== '') return
+    patch[field] = value
+    fills.push({
+      field,
+      label: FIELD_LABEL[field] ?? field,
+      value: String(value).slice(0, 120),
+    })
+  }
+  put('authors', draft.authors)
+  put('publisher', draft.publisher)
+  put('year', draft.year)
+  put('pages', draft.pages)
+  put('annotation', draft.annotation)
+  if (!row.coverPath && draft.coverUrl) {
+    patch.coverUrl = draft.coverUrl
+    fills.push({ field: 'coverUrl', label: 'обложка', value: 'нашлась' })
+  }
+  if (fills.length === 0) return null
+
+  const [created] = await db
+    .insert(aiSuggestion)
+    .values({
+      bookId,
+      isbn13: row.isbn13 ?? '',
+      verdict: 'confirmed',
+      status: 'proposed',
+      beforeJson: JSON.stringify(snapshot(row)),
+      afterJson: JSON.stringify(patch),
+      appliedBy: userId,
+    })
+    .returning({ id: aiSuggestion.id })
+  if (!created) throw new AppError('Не удалось сохранить предложение')
+
+  return {
+    suggestionId: created.id,
+    fills,
+    title: draft.title,
+    authors: draft.authors ?? row.authors,
+    coverUrl: draft.coverUrl ?? null,
+    annotation: draft.annotation ?? null,
+    proof: null,
+    via: 'sources',
+  }
+}
+
+/** Применение предложения: только те поля, что были пустыми. */
+export async function applyProposal(
+  userId: string,
+  suggestionId: string,
+): Promise<void> {
+  const [row] = await db
+    .select()
+    .from(aiSuggestion)
+    .where(eq(aiSuggestion.id, suggestionId))
+  if (!row || row.status !== 'proposed') {
+    throw new AppError('Предложение не найдено', 'not_found')
+  }
+  const [target] = await db.select().from(book).where(eq(book.id, row.bookId))
+  if (!target) throw new AppError('Книга не найдена', 'not_found')
+  await assertBookAccess(userId, target)
+
+  const patch = JSON.parse(row.afterJson) as Record<string, unknown>
+  const coverUrl = typeof patch.coverUrl === 'string' ? patch.coverUrl : null
+  delete patch.coverUrl
+
+  if (Object.keys(patch).length > 0) {
+    const authors = typeof patch.authors === 'string' ? patch.authors : null
+    await db
+      .update(book)
+      .set({
+        ...patch,
+        ...(authors ? { authorsNorm: normalizeForSearch(authors) } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(book.id, row.bookId))
+    if (authors) await syncBookAuthors(row.bookId, authors)
+  }
+  if (coverUrl) {
+    try {
+      const { saveCoverFromUrl } = await import('./covers')
+      const saved = await saveCoverFromUrl(row.bookId, coverUrl)
+      await db
+        .update(book)
+        .set({ coverPath: saved.path, coverColor: saved.color })
+        .where(eq(book.id, row.bookId))
+    } catch {
+      // обложка — best-effort
+    }
+  }
+  await db
+    .update(aiSuggestion)
+    .set({ status: 'applied', appliedAt: new Date() })
+    .where(eq(aiSuggestion.id, suggestionId))
+  log.info('ai', 'дозаполнение применено', {
+    bookId: row.bookId,
+    fields: Object.keys(patch).join(','),
+  })
+}
+
+/** Отказ от предложения: ничего не меняем, запись закрываем. */
+export async function dismissProposal(
+  userId: string,
+  suggestionId: string,
+): Promise<void> {
+  const [row] = await db
+    .select()
+    .from(aiSuggestion)
+    .where(eq(aiSuggestion.id, suggestionId))
+  if (!row) throw new AppError('Предложение не найдено', 'not_found')
+  const [target] = await db.select().from(book).where(eq(book.id, row.bookId))
+  if (target) await assertBookAccess(userId, target)
+  await db
+    .update(aiSuggestion)
+    .set({ status: 'rejected', reviewedBy: userId, reviewedAt: new Date() })
+    .where(eq(aiSuggestion.id, suggestionId))
 }

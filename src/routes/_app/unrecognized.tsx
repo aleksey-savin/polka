@@ -6,91 +6,51 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { dateHuman } from '@/lib/dates'
 import { plural } from '@/lib/plural'
-import { applyRecognitionFn, recognizeBookFn } from '@/server/aiRecognize'
-import { aiReadyFn } from '@/server/ai'
+import {
+  applyRecognitionFn,
+  dismissRecognitionFn,
+  recognizeBookFn,
+} from '@/server/aiRecognize'
 import { myAccountFn } from '@/server/moderation'
-import { listUnrecognizedFn, retryLookupFn } from '@/server/unrecognized'
+import { listUnrecognizedFn } from '@/server/unrecognized'
 import type { RecognizeResult } from '@/services/aiRecognize'
 
-/** Болванки из сканера: ISBN есть, названия нет — здесь их добивают (M18, M25). */
+/**
+ * Болванки из сканера: ISBN есть, названия нет (M18).
+ *
+ * Одна кнопка «Найти» проходит всю цепочку: эталон → FantLab · Google Books ·
+ * OpenLibrary → поиск в интернете → модель. Человек решает: сохранить,
+ * отклонить или заполнить руками.
+ */
 export const Route = createFileRoute('/_app/unrecognized')({
   loader: async () => {
-    const [rows, ai, account] = await Promise.all([
+    const [rows, account] = await Promise.all([
       listUnrecognizedFn(),
-      aiReadyFn(),
       myAccountFn(),
     ])
-    return { rows, ai, isAdmin: account.role === 'admin' }
+    return { rows, isAdmin: account.role === 'admin' }
   },
   component: UnrecognizedPage,
 })
 
-const VERDICT = {
-  confirmed: {
-    mark: '✓',
-    title: 'Подтверждено',
-    text: 'Издание с этим номером есть в каталоге.',
-    tone: 'border-primary/45 bg-accent/40 text-accent-foreground',
-  },
-  'work-only': {
-    mark: '≈',
-    title: 'Книга такая есть, издание — не то',
-    text: 'Произведение есть, издания с этим номером — нет.',
-    tone: 'border-[color-mix(in_oklab,var(--stamp)_35%,transparent)] bg-[color-mix(in_oklab,var(--stamp)_7%,transparent)] text-foreground',
-  },
-  unconfirmed: {
-    mark: '!',
-    title: 'Не подтверждено',
-    text: 'Каталог не подтвердил — сверьте с книгой.',
-    tone: 'border-destructive/40 bg-destructive/5 text-foreground',
-  },
-  unknown: {
-    mark: '—',
-    title: 'Модель не знает этого номера',
-    text: 'Заполните вручную.',
-    tone: 'bg-card text-muted-foreground',
-  },
-} as const
-
 function UnrecognizedPage() {
-  const { rows, ai, isAdmin } = Route.useLoaderData()
+  const { rows, isAdmin } = Route.useLoaderData()
   const router = useRouter()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [found, setFound] = useState<Record<string, RecognizeResult>>({})
-  const [left, setLeft] = useState<number | null>(null)
+  const [details, setDetails] = useState<Record<string, boolean>>({})
+  const [batch, setBatch] = useState<{
+    done: number
+    total: number
+    hits: number
+  } | null>(null)
   const [stop, setStop] = useState(false)
 
-  async function retry(bookIds: Array<string>, key: string) {
-    setBusyId(key)
-    try {
-      const { resolved, missed } = await retryLookupFn({ data: { bookIds } })
-      if (resolved > 0) {
-        toast.success(
-          `Нашлось ${resolved} ${plural(resolved, 'книга', 'книги', 'книг')}` +
-            (missed > 0 ? `, осталось ${missed}` : ''),
-        )
-      } else {
-        toast.error('Источники снова ничего не знают об этих номерах')
-      }
-      void router.invalidate()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Не получилось')
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  async function recognize(
-    bookId: string,
-    options: { force?: boolean; mode?: 'extract' | 'generative' } = {},
-  ) {
+  async function find(bookId: string) {
     setBusyId(bookId)
     try {
-      const { result, usage } = await recognizeBookFn({
-        data: { bookId, ...options },
-      })
+      const { result } = await recognizeBookFn({ data: { bookId } })
       setFound((f) => ({ ...f, [bookId]: result }))
-      setLeft(usage.left)
       return result
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Не получилось')
@@ -100,22 +60,26 @@ function UnrecognizedPage() {
     }
   }
 
-  /** Пачкой: по одной, чтобы упереться в лимит без потерь. */
-  async function recognizeAll() {
-    setStop(false)
+  /** Пачкой — по одной, чтобы упереться в лимит без потерь. */
+  async function findAll() {
     const queue = rows.filter((r) => r.isbn13 && !found[r.id])
-    for (const row of queue) {
+    setStop(false)
+    setBatch({ done: 0, total: queue.length, hits: 0 })
+    let hits = 0
+    for (const [index, row] of queue.entries()) {
       if (stop) break
-      const result = await recognize(row.id)
+      const result = await find(row.id)
+      if (result?.guess.title) hits++
+      setBatch({ done: index + 1, total: queue.length, hits })
       if (!result) break
     }
   }
 
-  async function apply(bookId: string) {
+  async function save(bookId: string) {
     setBusyId(bookId)
     try {
       await applyRecognitionFn({ data: { bookId } })
-      toast.success('Карточка заполнена — модератор проверит')
+      toast.success('Сохранили')
       void router.invalidate()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Не получилось')
@@ -123,6 +87,27 @@ function UnrecognizedPage() {
       setBusyId(null)
     }
   }
+
+  async function dismiss(bookId: string) {
+    setBusyId(bookId)
+    try {
+      await dismissRecognitionFn({ data: { bookId } })
+      setFound((f) => {
+        const next = { ...f }
+        delete next[bookId]
+        return next
+      })
+      toast.success('Отклонили — книга осталась в списке')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const saveable = Object.entries(found).filter(
+    ([, result]) => result.verdict !== 'unknown' && result.guess.title,
+  )
 
   return (
     <div className="mx-auto max-w-[640px] pb-6">
@@ -147,48 +132,54 @@ function UnrecognizedPage() {
         {rows.length > 0 && (
           <Button
             className="ml-auto"
-            loading={busyId === 'all'}
-            onClick={() =>
-              void retry(
-                rows.map((r) => r.id),
-                'all',
-              )
-            }
+            loading={batch !== null && batch.done < batch.total}
+            onClick={() => void findAll()}
           >
-            Проверить все
+            Найти всё
           </Button>
         )}
       </div>
 
-      {rows.length > 0 && !ai && isAdmin && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed px-3.5 py-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Разбор с ИИ не подключён</p>
-            <p className="text-[12.5px] text-muted-foreground">
-              Нужны ключ, каталог и модель — и включённый тумблер в настройках.
-            </p>
+      {batch && (
+        <div className="mt-3 rounded-2xl border bg-card px-3.5 py-3">
+          <div className="flex items-baseline justify-between gap-3 text-[12.5px] text-muted-foreground">
+            <span>Ищу по одной</span>
+            <span className="font-mono">
+              {batch.done} из {batch.total}
+            </span>
           </div>
-          <Button variant="outline" asChild>
-            <Link to="/service/ai">Настроить</Link>
-          </Button>
-        </div>
-      )}
-
-      {rows.length > 0 && ai && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border bg-card px-3.5 py-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Разобрать с ИИ</p>
-            <p className="text-[12.5px] text-muted-foreground">
-              Сначала эталон и источники, модель — последней.
-              {left !== null && ` Осталось запросов сегодня: ${left}.`}
-            </p>
+          <div className="my-2 h-1.5 overflow-hidden rounded-full bg-border">
+            <div
+              className="h-full bg-primary transition-[width]"
+              style={{
+                width: `${batch.total ? (batch.done / batch.total) * 100 : 0}%`,
+              }}
+            />
           </div>
-          {busyId ? (
-            <Button variant="outline" onClick={() => setStop(true)}>
-              Остановить
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[12.5px] text-muted-foreground">
+            <span>
+              нашлось {batch.hits} · пусто {batch.done - batch.hits}
+            </span>
+            {batch.done < batch.total && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto"
+                onClick={() => setStop(true)}
+              >
+                Остановить
+              </Button>
+            )}
+          </div>
+          {saveable.length > 0 && (
+            <Button
+              className="mt-2 h-11 w-full"
+              onClick={() => {
+                void Promise.all(saveable.map(([id]) => save(id)))
+              }}
+            >
+              Сохранить найденные ({saveable.length})
             </Button>
-          ) : (
-            <Button onClick={() => void recognizeAll()}>Разобрать все</Button>
           )}
         </div>
       )}
@@ -204,15 +195,15 @@ function UnrecognizedPage() {
         <div className="mt-4">
           {rows.map((row) => {
             const result = found[row.id]
-            const verdict = result ? VERDICT[result.verdict] : null
+            const empty = result && !result.guess.title
             return (
-              <div key={row.id} className="border-t py-2.5 first:border-t-0">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div key={row.id} className="border-t py-3 first:border-t-0">
+                <div className="flex items-center gap-3">
                   <span
                     aria-hidden
                     className="h-14 w-[38px] flex-none rounded-[3px] bg-[repeating-linear-gradient(135deg,#E8E4DA,#E8E4DA_5px,#DDD8CC_5px,#DDD8CC_10px)] shadow-[inset_1.5px_0_0_rgba(255,255,255,.5)]"
                   />
-                  <div className="min-w-[140px] flex-1">
+                  <div className="min-w-0 flex-1">
                     <p className="font-mono text-sm font-medium">
                       {row.isbn13 ?? 'без ISBN'}
                     </p>
@@ -222,173 +213,151 @@ function UnrecognizedPage() {
                       </span>
                       {row.publisher && `${row.publisher} · `}
                       {dateHuman(row.createdAt)}
-                      {` · ${row.shelfName ?? 'Неразобранное'}`}
                     </p>
                   </div>
-                  <div className="flex flex-none gap-2">
-                    {ai && !result && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        loading={busyId === row.id}
-                        disabled={!row.isbn13}
-                        onClick={() => void recognize(row.id)}
-                      >
-                        Спросить ИИ
-                      </Button>
-                    )}
+                  {!result && (
                     <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-accent-foreground"
-                      loading={busyId === `retry-${row.id}`}
+                      className="flex-none"
+                      loading={busyId === row.id}
                       disabled={!row.isbn13}
-                      onClick={() => void retry([row.id], `retry-${row.id}`)}
+                      onClick={() => void find(row.id)}
                     >
-                      Найти снова
+                      Найти
                     </Button>
-                    <Button size="sm" variant="outline" asChild>
+                  )}
+                </div>
+
+                {result && !empty && (
+                  <div className="mt-2.5 flex gap-3 rounded-2xl border border-primary/30 bg-accent/25 p-3">
+                    {result.confirmed?.coverUrl ? (
+                      <img
+                        src={result.confirmed.coverUrl}
+                        alt=""
+                        className="aspect-[7/10] w-[66px] flex-none rounded-[4px] object-cover shadow-[0_6px_14px_-8px_rgba(35,43,56,.5)]"
+                      />
+                    ) : (
+                      <span
+                        aria-hidden
+                        className="aspect-[7/10] w-[66px] flex-none rounded-[4px] bg-patina-old/40"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15.5px] leading-tight font-semibold text-balance">
+                        {result.confirmed?.title ?? result.guess.title}
+                      </p>
+                      <p className="mt-0.5 text-[13px] text-muted-foreground">
+                        {result.confirmed?.authors || result.guess.authors}
+                      </p>
+                      <p className="mt-1 font-mono text-[11.5px] text-muted-foreground">
+                        {[
+                          result.confirmed?.publisher ??
+                            result.guess.publisher ??
+                            result.fromPrefix,
+                          result.confirmed?.year ?? result.guess.year,
+                          result.confirmed?.pages
+                            ? `${result.confirmed.pages} с.`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                      {result.confirmed?.annotation && (
+                        <p className="mt-1.5 line-clamp-3 text-[12.5px] leading-snug text-muted-foreground">
+                          {result.confirmed.annotation}
+                        </p>
+                      )}
+                      {result.proof ? (
+                        <p className="mt-2 text-[12px] text-accent-foreground">
+                          ISBN найден на{' '}
+                          <a
+                            href={result.proof.url}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="underline underline-offset-2"
+                          >
+                            {hostOf(result.proof.url)}
+                          </a>
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-[12px] text-muted-foreground">
+                          {result.via === 'sources'
+                            ? 'Нашлось в каталогах'
+                            : result.verdict === 'confirmed'
+                              ? 'Подтверждено каталогом'
+                              : 'Каталог не подтвердил — сверьте с книгой'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {empty && (
+                  <div className="mt-2.5 rounded-xl border px-3 py-2.5 text-[12.5px] text-muted-foreground">
+                    <b className="text-foreground">Ничего не нашлось.</b> Ни в
+                    каталогах, ни в поиске.
+                    {row.publisher && ` Издательство: ${row.publisher}.`}
+                  </div>
+                )}
+
+                {result && (
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    {!empty && (
+                      <>
+                        <Button
+                          loading={busyId === row.id}
+                          onClick={() => void save(row.id)}
+                        >
+                          Сохранить
+                        </Button>
+                        <Button
+                          variant="outline"
+                          loading={busyId === row.id}
+                          onClick={() => void dismiss(row.id)}
+                        >
+                          Не то
+                        </Button>
+                      </>
+                    )}
+                    <Button variant={empty ? 'default' : 'ghost'} asChild>
                       <Link
                         to="/books/$bookId/edit"
                         params={{ bookId: row.id }}
                       >
-                        Заполнить
+                        Заполнить руками
                       </Link>
                     </Button>
-                  </div>
-                </div>
-
-                {result && verdict && (
-                  <div className="mt-2 ml-[50px]">
-                    {result.guess.title && (
-                      <div className="mb-1.5">
-                        <p className="text-[15px] leading-tight font-semibold">
-                          {result.confirmed?.title ?? result.guess.title}
-                        </p>
-                        <p className="text-[13px] text-muted-foreground">
-                          {result.confirmed?.authors || result.guess.authors}
-                          {(result.confirmed?.year ?? result.guess.year) &&
-                            ` · ${result.confirmed?.year ?? result.guess.year}`}
-                          {result.cached && ' · из памяти, запрос не тратился'}
-                        </p>
-                      </div>
-                    )}
-                    <div
-                      className={`rounded-xl border px-3 py-2 text-[12.5px] leading-snug ${verdict.tone}`}
-                    >
-                      <b>
-                        {verdict.mark} {verdict.title}.
-                      </b>{' '}
-                      {verdict.text}
-                    </div>
-                    {result.proof && (
-                      <p className="mt-1.5 text-[12.5px]">
-                        <span className="text-muted-foreground">
-                          ISBN найден на{' '}
-                        </span>
-                        <a
-                          href={result.proof.url}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="underline underline-offset-2"
-                        >
-                          {new URL(result.proof.url).hostname.replace(
-                            /^www\./,
-                            '',
-                          )}
-                        </a>
-                      </p>
-                    )}
                     {result.sources.length > 0 && (
-                      <p className="mt-1.5 text-[11.5px] text-muted-foreground">
-                        {result.sources
-                          .map((src) => `${src.name}: ${src.outcome}`)
-                          .join(' · ')}
-                        {result.askedModel
-                          ? ' · спросили модель'
-                          : ' · хватило источников'}
-                      </p>
-                    )}
-                    {isAdmin &&
-                      result.sources.some(
-                        (src) =>
-                          src.detail?.includes('выключен') ||
-                          (src.name === 'Google Books' && src.detail),
-                      ) && (
-                        <p className="mt-1 text-[11.5px]">
-                          <Link
-                            to="/service/sources"
-                            className="underline underline-offset-2"
-                          >
-                            Настроить источники
-                          </Link>
-                        </p>
-                      )}
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {result.verdict !== 'unknown' && (
-                        <Button
-                          size="sm"
-                          loading={busyId === row.id}
-                          onClick={() => void apply(row.id)}
-                        >
-                          {result.verdict === 'confirmed'
-                            ? 'Применить'
-                            : 'Применить с пометкой'}
-                        </Button>
-                      )}
-                      {result.workId && (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link
-                            to="/works/$workId"
-                            params={{ workId: result.workId }}
-                          >
-                            Выбрать издание
-                          </Link>
-                        </Button>
-                      )}
-                      {result.verdict !== 'confirmed' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          loading={busyId === row.id}
-                          onClick={() =>
-                            void recognize(row.id, { force: true })
-                          }
-                        >
-                          Спросить снова
-                        </Button>
-                      )}
-                      {result.verdict !== 'confirmed' &&
-                        result.via !== 'web-generative' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            loading={busyId === row.id}
-                            onClick={() =>
-                              void recognize(row.id, {
-                                force: true,
-                                mode: 'generative',
-                              })
-                            }
-                          >
-                            Спросить платно
-                          </Button>
-                        )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                      <button
+                        type="button"
+                        className="text-[12.5px] text-muted-foreground underline underline-offset-2"
                         onClick={() =>
-                          setFound((f) => {
-                            const next = { ...f }
-                            delete next[row.id]
-                            return next
-                          })
+                          setDetails((d) => ({ ...d, [row.id]: !d[row.id] }))
                         }
                       >
-                        Скрыть
-                      </Button>
-                    </div>
+                        {details[row.id] ? 'Скрыть' : 'Подробнее'}
+                      </button>
+                    )}
                   </div>
+                )}
+
+                {result && details[row.id] && (
+                  <p className="mt-2 text-[11.5px] text-muted-foreground">
+                    {result.sources
+                      .map((src) => `${src.name}: ${src.outcome}`)
+                      .join(' · ')}
+                    {result.cached && ' · из памяти'}
+                    {isAdmin && (
+                      <>
+                        {' · '}
+                        <Link
+                          to="/service/sources"
+                          className="underline underline-offset-2"
+                        >
+                          настройки источников
+                        </Link>
+                      </>
+                    )}
+                  </p>
                 )}
               </div>
             )
@@ -397,4 +366,13 @@ function UnrecognizedPage() {
       )}
     </div>
   )
+}
+
+/** Домен без www — им и подписываем ссылку-доказательство. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
 }

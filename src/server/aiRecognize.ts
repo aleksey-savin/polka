@@ -3,7 +3,11 @@ import { z } from 'zod'
 
 import {
   aiMarkFor,
+  applyProposal,
   applyRecognition,
+  dismissProposal,
+  dismissRecognition,
+  proposeForBook,
   approveToReference,
   listAiReview,
   pendingAiReview,
@@ -85,3 +89,31 @@ export const aiMarkFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .validator(z.object({ bookId: z.string() }))
   .handler(({ data }) => aiMarkFor(data.bookId))
+
+/** «Не то»: книга остаётся нераспознанной, ответ больше не предлагается. */
+export const dismissRecognitionFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ bookId: z.string() }))
+  .handler(({ context, data }) =>
+    dismissRecognition(context.user.id, data.bookId),
+  )
+
+/** «Найти данные» на карточке книги: дозаполнение пустых полей. */
+export const proposeForBookFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ bookId: z.string() }))
+  .handler(({ context, data }) => proposeForBook(context.user.id, data.bookId))
+
+export const applyProposalFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ suggestionId: z.string() }))
+  .handler(({ context, data }) =>
+    applyProposal(context.user.id, data.suggestionId),
+  )
+
+export const dismissProposalFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ suggestionId: z.string() }))
+  .handler(({ context, data }) =>
+    dismissProposal(context.user.id, data.suggestionId),
+  )

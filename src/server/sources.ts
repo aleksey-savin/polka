@@ -30,7 +30,7 @@ export const saveWebSettingsFn = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       enabled: z.boolean(),
-      mode: z.enum(['extract', 'generative']),
+      paidFallback: z.boolean(),
       dailyLimit: z.number().int().min(0).max(10_000),
     }),
   )

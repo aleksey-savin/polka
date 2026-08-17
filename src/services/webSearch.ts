@@ -43,6 +43,8 @@ async function settingsRow() {
 export interface WebSearchSettings {
   enabled: boolean
   mode: WebMode
+  /** Платный генеративный поиск — вторым заходом, когда бесплатный пуст. */
+  paidFallback: boolean
   dailyLimit: number
   lastResult: string | null
   lastResultAt: Date | null
@@ -53,6 +55,7 @@ export async function webSettings(): Promise<WebSearchSettings> {
   return {
     enabled: found?.webEnabled ?? false,
     mode: found?.webMode ?? 'extract',
+    paidFallback: found?.webPaidFallback ?? false,
     dailyLimit: found?.webDailyLimit ?? 100,
     lastResult: found?.webLastResult ?? null,
     lastResultAt: found?.webLastResultAt ?? null,
@@ -314,7 +317,7 @@ export async function spendSearch(
 
 export async function saveWebSettings(input: {
   enabled: boolean
-  mode: WebMode
+  paidFallback: boolean
   dailyLimit: number
 }): Promise<void> {
   await db
@@ -322,7 +325,7 @@ export async function saveWebSettings(input: {
     .values({
       id: ROW,
       webEnabled: input.enabled,
-      webMode: input.mode,
+      webPaidFallback: input.paidFallback,
       webDailyLimit: input.dailyLimit,
       updatedAt: new Date(),
     })
@@ -330,14 +333,14 @@ export async function saveWebSettings(input: {
       target: sourceSetting.id,
       set: {
         webEnabled: input.enabled,
-        webMode: input.mode,
+        webPaidFallback: input.paidFallback,
         webDailyLimit: input.dailyLimit,
         updatedAt: new Date(),
       },
     })
   log.info('web', 'настройки поиска изменены', {
     enabled: input.enabled,
-    mode: input.mode,
+    paidFallback: input.paidFallback,
   })
 }
 

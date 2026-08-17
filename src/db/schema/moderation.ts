@@ -237,7 +237,8 @@ export const aiSuggestion = sqliteTable(
     }).notNull(),
     /** applied — стоит в карточке и ждёт модератора; approved — ушло в эталон. */
     status: text('status', {
-      enum: ['applied', 'reverted', 'approved', 'rejected'],
+      // proposed — найдено и ждёт решения человека (M26.2)
+      enum: ['proposed', 'applied', 'reverted', 'approved', 'rejected'],
     })
       .notNull()
       .default('applied'),
@@ -275,6 +276,10 @@ export const sourceSetting = sqliteTable('source_setting', {
     .notNull()
     .default('extract'),
   webDailyLimit: integer('web_daily_limit').notNull().default(100),
+  /** Платный генеративный поиск — только если бесплатный путь не справился. */
+  webPaidFallback: integer('web_paid_fallback', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   webLastResult: text('web_last_result'),
   webLastResultAt: integer('web_last_result_at', { mode: 'timestamp' }),
   lastCheck: text('last_check'),

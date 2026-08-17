@@ -8,6 +8,7 @@ import {
   Heart,
   Image as ImageIcon,
   ImageOff,
+  Sparkles,
   Trash2,
   TriangleAlert,
   UserRound,
@@ -43,7 +44,14 @@ import {
 } from '@/server/books'
 import { dateHuman, dateRu, dateShort } from '@/lib/dates'
 import { removeCoverFn, uploadCoverFn } from '@/server/covers'
-import { aiMarkFn, revertRecognitionFn } from '@/server/aiRecognize'
+import {
+  aiMarkFn,
+  applyProposalFn,
+  dismissProposalFn,
+  proposeForBookFn,
+  revertRecognitionFn,
+} from '@/server/aiRecognize'
+import type { Proposal } from '@/services/aiRecognize'
 import { bookCycleFn } from '@/server/cycles'
 import { bookLoanHistoryFn, returnLoanFn } from '@/server/loans'
 import { listBookPersonalFn } from '@/server/personal'
@@ -74,6 +82,8 @@ function BookCardPage() {
   const navigate = Route.useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
   const [coverOpen, setCoverOpen] = useState(false)
+  const [proposal, setProposal] = useState<Proposal | null>(null)
+  const [finding, setFinding] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [lendOpen, setLendOpen] = useState(false)
   const [giftOpen, setGiftOpen] = useState(false)
@@ -139,7 +149,38 @@ function BookCardPage() {
     await navigate({ to: '/books', search: {} })
   }
 
+  const incomplete =
+    !book.coverPath || !book.annotation || !book.publisher || !book.year
+
+  async function findData() {
+    setFinding(true)
+    try {
+      const found = await proposeForBookFn({ data: { bookId: book.id } })
+      if (!found) {
+        toast.info('Нечего добавить — всё уже заполнено или ничего не нашлось')
+        return
+      }
+      setProposal(found)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setFinding(false)
+    }
+  }
+
   const menuEntries: Array<ActionMenuEntry> = [
+    ...(incomplete
+      ? ([
+          {
+            key: 'find-data',
+            label: finding ? 'Ищу…' : 'Найти данные',
+            sub: 'заполнит пустые поля: обложку, описание, год',
+            icon: <Sparkles />,
+            onSelect: () => void findData(),
+          },
+          'separator',
+        ] satisfies Array<ActionMenuEntry>)
+      : []),
     ...(canCirculate
       ? ([
           {
@@ -865,6 +906,93 @@ function BookCardPage() {
         onOpenChange={setGiftOpen}
         onDone={refresh}
       />
+      <Drawer
+        open={proposal !== null}
+        onOpenChange={(open) => {
+          if (!open && proposal) {
+            void dismissProposalFn({
+              data: { suggestionId: proposal.suggestionId },
+            })
+            setProposal(null)
+          }
+        }}
+      >
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Нашлось</DrawerTitle>
+          </DrawerHeader>
+          {proposal && (
+            <>
+              <div className="flex gap-3">
+                {proposal.coverUrl && (
+                  <img
+                    src={proposal.coverUrl}
+                    alt=""
+                    className="aspect-[7/10] w-[70px] flex-none rounded-[4px] object-cover"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15.5px] leading-tight font-semibold">
+                    {proposal.title}
+                  </p>
+                  <p className="text-[13px] text-muted-foreground">
+                    {proposal.authors}
+                  </p>
+                  <p className="mt-1.5 text-[12.5px] text-muted-foreground">
+                    Заполнится:{' '}
+                    {proposal.fills.map((fill) => fill.label).join(', ')}
+                  </p>
+                </div>
+              </div>
+              {proposal.annotation && (
+                <p className="mt-3 line-clamp-4 text-[13px] leading-snug text-muted-foreground">
+                  {proposal.annotation}
+                </p>
+              )}
+              <p className="mt-2 text-[12.5px] text-muted-foreground">
+                Уже заполненные поля не меняются.
+              </p>
+            </>
+          )}
+          <DrawerFooter>
+            <Button
+              className="h-12 w-full text-[15px]"
+              onClick={() => {
+                if (!proposal) return
+                void applyProposalFn({
+                  data: { suggestionId: proposal.suggestionId },
+                })
+                  .then(() => {
+                    toast.success('Сохранили')
+                    setProposal(null)
+                    void router.invalidate()
+                  })
+                  .catch((e: unknown) =>
+                    toast.error(
+                      e instanceof Error ? e.message : 'Не получилось',
+                    ),
+                  )
+              }}
+            >
+              Сохранить
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 w-full text-[15px]"
+              onClick={() => {
+                if (!proposal) return
+                void dismissProposalFn({
+                  data: { suggestionId: proposal.suggestionId },
+                })
+                setProposal(null)
+              }}
+            >
+              Не то
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
       <DeleteBookDialog
         title={book.title}
         open={deleteOpen}

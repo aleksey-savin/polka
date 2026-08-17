@@ -39,7 +39,7 @@ export interface SourceSettingsView {
   hasGoogleKey: boolean
   web: {
     enabled: boolean
-    mode: 'extract' | 'generative'
+    paidFallback: boolean
     dailyLimit: number
     lastResult: string | null
     lastResultAt: Date | null

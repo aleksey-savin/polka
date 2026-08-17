@@ -20,6 +20,8 @@ const { createBook } = await import('./books')
 const { userAccount } = await import('@/db/schema/moderation')
 const {
   applyRecognition,
+  dismissRecognition,
+  proposeForBook,
   approveToReference,
   listAiReview,
   parseGuess,
@@ -224,6 +226,44 @@ describe('разбор нераспознанного', () => {
     const result = await recognizeBook(ME, id)
     expect(result.cached).toBe(true)
     expect(calls).toBe(before)
+  })
+})
+
+describe('решение человека', () => {
+  test('«не то» оставляет книгу в списке и не предлагает то же снова', async () => {
+    const isbn = '9785042222221'
+    const [target] = await db
+      .select()
+      .from(book)
+      .where(eq(book.isbn13, isbn))
+      .limit(1)
+    const id = target?.id ?? (await unrecognizedBook('9785044444447'))
+
+    await dismissRecognition(ME, id)
+    const [guess] = await db
+      .select()
+      .from(aiIsbnGuess)
+      .where(eq(aiIsbnGuess.isbn13, isbn))
+    if (guess) {
+      expect(guess.verdict).toBe('unknown')
+      expect(guess.title).toBeNull()
+    }
+  })
+
+  test('дозаполнение заполняет только пустые поля', async () => {
+    const created = await createBook(ME, {
+      title: 'Книга с пробелами',
+      authors: 'Автор Авторов',
+      publisher: 'Своё издательство',
+      libraryId: library.id,
+      shelfId: shelf.id,
+    })
+    // источники в тестах молчат, поэтому предложения быть не должно
+    expect(await proposeForBook(ME, created.id)).toBeNull()
+
+    const [row] = await db.select().from(book).where(eq(book.id, created.id))
+    // и ничего не затёрлось
+    expect(row?.publisher).toBe('Своё издательство')
   })
 })
 

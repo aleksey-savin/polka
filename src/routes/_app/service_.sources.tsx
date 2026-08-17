@@ -26,21 +26,6 @@ export const Route = createFileRoute('/_app/service_/sources')({
   component: SourcesPage,
 })
 
-const MODES = [
-  {
-    value: 'extract' as const,
-    title: 'Поиск и извлечение',
-    sub: 'Берём выдачу, модель читает сниппеты. Принимаем то, где встретился сам ISBN.',
-    price: '≈50–200 ₽ / 1000 поисков',
-  },
-  {
-    value: 'generative' as const,
-    title: 'Генеративный ответ',
-    sub: 'Модель ищет и отвечает сама, со списком источников.',
-    price: '≈5 ₽ / книга',
-  },
-]
-
 function SourcesPage() {
   const settings = Route.useLoaderData()
   const router = useRouter()
@@ -51,7 +36,7 @@ function SourcesPage() {
   const [probe, setProbe] = useState<Array<SourceProbe> | null>(null)
   const [web, setWeb] = useState({
     enabled: settings.web.enabled,
-    mode: settings.web.mode,
+    paidFallback: settings.web.paidFallback,
     dailyLimit: settings.web.dailyLimit.toString(),
   })
   const [webCheck, setWebCheck] = useState<{
@@ -91,7 +76,7 @@ function SourcesPage() {
       await saveWebSettingsFn({
         data: {
           enabled: web.enabled,
-          mode: web.mode,
+          paidFallback: web.paidFallback,
           dailyLimit: Number(web.dailyLimit) || 0,
         },
       })
@@ -224,41 +209,35 @@ function SourcesPage() {
         </p>
       )}
 
-      <div className="mt-2 grid gap-2">
-        {MODES.map((mode) => (
-          <button
-            key={mode.value}
-            type="button"
-            className={`flex items-start gap-3 rounded-2xl border p-3 text-left ${
-              web.mode === mode.value
-                ? 'border-primary/45 bg-accent/40'
-                : 'bg-card'
+      <div className="flex items-center gap-3 border-t py-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[14.5px] font-semibold">
+            Платный поиск, если не нашлось
+          </p>
+          <p className="text-[12.5px] text-muted-foreground">
+            Генеративный ответ с источниками · ≈5 ₽ за книгу · вторым заходом,
+            когда бесплатный путь пуст
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={web.paidFallback}
+          aria-label="Платный поиск, если не нашлось"
+          className={`relative h-7 w-[46px] flex-none rounded-full transition-colors ${
+            web.paidFallback ? 'bg-primary' : 'bg-border'
+          }`}
+          onClick={() =>
+            setWeb((w) => ({ ...w, paidFallback: !w.paidFallback }))
+          }
+        >
+          <span
+            aria-hidden
+            className={`absolute top-[3px] left-[3px] size-[22px] rounded-full bg-white shadow transition-transform ${
+              web.paidFallback ? 'translate-x-[18px]' : ''
             }`}
-            onClick={() => setWeb((w) => ({ ...w, mode: mode.value }))}
-          >
-            <span
-              aria-hidden
-              className={`mt-0.5 grid size-5 flex-none place-items-center rounded-full border-[1.5px] ${
-                web.mode === mode.value ? 'border-primary' : 'border-border'
-              }`}
-            >
-              {web.mode === mode.value && (
-                <span className="size-2.5 rounded-full bg-primary" />
-              )}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[14.5px] font-semibold">
-                {mode.title}
-              </span>
-              <span className="block text-[12.5px] text-muted-foreground">
-                {mode.sub}
-              </span>
-              <span className="mt-0.5 block font-mono text-[11.5px] text-muted-foreground">
-                {mode.price}
-              </span>
-            </span>
-          </button>
-        ))}
+          />
+        </button>
       </div>
 
       <div className="mt-3 grid gap-1.5">
