@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 import { toast } from 'sonner'
 
@@ -7,7 +7,11 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { dateHuman } from '@/lib/dates'
-import { moderationQueueFn, resolveModerationFn } from '@/server/moderation'
+import {
+  moderationQueueFn,
+  queueCountsFn,
+  resolveModerationFn,
+} from '@/server/moderation'
 import type { QueueRow } from '@/services/moderation'
 
 /** Очередь модератора (M21): публикация не ждёт, разбираем потом. */
@@ -17,10 +21,11 @@ export const Route = createFileRoute('/_app/service_/queue')({
   }),
   loaderDeps: ({ search }) => search,
   loader: async ({ deps }) => {
-    const rows = await moderationQueueFn({
-      data: { filter: deps.filter ?? 'reported' },
-    })
-    return { rows }
+    const [page, counts] = await Promise.all([
+      moderationQueueFn({ data: { filter: deps.filter ?? 'reported' } }),
+      queueCountsFn(),
+    ])
+    return { page, counts }
   },
   component: ModerationPage,
 })
@@ -41,12 +46,53 @@ const REASONS = [
   'Другое',
 ]
 
+/** Куда ведёт «Открыть»: у ссылки объекта на своей странице нет. */
+function targetLink(
+  item: QueueRow,
+): { to: string; params?: Record<string, string> } | null {
+  if (item.kind === 'book_cover') {
+    return { to: '/books/$bookId', params: { bookId: item.targetId } }
+  }
+  if (item.kind === 'ref_work') {
+    return { to: '/works/$workId', params: { workId: item.targetId } }
+  }
+  if (item.kind === 'ref_book') {
+    return { to: '/editions/$refBookId', params: { refBookId: item.targetId } }
+  }
+  return null
+}
+
 function ModerationPage() {
-  const { rows } = Route.useLoaderData()
+  const { page, counts } = Route.useLoaderData()
   const search = Route.useSearch()
   const router = useRouter()
   const navigate = Route.useNavigate()
   const filter = search.filter ?? 'reported'
+
+  // докрученные страницы держим отдельно: лоадер отдаёт только первую
+  const [extra, setExtra] = useState<Array<QueueRow>>([])
+  const [cursor, setCursor] = useState<string | null>(page.cursor)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const rows = [...page.rows, ...extra]
+
+  useEffect(() => {
+    setExtra([])
+    setCursor(page.cursor)
+  }, [page])
+
+  async function loadMore() {
+    if (!cursor) return
+    setLoadingMore(true)
+    try {
+      const next = await moderationQueueFn({ data: { filter, cursor } })
+      setExtra((prev) => [...prev, ...next.rows])
+      setCursor(next.cursor)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   const [openId, setOpenId] = useState<string | null>(null)
   const [reason, setReason] = useState(REASONS[0]!)
@@ -98,11 +144,11 @@ function ModerationPage() {
       <div className="flex gap-1 rounded-full border bg-card p-1">
         {(
           [
-            ['reported', 'Жалобы'],
-            ['pending', 'На проверке'],
-            ['resolved', 'Разобрано'],
+            ['reported', 'Жалобы', counts.reported],
+            ['pending', 'На проверке', counts.pending],
+            ['resolved', 'Разобрано', counts.resolved],
           ] as const
-        ).map(([value, label]) => (
+        ).map(([value, label, n]) => (
           <button
             key={value}
             type="button"
@@ -114,6 +160,7 @@ function ModerationPage() {
             onClick={() => void navigate({ search: { filter: value } })}
           >
             {label}
+            {n > 0 && <span className="ml-1 font-mono text-[11px]">{n}</span>}
           </button>
         ))}
       </div>
@@ -163,10 +210,10 @@ function ModerationPage() {
                     ? `жалоба · ${item.reportCount}`
                     : KIND_LABEL[item.kind]}
                 </span>
-                <h2 className="mt-1.5 truncate text-[15.5px] font-semibold">
+                <h2 className="mt-1.5 text-[15.5px] leading-[1.25] font-semibold [overflow-wrap:anywhere]">
                   {item.title}
                 </h2>
-                <p className="truncate text-[12.5px] text-muted-foreground">
+                <p className="text-[12.5px] text-muted-foreground [overflow-wrap:anywhere]">
                   {[item.subtitle, item.ownerName && `автор ${item.ownerName}`]
                     .filter(Boolean)
                     .join(' · ')}
@@ -187,8 +234,8 @@ function ModerationPage() {
                   </p>
                 )}
 
-                {item.status === 'pending' && (
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {item.status === 'pending' && (
                     <Button
                       size="sm"
                       loading={busy === item.id && openId === null}
@@ -196,6 +243,8 @@ function ModerationPage() {
                     >
                       В порядке
                     </Button>
+                  )}
+                  {item.status === 'pending' && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -206,8 +255,22 @@ function ModerationPage() {
                     >
                       Снять…
                     </Button>
-                  </div>
-                )}
+                  )}
+                  {(() => {
+                    const link = targetLink(item)
+                    return link ? (
+                      <Button size="sm" variant="outline" asChild>
+                        <Link
+                          to={link.to as never}
+                          params={link.params as never}
+                          search={{} as never}
+                        >
+                          Открыть
+                        </Link>
+                      </Button>
+                    ) : null
+                  })()}
+                </div>
 
                 {openId === item.id && (
                   <div className="mt-2.5 grid gap-2 rounded-xl border bg-background p-2.5">
@@ -268,6 +331,16 @@ function ModerationPage() {
               </div>
             </div>
           ))}
+          {cursor && (
+            <Button
+              variant="outline"
+              className="mt-2 h-12 w-full"
+              loading={loadingMore}
+              onClick={() => void loadMore()}
+            >
+              Показать ещё
+            </Button>
+          )}
         </div>
       )}
     </div>

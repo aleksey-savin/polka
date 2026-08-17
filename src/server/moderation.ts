@@ -5,6 +5,7 @@ import {
   accountOf,
   listLog,
   listQueue,
+  queueCounts,
   listUsers,
   pendingCount,
   report,
@@ -25,10 +26,22 @@ export const pendingModerationFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .handler(({ context }) => pendingCount(context.user.id))
 
+/** Счётчики табов — отдельно от списка, чтобы не тянуть все строки. */
+export const queueCountsFn = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(({ context }) => queueCounts(context.user.id))
+
 export const moderationQueueFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .validator(z.object({ filter: z.enum(['reported', 'pending', 'resolved']) }))
-  .handler(({ context, data }) => listQueue(context.user.id, data.filter))
+  .validator(
+    z.object({
+      filter: z.enum(['reported', 'pending', 'resolved']),
+      cursor: z.string().nullable().optional(),
+    }),
+  )
+  .handler(({ context, data }) =>
+    listQueue(context.user.id, data.filter, data.cursor),
+  )
 
 export const resolveModerationFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
@@ -52,7 +65,8 @@ export const resolveModerationFn = createServerFn({ method: 'POST' })
 
 export const moderationLogFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
-  .handler(({ context }) => listLog(context.user.id))
+  .validator(z.object({ cursor: z.string().nullable().optional() }).optional())
+  .handler(({ context, data }) => listLog(context.user.id, data?.cursor))
 
 export const listUsersFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])

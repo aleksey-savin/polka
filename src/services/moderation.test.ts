@@ -19,7 +19,9 @@ const {
   accountOf,
   enqueue,
   ensureFirstAdmin,
+  listLog,
   listQueue,
+  queueCounts,
   listUsers,
   report,
   resolve,
@@ -97,11 +99,11 @@ describe('очередь и санкции', () => {
     const shareId = row!.id
 
     const pending = await listQueue('u-first', 'pending')
-    expect(pending.map((i) => i.targetId)).toContain(shareId)
+    expect(pending.rows.map((i) => i.targetId)).toContain(shareId)
 
     await report('share', shareId, 'Реклама и спам', 'ссылка на казино', null)
     const reported = await listQueue('u-first', 'reported')
-    const item = reported.find((i) => i.targetId === shareId)
+    const item = reported.rows.find((i) => i.targetId === shareId)
     expect(item?.reportCount).toBe(1)
     expect(item?.reports[0]?.reason).toBe('Реклама и спам')
 
@@ -147,7 +149,7 @@ describe('очередь и санкции', () => {
 
   test('разобранное не возвращается в очередь само, но возвращается по жалобе', async () => {
     await enqueue('ref_work', 'work-1', 'u-third')
-    const item = (await listQueue('u-first', 'pending')).find(
+    const item = (await listQueue('u-first', 'pending')).rows.find(
       (i) => i.targetId === 'work-1',
     )
     expect(item).toBeDefined()
@@ -156,11 +158,43 @@ describe('очередь и санкции', () => {
     // повторная постановка в очередь решение не отменяет
     await enqueue('ref_work', 'work-1', 'u-third')
     const stillResolved = await listQueue('u-first', 'resolved')
-    expect(stillResolved.some((i) => i.id === item!.id)).toBe(true)
+    expect(stillResolved.rows.some((i) => i.id === item!.id)).toBe(true)
 
     // а вот жалоба возвращает объект модератору
     await report('ref_work', 'work-1', 'Порнография', null, null)
     const reported = await listQueue('u-first', 'reported')
-    expect(reported.some((i) => i.id === item!.id)).toBe(true)
+    expect(reported.rows.some((i) => i.id === item!.id)).toBe(true)
+  })
+})
+
+describe('пагинация очереди', () => {
+  test('страницы не пересекаются, счётчики считаются отдельно', async () => {
+    // 25 записей — больше страницы (20)
+    for (let i = 0; i < 25; i++) {
+      await enqueue('ref_work', `page-work-${i}`, 'u-third')
+    }
+    const first = await listQueue('u-first', 'pending')
+    expect(first.rows.length).toBe(20)
+    expect(first.cursor).not.toBeNull()
+
+    const second = await listQueue('u-first', 'pending', first.cursor)
+    expect(second.rows.length).toBeGreaterThan(0)
+    // одна и та же запись не приходит дважды
+    const ids = new Set([
+      ...first.rows.map((r) => r.id),
+      ...second.rows.map((r) => r.id),
+    ])
+    expect(ids.size).toBe(first.rows.length + second.rows.length)
+
+    const counts = await queueCounts('u-first')
+    expect(counts.pending).toBeGreaterThanOrEqual(25)
+    // счётчик не равен размеру страницы — именно этого раньше не хватало
+    expect(counts.pending).toBeGreaterThan(first.rows.length)
+  })
+
+  test('журнал тоже страницами', async () => {
+    const page = await listLog('u-first')
+    expect(Array.isArray(page.rows)).toBe(true)
+    expect(page.rows.length).toBeLessThanOrEqual(20)
   })
 })

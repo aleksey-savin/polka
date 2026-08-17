@@ -161,10 +161,81 @@ const KIND_TITLE: Record<ModerationKind, string> = {
 }
 
 /** Очередь модератора: жалобы вперёд, дальше — по свежести. */
+export type QueueFilter = 'reported' | 'pending' | 'resolved'
+
+const PAGE = 20
+
+/** Условие фильтра — одно на список и на счётчик, чтобы не разъезжались. */
+function queueWhere(filter: QueueFilter) {
+  return filter === 'reported'
+    ? and(
+        eq(moderationItem.status, 'pending'),
+        sql`${moderationItem.reportCount} > 0`,
+      )
+    : filter === 'pending'
+      ? and(
+          eq(moderationItem.status, 'pending'),
+          eq(moderationItem.reportCount, 0),
+        )
+      : sql`${moderationItem.status} != 'pending'`
+}
+
+/** Счётчики табов: дешёвый COUNT вместо длины загруженного списка. */
+export async function queueCounts(
+  userId: string,
+): Promise<Record<QueueFilter, number>> {
+  await requireModerator(userId)
+  const one = async (filter: QueueFilter) => {
+    const [row] = await db
+      .select({ n: count() })
+      .from(moderationItem)
+      .where(queueWhere(filter))
+    return row?.n ?? 0
+  }
+  const [reported, pending, resolved] = await Promise.all([
+    one('reported'),
+    one('pending'),
+    one('resolved'),
+  ])
+  return { reported, pending, resolved }
+}
+
+export interface QueuePage {
+  rows: Array<QueueRow>
+  /** Метка последней записи; передать обратно, чтобы получить следующие. */
+  cursor: string | null
+}
+
+/**
+ * Курсор — пара «дата + id».
+ *
+ * Дата в секундах: drizzle хранит `timestamp` секундами, и сравнение с
+ * миллисекундами всегда истинно — страницы повторялись бы. Пара нужна потому,
+ * что при пакетной постановке (скан стопки, бэкфилл) десятки записей попадают
+ * в одну секунду.
+ */
+const seconds = (date: Date) => Math.floor(date.getTime() / 1000)
+
+const encodeCursor = (createdAt: Date, id: string) =>
+  `${seconds(createdAt)}:${id}`
+
+function decodeCursor(raw: string): { time: number; id: string } | null {
+  const at = raw.indexOf(':')
+  if (at <= 0) return null
+  const time = Number(raw.slice(0, at))
+  const id = raw.slice(at + 1)
+  return Number.isFinite(time) && id ? { time, id } : null
+}
+
+/**
+ * Страница очереди. Курсор по дате, а не offset: пока модератор смотрит,
+ * приходят новые жалобы — offset сдвинулся бы и записи стали дублироваться.
+ */
 export async function listQueue(
   userId: string,
-  filter: 'reported' | 'pending' | 'resolved',
-): Promise<Array<QueueRow>> {
+  filter: QueueFilter,
+  cursor?: string | null,
+): Promise<QueuePage> {
   await requireModerator(userId)
   const rows = await db
     .select({
@@ -180,21 +251,21 @@ export async function listQueue(
     .from(moderationItem)
     .leftJoin(user, eq(user.id, moderationItem.ownerId))
     .where(
-      filter === 'reported'
-        ? and(
-            eq(moderationItem.status, 'pending'),
-            sql`${moderationItem.reportCount} > 0`,
-          )
-        : filter === 'pending'
-          ? and(
-              eq(moderationItem.status, 'pending'),
-              eq(moderationItem.reportCount, 0),
-            )
-          : sql`${moderationItem.status} != 'pending'`,
+      (() => {
+        const after = cursor ? decodeCursor(cursor) : null
+        if (!after) return queueWhere(filter)
+        return and(
+          queueWhere(filter),
+          sql`(${moderationItem.createdAt} < ${after.time} or (${moderationItem.createdAt} = ${after.time} and ${moderationItem.id} < ${after.id}))`,
+        )
+      })(),
     )
-    .orderBy(desc(moderationItem.reportCount), desc(moderationItem.createdAt))
-    .limit(100)
-  if (rows.length === 0) return []
+    .orderBy(desc(moderationItem.createdAt), desc(moderationItem.id))
+    .limit(PAGE + 1)
+  if (rows.length === 0) return { rows: [], cursor: null }
+
+  const hasMore = rows.length > PAGE
+  const page = hasMore ? rows.slice(0, PAGE) : rows
 
   const reports = await db
     .select()
@@ -202,13 +273,13 @@ export async function listQueue(
     .where(
       inArray(
         moderationReport.itemId,
-        rows.map((r) => r.id),
+        page.map((r) => r.id),
       ),
     )
     .orderBy(desc(moderationReport.createdAt))
 
   const out: Array<QueueRow> = []
-  for (const row of rows) {
+  for (const row of page) {
     const view = await describeTarget(row.kind, row.targetId)
     out.push({
       ...row,
@@ -222,7 +293,11 @@ export async function listQueue(
         })),
     })
   }
-  return out
+  const last = page[page.length - 1]
+  return {
+    rows: out,
+    cursor: hasMore && last ? encodeCursor(last.createdAt, last.id) : null,
+  }
 }
 
 /** Человеческое описание объекта: что именно смотрит модератор. */
@@ -527,7 +602,16 @@ export interface LogRow {
   subjectName: string | null
 }
 
-export async function listLog(userId: string): Promise<Array<LogRow>> {
+export interface LogPage {
+  rows: Array<LogRow>
+  cursor: string | null
+}
+
+/** Журнал страницами: он растёт вечно, тянуть его целиком нельзя. */
+export async function listLog(
+  userId: string,
+  cursor?: string | null,
+): Promise<LogPage> {
   await requireModerator(userId)
   const actor = db.select().from(user).as('actor')
   const rows = await db
@@ -542,10 +626,19 @@ export async function listLog(userId: string): Promise<Array<LogRow>> {
     })
     .from(moderationLog)
     .leftJoin(actor, eq(actor.id, moderationLog.actorId))
-    .orderBy(desc(moderationLog.createdAt))
-    .limit(200)
+    .where(
+      (() => {
+        const after = cursor ? decodeCursor(cursor) : null
+        if (!after) return undefined
+        return sql`(${moderationLog.createdAt} < ${after.time} or (${moderationLog.createdAt} = ${after.time} and ${moderationLog.id} < ${after.id}))`
+      })(),
+    )
+    .orderBy(desc(moderationLog.createdAt), desc(moderationLog.id))
+    .limit(PAGE + 1)
+  const hasMore = rows.length > PAGE
+  const page = hasMore ? rows.slice(0, PAGE) : rows
   const subjects = await db.select({ id: user.id, name: user.name }).from(user)
-  return rows.map((r) => ({
+  const out = page.map((r) => ({
     id: r.id,
     action: r.action,
     kind: r.kind,
@@ -554,6 +647,12 @@ export async function listLog(userId: string): Promise<Array<LogRow>> {
     actorName: r.actorName,
     subjectName: subjects.find((s) => s.id === r.subjectId)?.name ?? null,
   }))
+  const lastLog = page[page.length - 1]
+  return {
+    rows: out,
+    cursor:
+      hasMore && lastLog ? encodeCursor(lastLog.createdAt, lastLog.id) : null,
+  }
 }
 
 /** Решения по объектам владельца — плашки «снято модератором». */

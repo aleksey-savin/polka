@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { toast } from 'sonner'
 
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { dateHuman } from '@/lib/dates'
 import { moderationLogFn } from '@/server/moderation'
@@ -7,7 +10,7 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 
 /** Журнал модерации: кто, что, когда и почему (M21). */
 export const Route = createFileRoute('/_app/service_/log')({
-  loader: () => moderationLogFn(),
+  loader: () => moderationLogFn({ data: {} }),
   component: LogPage,
 })
 
@@ -24,7 +27,31 @@ const ACTION_LABEL: Record<string, string> = {
 }
 
 function LogPage() {
-  const rows = Route.useLoaderData()
+  const page = Route.useLoaderData()
+  // журнал растёт вечно — грузим страницами по требованию
+  const [extra, setExtra] = useState<Array<(typeof page.rows)[number]>>([])
+  const [cursor, setCursor] = useState<string | null>(page.cursor)
+  const [busy, setBusy] = useState(false)
+  const rows = [...page.rows, ...extra]
+
+  useEffect(() => {
+    setExtra([])
+    setCursor(page.cursor)
+  }, [page])
+
+  async function loadMore() {
+    if (!cursor) return
+    setBusy(true)
+    try {
+      const next = await moderationLogFn({ data: { cursor } })
+      setExtra((prev) => [...prev, ...next.rows])
+      setCursor(next.cursor)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
     <div className="mx-auto max-w-[640px] pb-6">
       <Breadcrumbs
@@ -36,8 +63,6 @@ function LogPage() {
       <h1 className="mb-4 text-[25px] leading-tight font-semibold">
         Журнал решений
       </h1>
-      <h2 className="text-[17px] font-semibold">Журнал модерации</h2>
-
       {rows.length === 0 ? (
         <Card className="mt-5">
           <CardContent className="py-8 text-sm text-muted-foreground">
@@ -64,6 +89,16 @@ function LogPage() {
               </span>
             </div>
           ))}
+          {cursor && (
+            <Button
+              variant="outline"
+              className="mt-3 h-12 w-full"
+              loading={busy}
+              onClick={() => void loadMore()}
+            >
+              Показать ещё
+            </Button>
+          )}
         </div>
       )}
     </div>
