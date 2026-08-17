@@ -155,6 +155,13 @@
       "when": 1786952457380,
       "tag": "0021_serious_rictor",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1786954004314,
+      "tag": "0022_peaceful_tyrannus",
+      "breakpoints": true
     }
   ]
 }

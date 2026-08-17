@@ -29,25 +29,25 @@ const VERDICT = {
   confirmed: {
     mark: '✓',
     title: 'Подтверждено',
-    text: 'Издание с этим номером нашлось в каталоге — данные берём оттуда.',
+    text: 'Издание с этим номером есть в каталоге.',
     tone: 'border-primary/45 bg-accent/40 text-accent-foreground',
   },
   'work-only': {
     mark: '≈',
     title: 'Книга такая есть, издание — не то',
-    text: 'Произведение нашлось, но издания с этим номером в каталоге нет.',
+    text: 'Произведение есть, издания с этим номером — нет.',
     tone: 'border-[color-mix(in_oklab,var(--stamp)_35%,transparent)] bg-[color-mix(in_oklab,var(--stamp)_7%,transparent)] text-foreground',
   },
   unconfirmed: {
     mark: '!',
     title: 'Не подтверждено',
-    text: 'Каталог молчит. Это предположение модели — сверьте с книгой в руках.',
+    text: 'Каталог не подтвердил — сверьте с книгой.',
     tone: 'border-destructive/40 bg-destructive/5 text-foreground',
   },
   unknown: {
     mark: '—',
     title: 'Модель не знает этого номера',
-    text: 'Так честнее, чем красивая выдумка. Остаётся заполнить вручную.',
+    text: 'Заполните вручную.',
     tone: 'bg-card text-muted-foreground',
   },
 } as const
@@ -276,6 +276,24 @@ function UnrecognizedPage() {
                       </b>{' '}
                       {verdict.text}
                     </div>
+                    {result.proof && (
+                      <p className="mt-1.5 text-[12.5px]">
+                        <span className="text-muted-foreground">
+                          ISBN найден на{' '}
+                        </span>
+                        <a
+                          href={result.proof.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="underline underline-offset-2"
+                        >
+                          {new URL(result.proof.url).hostname.replace(
+                            /^www\./,
+                            '',
+                          )}
+                        </a>
+                      </p>
+                    )}
                     {result.sources.length > 0 && (
                       <p className="mt-1.5 text-[11.5px] text-muted-foreground">
                         {result.sources

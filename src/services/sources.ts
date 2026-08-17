@@ -37,6 +37,16 @@ export async function googleBooksKey(): Promise<string | null> {
 
 export interface SourceSettingsView {
   hasGoogleKey: boolean
+  web: {
+    enabled: boolean
+    mode: 'extract' | 'generative'
+    dailyLimit: number
+    lastResult: string | null
+    lastResultAt: Date | null
+    used: number
+    /** Поиску нужны ключ и каталог из настроек ИИ. */
+    ready: boolean
+  }
   /** Ключ пришёл из переменной окружения, поменять его можно только там. */
   fromEnv: boolean
   lastCheck: string | null
@@ -48,7 +58,15 @@ export async function getSourceSettings(
 ): Promise<SourceSettingsView> {
   await requireAdmin(userId)
   const found = await row()
+  const { webSettings, searchesToday } = await import('./webSearch')
+  const { aiCredentials } = await import('./ai')
+  const [web, quota, creds] = await Promise.all([
+    webSettings(),
+    searchesToday(userId),
+    aiCredentials(),
+  ])
   return {
+    web: { ...web, used: quota.used, ready: creds !== null },
     hasGoogleKey:
       Boolean(found?.googleKeyEnc) || Boolean(env.GOOGLE_BOOKS_API_KEY),
     fromEnv: !found?.googleKeyEnc && Boolean(env.GOOGLE_BOOKS_API_KEY),

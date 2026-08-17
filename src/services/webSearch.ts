@@ -1,0 +1,363 @@
+import { and, eq, sql } from 'drizzle-orm'
+
+import { db } from '@/db'
+import { aiUsage, sourceSetting } from '@/db/schema/moderation'
+import { log } from '@/lib/logger'
+import { aiCredentials } from './ai'
+import { AppError } from './errors'
+
+/**
+ * Поиск в интернете по ISBN (M26).
+ *
+ * Языковая модель номеров не знает — номер лежит на страницах магазинов и
+ * библиотек. Поэтому сначала ищем страницу, а потом просим модель прочитать
+ * найденное. Принимаем результат только если сам номер встретился в тексте:
+ * тогда у нас есть ссылка, по которой можно проверить.
+ *
+ * Инструмент — Yandex Search API v2 (услуга включается в консоли, сервисному
+ * аккаунту нужна роль search-api.webSearch.user). Ключ и каталог — те же, что
+ * у настроек ИИ.
+ */
+
+const SEARCH_HOST = 'https://searchapi.api.cloud.yandex.net'
+const OPERATION_HOST = 'https://operation.api.cloud.yandex.net'
+
+export type WebMode = 'extract' | 'generative'
+
+export interface WebHit {
+  url: string
+  title: string
+  text: string
+}
+
+const ROW = 'default'
+
+async function settingsRow() {
+  const [found] = await db
+    .select()
+    .from(sourceSetting)
+    .where(eq(sourceSetting.id, ROW))
+  return found ?? null
+}
+
+export interface WebSearchSettings {
+  enabled: boolean
+  mode: WebMode
+  dailyLimit: number
+  lastResult: string | null
+  lastResultAt: Date | null
+}
+
+export async function webSettings(): Promise<WebSearchSettings> {
+  const found = await settingsRow()
+  return {
+    enabled: found?.webEnabled ?? false,
+    mode: found?.webMode ?? 'extract',
+    dailyLimit: found?.webDailyLimit ?? 100,
+    lastResult: found?.webLastResult ?? null,
+    lastResultAt: found?.webLastResultAt ?? null,
+  }
+}
+
+const today = () => new Date().toISOString().slice(0, 10)
+
+export interface SearchQuota {
+  used: number
+  limit: number
+  left: number
+}
+
+export async function searchesToday(userId: string): Promise<SearchQuota> {
+  const settings = await webSettings()
+  const [row] = await db
+    .select({ searches: aiUsage.searches })
+    .from(aiUsage)
+    .where(and(eq(aiUsage.userId, userId), eq(aiUsage.day, today())))
+  const used = row?.searches ?? 0
+  return {
+    used,
+    limit: settings.dailyLimit,
+    left: Math.max(0, settings.dailyLimit - used),
+  }
+}
+
+async function countSearch(userId: string): Promise<void> {
+  await db
+    .insert(aiUsage)
+    .values({ userId, day: today(), searches: 1 })
+    .onConflictDoUpdate({
+      target: [aiUsage.userId, aiUsage.day],
+      set: { searches: sql`${aiUsage.searches} + 1` },
+    })
+}
+
+async function remember(result: string): Promise<void> {
+  await db
+    .update(sourceSetting)
+    .set({ webLastResult: result, webLastResultAt: new Date() })
+    .where(eq(sourceSetting.id, ROW))
+}
+
+/** Ответ Web Search приходит XML в base64 — вытаскиваем ссылки и сниппеты. */
+export function parseSearchXml(xml: string): Array<WebHit> {
+  const clean = (s: string) =>
+    s
+      .replace(/<\/?hlword[^>]*>/g, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+  const hits: Array<WebHit> = []
+  for (const doc of xml.split('<doc').slice(1)) {
+    const url = /<url>([\s\S]*?)<\/url>/.exec(doc)?.[1]
+    if (!url) continue
+    const title = /<title>([\s\S]*?)<\/title>/.exec(doc)?.[1] ?? ''
+    const passages = [...doc.matchAll(/<passage>([\s\S]*?)<\/passage>/g)].map(
+      (m) => clean(m[1] ?? ''),
+    )
+    const headline = /<headline>([\s\S]*?)<\/headline>/.exec(doc)?.[1] ?? ''
+    const text = [...passages, clean(headline)].filter(Boolean).join(' · ')
+    hits.push({ url: clean(url), title: clean(title), text })
+  }
+  return hits
+}
+
+interface OperationResponse {
+  id?: string
+  done?: boolean
+  response?: { rawData?: string }
+  error?: { message?: string }
+  message?: string
+}
+
+/**
+ * Веб-выдача по запросу. Синхронный метод есть не во всех регионах, поэтому
+ * при отказе идём асинхронным путём и опрашиваем операцию.
+ */
+export async function searchWeb(query: string): Promise<Array<WebHit>> {
+  const creds = await aiCredentials()
+  if (!creds)
+    throw new AppError('Не задан ключ ИИ — он же нужен поиску', 'invalid')
+
+  const body = {
+    query: {
+      searchType: 'SEARCH_TYPE_RU',
+      queryText: query,
+      familyMode: 'FAMILY_MODE_NONE',
+      page: '0',
+    },
+    groupSpec: {
+      groupMode: 'GROUPING_MODE_FLAT',
+      groupsOnPage: '8',
+      docsInGroup: '1',
+    },
+    folderId: creds.folderId,
+    responseFormat: 'FORMAT_XML',
+  }
+  const headers = {
+    authorization: `Api-Key ${creds.key}`,
+    'content-type': 'application/json',
+  }
+
+  const sync = await fetch(`${SEARCH_HOST}/v2/web/search`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15_000),
+  }).catch(() => null)
+
+  if (sync?.ok) {
+    const data = (await sync.json()) as OperationResponse
+    const raw = data.response?.rawData ?? (data as { rawData?: string }).rawData
+    if (raw) return parseSearchXml(Buffer.from(raw, 'base64').toString('utf8'))
+  } else if (sync) {
+    log.info('web', 'синхронный поиск недоступен, пробуем асинхронный', {
+      status: sync.status,
+    })
+  }
+
+  const started = await fetch(`${SEARCH_HOST}/v2/web/searchAsync`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15_000),
+  })
+  const startedRaw = await started.text()
+  if (!started.ok) {
+    throw new AppError(
+      `Поиск ответил ${started.status}: ${startedRaw.slice(0, 200)}`,
+    )
+  }
+  const operation = JSON.parse(startedRaw) as OperationResponse
+  if (!operation.id) throw new AppError('Поиск не вернул идентификатор задачи')
+
+  // операция обычно готова за 1–3 секунды
+  for (let attempt = 0; attempt < 8; attempt++) {
+    await new Promise((r) => setTimeout(r, attempt === 0 ? 900 : 700))
+    const res = await fetch(`${OPERATION_HOST}/operations/${operation.id}`, {
+      headers: { authorization: `Api-Key ${creds.key}` },
+      signal: AbortSignal.timeout(10_000),
+    })
+    const raw = await res.text()
+    if (!res.ok) {
+      throw new AppError(`Поиск ответил ${res.status}: ${raw.slice(0, 200)}`)
+    }
+    const done = JSON.parse(raw) as OperationResponse
+    if (done.error) {
+      throw new AppError(
+        `Поиск отказал: ${done.error.message ?? 'без причины'}`,
+      )
+    }
+    if (done.done && done.response?.rawData) {
+      return parseSearchXml(
+        Buffer.from(done.response.rawData, 'base64').toString('utf8'),
+      )
+    }
+  }
+  throw new AppError('Поиск не ответил за отведённое время')
+}
+
+export interface GenAnswer {
+  text: string
+  sources: Array<{ url: string; title: string; used: boolean }>
+}
+
+/** Генеративный ответ: модель ищет сама и возвращает использованные источники. */
+export async function genSearch(query: string): Promise<GenAnswer> {
+  const creds = await aiCredentials()
+  if (!creds)
+    throw new AppError('Не задан ключ ИИ — он же нужен поиску', 'invalid')
+
+  const res = await fetch(`${SEARCH_HOST}/v2/gen/search`, {
+    method: 'POST',
+    headers: {
+      authorization: `Api-Key ${creds.key}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      messages: [{ content: query, role: 'ROLE_USER' }],
+      folderId: creds.folderId,
+      fixMisspell: false,
+      enableNrfmDocs: false,
+    }),
+    signal: AbortSignal.timeout(30_000),
+  })
+  const raw = await res.text()
+  if (!res.ok) {
+    throw new AppError(`Поиск ответил ${res.status}: ${raw.slice(0, 200)}`)
+  }
+  const data = JSON.parse(raw) as {
+    message?: { content?: string }
+    sources?: Array<{ url?: string; title?: string; used?: boolean }>
+  }
+  return {
+    text: data.message?.content ?? '',
+    sources: (data.sources ?? [])
+      .filter((s) => typeof s.url === 'string')
+      .map((s) => ({
+        url: s.url ?? '',
+        title: s.title ?? '',
+        used: s.used ?? false,
+      })),
+  }
+}
+
+/** Только цифры: на страницах номер печатают с дефисами и пробелами как попало. */
+export const bareIsbn = (isbn: string) => isbn.replace(/[^0-9Xx]/g, '')
+
+/**
+ * Встречается ли номер в тексте. Правило приёмки: без этого данные не берём,
+ * иначе получим уверенный пересказ чужой книги.
+ */
+export function mentionsIsbn(text: string, isbn13: string): boolean {
+  const digits = bareIsbn(text.replace(/[\s‑–—-]/g, ''))
+  return digits.includes(bareIsbn(isbn13))
+}
+
+/** Расход поиска: проверяем лимит, считаем и пишем результат в настройки. */
+export async function spendSearch(
+  userId: string,
+  run: () => Promise<string>,
+): Promise<void> {
+  const quota = await searchesToday(userId)
+  if (quota.left <= 0) {
+    throw new AppError(
+      `Дневной лимит поисков исчерпан (${quota.limit}). Счётчик обнулится завтра.`,
+      'invalid',
+    )
+  }
+  const started = performance.now()
+  try {
+    const summary = await run()
+    await countSearch(userId)
+    await remember(
+      `ok: ${summary} за ${Math.round(performance.now() - started)} мс`,
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    await remember(`ошибка: ${message}`)
+    log.warn('web', 'поиск не удался', { message })
+    throw error
+  }
+}
+
+export async function saveWebSettings(input: {
+  enabled: boolean
+  mode: WebMode
+  dailyLimit: number
+}): Promise<void> {
+  await db
+    .insert(sourceSetting)
+    .values({
+      id: ROW,
+      webEnabled: input.enabled,
+      webMode: input.mode,
+      webDailyLimit: input.dailyLimit,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: sourceSetting.id,
+      set: {
+        webEnabled: input.enabled,
+        webMode: input.mode,
+        webDailyLimit: input.dailyLimit,
+        updatedAt: new Date(),
+      },
+    })
+  log.info('web', 'настройки поиска изменены', {
+    enabled: input.enabled,
+    mode: input.mode,
+  })
+}
+
+/** Проверка связи: ищем заведомо существующий номер. */
+export async function checkWebSearch(
+  userId: string,
+): Promise<{ ok: boolean; message: string }> {
+  const probe = '9785171636951'
+  try {
+    let found = 0
+    await spendSearch(userId, async () => {
+      const hits = await searchWeb(`ISBN ${probe}`)
+      found = hits.length
+      return `${hits.length} результатов`
+    })
+    return {
+      ok: found > 0,
+      message:
+        found > 0
+          ? `${found} результатов`
+          : 'поиск ответил, но ничего не нашёл по тестовому номеру',
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : String(error),
+    }
+  }
+}

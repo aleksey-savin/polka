@@ -281,6 +281,30 @@ ai_suggestion               book_id · isbn13 · verdict · status
   `fetchOpenLibrary`, `searchFantlab`, `fetchWorkEditions`) наружу не ходят —
   иначе прогон зависит от чужих серверов.
 
+## Поиск в интернете по ISBN (M26)
+
+```
+source_setting  web_enabled · web_mode ('extract' | 'generative')
+                web_daily_limit · web_last_result · web_last_result_at
+ai_usage        searches           -- поиски считаем отдельно от запросов модели
+ai_isbn_guess   via · proof_url · proof_title
+```
+
+- `services/webSearch.ts`: `searchWeb` (Web Search API v2 — сначала синхронный
+  `/v2/web/search`, при отказе `/v2/web/searchAsync` + опрос операции),
+  `genSearch` (`/v2/gen/search`), `spendSearch` (лимит, счётчик, запись
+  результата), `parseSearchXml`, `mentionsIsbn`.
+- **Ответ Web Search — XML внутри base64** (`response.rawData`): декодируем и
+  вытаскиваем `url`/`title`/`passage`/`headline` регулярками, снимая `<hlword>`.
+- Ключ и каталог берутся из настроек ИИ (`aiCredentials()`), отдельных полей
+  нет: это то же облако. Услугу нужно включить в консоли, сервисному аккаунту
+  дать роль `search-api.webSearch.user`.
+- **Правило приёмки**: номер должен встретиться в тексте найденной страницы
+  (`mentionsIsbn` сравнивает только цифры — на страницах номер печатают с
+  дефисами, тире и пробелами). Иначе результат не берётся вовсе.
+- Порядок в `recognizeBook`: эталон → API-источники → веб-поиск → модель по
+  памяти. Каждый шаг только если предыдущий промолчал.
+
 ## Подводные камни, на которые уже наступили
 
 Список не для истории, а чтобы не наступить снова:

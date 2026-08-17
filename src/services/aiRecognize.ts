@@ -19,6 +19,13 @@ import {
 import { normalizeForSearch } from './search'
 import { resolveSeriesByName } from './series'
 import { adoptExternalWork, searchByTitle } from './titleSearch'
+import {
+  genSearch,
+  mentionsIsbn,
+  searchWeb,
+  spendSearch,
+  webSettings,
+} from './webSearch'
 
 /**
  * Разбор нераспознанных с ИИ (M25).
@@ -73,6 +80,10 @@ export interface RecognizeResult {
   /** Спрашивали ли модель вообще: источники могли справиться сами. */
   askedModel: boolean
   sources: Array<SourceReport>
+  /** Каким путём получено: sources · web-extract · web-generative · model. */
+  via: string
+  /** Страница, на которой встретился номер. */
+  proof: { url: string; title: string } | null
 }
 
 const SYSTEM = [
@@ -243,6 +254,10 @@ export async function recognizeBook(
       cached: true,
       askedModel: false,
       sources: [],
+      via: hit.via ?? 'model',
+      proof: hit.proofUrl
+        ? { url: hit.proofUrl, title: hit.proofTitle ?? hit.proofUrl }
+        : null,
     }
   }
 
@@ -304,7 +319,28 @@ export async function recognizeBook(
       cached: false,
       askedModel: false,
       sources,
+      via: 'sources',
+      proof: null,
     }
+  }
+
+  // Поиск в интернете: номер лежит на страницах магазинов и библиотек.
+  const web = await webSettings()
+  if (web.enabled) {
+    const found = await webLookup(userId, isbn13, web.mode, fromPrefix)
+    if (found) {
+      sources.push({
+        name: 'Поиск в интернете',
+        outcome: 'нашёл',
+        detail: found.proof?.url ?? null,
+      })
+      return { ...found, bookId, isbn13, fromPrefix, sources }
+    }
+    sources.push({
+      name: 'Поиск в интернете',
+      outcome: 'молчит',
+      detail: 'номер не встретился на найденных страницах',
+    })
   }
 
   const settings = await getAiSettings()
@@ -356,6 +392,133 @@ export async function recognizeBook(
     cached: false,
     askedModel: true,
     sources,
+    via: 'model',
+    proof: null,
+  }
+}
+
+const WEB_SYSTEM = [
+  'Ты читаешь фрагменты веб-страниц и выписываешь выходные данные книги.',
+  'Отвечай строго одним JSON-объектом, без пояснений.',
+  'Поля: known (boolean), title, authors, publisher, year (число), pages (число), series, sourceUrl.',
+  'Бери только то, что есть во фрагментах; sourceUrl — адрес страницы, откуда взял.',
+  'Если во фрагментах нет книги с этим ISBN — верни {"known": false}.',
+].join(' ')
+
+/**
+ * Веб-поиск с извлечением. Правило приёмки: номер должен встретиться в тексте
+ * найденной страницы, иначе результат не берём.
+ */
+async function webLookup(
+  userId: string,
+  isbn13: string,
+  mode: 'extract' | 'generative',
+  fromPrefix: string | null,
+): Promise<Omit<
+  RecognizeResult,
+  'bookId' | 'isbn13' | 'fromPrefix' | 'sources'
+> | null> {
+  let payload = ''
+  interface Proof {
+    url: string
+    title: string
+  }
+  // ссылку набираем внутри колбэка расхода — держим в объекте, иначе TS
+  // считает переменную навсегда null
+  const box: { proof: Proof | null } = { proof: null }
+
+  try {
+    if (mode === 'generative') {
+      await spendSearch(userId, async () => {
+        const answer = await genSearch(
+          `Книга с ISBN ${isbn13}: название, автор, издательство, год, число страниц.`,
+        )
+        const cited =
+          answer.sources.find((src) => src.used) ?? answer.sources[0]
+        if (cited)
+          box.proof = { url: cited.url, title: cited.title || cited.url }
+        payload = [
+          answer.text,
+          ...answer.sources.map((src) => `${src.url} ${src.title}`),
+        ].join('\n')
+        return `${answer.sources.length} источников`
+      })
+    } else {
+      await spendSearch(userId, async () => {
+        const hits = await searchWeb(`ISBN ${isbn13}`)
+        const withIsbn = hits.filter(
+          (hit) =>
+            mentionsIsbn(hit.text, isbn13) || mentionsIsbn(hit.title, isbn13),
+        )
+        const useful = withIsbn.length > 0 ? withIsbn : hits
+        const first = withIsbn[0]
+        if (first)
+          box.proof = { url: first.url, title: first.title || first.url }
+        payload = useful
+          .slice(0, 8)
+          .map((hit) => `${hit.url}\n${hit.title}\n${hit.text}`)
+          .join('\n\n')
+        return `${hits.length} результатов, с номером ${withIsbn.length}`
+      })
+    }
+  } catch (error) {
+    log.warn('web', 'поиск по номеру не удался', {
+      isbn: isbn13,
+      message: error instanceof Error ? error.message : String(error),
+    })
+    return null
+  }
+
+  // без номера в тексте доверять нечему
+  if (!payload.trim() || !mentionsIsbn(payload, isbn13)) return null
+
+  const answer = await ask(
+    userId,
+    `ISBN: ${isbn13}. Фрагменты найденных страниц:\n\n${payload.slice(0, 6000)}`,
+    { system: WEB_SYSTEM, maxTokens: 400 },
+  )
+  const guess = parseGuess(answer.text)
+  if (!guess.known || !guess.title) return null
+
+  const checked = await verify(userId, isbn13, guess)
+  const via = mode === 'generative' ? 'web-generative' : 'web-extract'
+  const settings = await getAiSettings()
+
+  await db
+    .insert(aiIsbnGuess)
+    .values({
+      isbn13,
+      // страница с номером — подтверждение не хуже каталога
+      verdict: checked.refBookId ? 'confirmed' : 'unconfirmed',
+      title: guess.title,
+      authors: guess.authors,
+      publisher: guess.publisher ?? fromPrefix,
+      year: guess.year,
+      seriesName: guess.seriesName,
+      refBookId: checked.refBookId,
+      workId: checked.workId,
+      model: settings.model,
+      via,
+      proofUrl: box.proof?.url ?? null,
+      proofTitle: box.proof?.title ?? null,
+      rawJson: answer.text.slice(0, 2000),
+    })
+    .onConflictDoNothing()
+
+  log.info('web', 'номер найден в интернете', { isbn: isbn13, via })
+
+  return {
+    verdict: checked.refBookId ? 'confirmed' : 'unconfirmed',
+    guess,
+    refBookId: checked.refBookId,
+    workId: checked.workId,
+    confirmed: checked.refBookId
+      ? await confirmedFields(checked.refBookId)
+      : null,
+    cached: false,
+    askedModel: true,
+    via,
+    proof: box.proof,
   }
 }
 

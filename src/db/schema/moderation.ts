@@ -177,6 +177,8 @@ export const aiUsage = sqliteTable(
     day: text('day').notNull(),
     calls: integer('calls').notNull().default(0),
     tokens: integer('tokens').notNull().default(0),
+    /** Поиски в интернете считаем отдельно: это другие деньги. */
+    searches: integer('searches').notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.userId, t.day] })],
 )
@@ -201,6 +203,11 @@ export const aiIsbnGuess = sqliteTable('ai_isbn_guess', {
   refBookId: text('ref_book_id'),
   workId: text('work_id'),
   model: text('model'),
+  /** Каким путём получено: sources · web-extract · web-generative · model. */
+  via: text('via'),
+  /** Страница, на которой встретился сам номер. */
+  proofUrl: text('proof_url'),
+  proofTitle: text('proof_title'),
   rawJson: text('raw_json'),
   askedAt: integer('asked_at', { mode: 'timestamp' })
     .notNull()
@@ -255,6 +262,17 @@ export const aiSuggestion = sqliteTable(
 export const sourceSetting = sqliteTable('source_setting', {
   id: text('id').primaryKey().default('default'),
   googleKeyEnc: text('google_key_enc'),
+  /** Поиск в интернете по ISBN (M26): ключ и каталог берём из настроек ИИ. */
+  webEnabled: integer('web_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  /** extract — выдача + извлечение моделью; generative — ответ с поиском. */
+  webMode: text('web_mode', { enum: ['extract', 'generative'] })
+    .notNull()
+    .default('extract'),
+  webDailyLimit: integer('web_daily_limit').notNull().default(100),
+  webLastResult: text('web_last_result'),
+  webLastResultAt: integer('web_last_result_at', { mode: 'timestamp' }),
   lastCheck: text('last_check'),
   lastCheckAt: integer('last_check_at', { mode: 'timestamp' }),
   updatedAt: integer('updated_at', { mode: 'timestamp' })

@@ -402,6 +402,20 @@ export function parseModelList(raw: string, folder = ''): Array<string> {
   return [...new Set(names)].sort()
 }
 
+/**
+ * Ключ и каталог для сервисов, которые ходят в то же облако (поиск в
+ * интернете). Наружу не отдаётся — только внутри сервисного слоя.
+ */
+export async function aiCredentials(): Promise<{
+  key: string
+  folderId: string
+} | null> {
+  const found = await row()
+  if (!found?.apiKeyEnc || !found.folderId) return null
+  const key = await open(found.apiKeyEnc)
+  return key ? { key, folderId: found.folderId } : null
+}
+
 /** Доступен ли ИИ прямо сейчас — от этого зависят кнопки в интерфейсе. */
 export async function aiReady(): Promise<boolean> {
   const view = await getAiSettings()

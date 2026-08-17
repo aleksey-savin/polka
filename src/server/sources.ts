@@ -6,6 +6,8 @@ import {
   probeSources,
   saveSourceSettings,
 } from '@/services/sources'
+import { checkWebSearch, saveWebSettings } from '@/services/webSearch'
+import { requireAdmin } from '@/services/moderation'
 import { authMiddleware } from './middleware'
 
 export const getSourceSettingsFn = createServerFn({ method: 'GET' })
@@ -22,3 +24,24 @@ export const saveSourceSettingsFn = createServerFn({ method: 'POST' })
 export const probeSourcesFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(({ context }) => probeSources(context.user.id))
+
+export const saveWebSettingsFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(
+    z.object({
+      enabled: z.boolean(),
+      mode: z.enum(['extract', 'generative']),
+      dailyLimit: z.number().int().min(0).max(10_000),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    await requireAdmin(context.user.id)
+    await saveWebSettings(data)
+  })
+
+export const checkWebSearchFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    await requireAdmin(context.user.id)
+    return checkWebSearch(context.user.id)
+  })
