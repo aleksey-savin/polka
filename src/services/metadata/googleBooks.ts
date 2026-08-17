@@ -15,6 +15,10 @@ import { yearFrom } from './types'
 import type { MetadataDraft, SourceResult } from './types'
 
 const TIMEOUT = 4000
+/** Google отвечает 503 «Service temporarily unavailable» на ровном месте —
+    со второй попытки обычно проходит, поэтому повторяем. */
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504])
+const ATTEMPTS = 3
 
 interface GbVolumeInfo {
   title?: string
@@ -56,13 +60,21 @@ export async function fetchGoogleBooks(
   try {
     const stored = await googleBooksKey()
     const key = stored ? `&key=${stored}` : ''
-    const res = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn13}&country=RU${key}`,
-      {
-        headers: { referer: `${env.APP_URL}/` },
-        signal: AbortSignal.timeout(TIMEOUT),
-      },
-    )
+    let res: Response | null = null
+    for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+      res = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn13}&country=RU${key}`,
+        {
+          headers: { referer: `${env.APP_URL}/` },
+          signal: AbortSignal.timeout(TIMEOUT),
+        },
+      )
+      if (res.ok || !RETRY_STATUS.has(res.status)) break
+      if (attempt < ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, attempt * 400))
+      }
+    }
+    if (!res) return null
     if (!res.ok) {
       // 403 — ключ ограничен и реферер не подошёл, 429 — квота: и то и другое
       // выглядит для человека как «книга не нашлась», поэтому пишем в журнал

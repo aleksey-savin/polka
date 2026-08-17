@@ -99,6 +99,28 @@ export interface SourceProbe {
 /** Заведомо существующий номер: по нему и проверяем, живы ли источники. */
 const PROBE_ISBN = '9785171636951'
 
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504])
+
+/** Повторяем на «временно недоступен»: и Google, и OpenLibrary этим грешат. */
+async function fetchRetry(
+  url: string,
+  init: RequestInit,
+  attempts = 3,
+): Promise<Response> {
+  let last: Response | null = null
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      last = await fetch(url, init)
+      if (last.ok || !RETRY_STATUS.has(last.status)) return last
+    } catch (error) {
+      if (attempt === attempts) throw error
+    }
+    await new Promise((r) => setTimeout(r, attempt * 400))
+  }
+  if (!last) throw new Error('нет ответа')
+  return last
+}
+
 /** Проверка источников: показываем дословно, кто что ответил. */
 export async function probeSources(
   userId: string,
@@ -109,7 +131,7 @@ export async function probeSources(
 
   // Google Books
   try {
-    const res = await fetch(
+    const res = await fetchRetry(
       `https://www.googleapis.com/books/v1/volumes?q=isbn:${PROBE_ISBN}&country=RU${key ? `&key=${key}` : ''}`,
       {
         headers: { referer: `${env.APP_URL}/` },
@@ -121,7 +143,12 @@ export async function probeSources(
       out.push({
         name: 'Google Books',
         ok: false,
-        message: `${res.status}: ${raw.slice(0, 160)}`,
+        message:
+          res.status === 503
+            ? '503 — Google временно занят, попробуйте ещё раз'
+            : res.status === 403
+              ? '403 — ключ ограничен: разрешите домен приложения или IP сервера'
+              : `${res.status}: ${raw.slice(0, 140)}`,
       })
     } else {
       const items = (JSON.parse(raw) as { items?: Array<unknown> }).items
@@ -162,20 +189,23 @@ export async function probeSources(
 
   // OpenLibrary
   try {
-    const res = await fetch(
+    const res = await fetchRetry(
       `https://openlibrary.org/api/books?bibkeys=ISBN:${PROBE_ISBN}&format=json&jscmd=data`,
-      { signal: AbortSignal.timeout(8000) },
+      { signal: AbortSignal.timeout(12_000) },
+      2,
     )
     out.push({
       name: 'OpenLibrary',
       ok: res.ok,
       message: res.ok ? 'отвечает' : `${res.status}`,
     })
-  } catch (error) {
+  } catch {
+    // из российских сетей openlibrary.org часто недоступен; на поиск это не
+    // влияет — FantLab и Google работают, поэтому не пугаем красным текстом
     out.push({
       name: 'OpenLibrary',
       ok: false,
-      message: error instanceof Error ? error.message : 'не ответил',
+      message: 'не отвечает из этой сети — на поиск книг почти не влияет',
     })
   }
 

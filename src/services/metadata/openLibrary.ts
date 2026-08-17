@@ -3,6 +3,8 @@ import { POLKA_USER_AGENT } from '@/services/userAgent'
 import { yearFrom } from './types'
 import type { MetadataDraft, SourceResult } from './types'
 
+// из российских сетей openlibrary.org отвечает через раз: ждём недолго,
+// FantLab и Google важнее для наших книг
 const TIMEOUT = 4000
 const HEADERS = { 'User-Agent': POLKA_USER_AGENT }
 

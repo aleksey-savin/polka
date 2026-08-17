@@ -274,6 +274,8 @@ function SourcesPage() {
         />
         <p className="text-[12.5px] text-muted-foreground">
           Отдельно от лимита модели. Сегодня истрачено {settings.web.used}.
+          {!settings.web.enabled &&
+            ' Тумблер вступит в силу после «Сохранить поиск».'}
         </p>
       </div>
 
@@ -297,7 +299,7 @@ function SourcesPage() {
           variant="outline"
           className="h-11"
           loading={busy === 'webcheck'}
-          disabled={!settings.web.ready || !settings.web.enabled}
+          disabled={!settings.web.ready}
           onClick={() => void checkWeb()}
         >
           Проверить поиск
