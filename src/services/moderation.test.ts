@@ -8,6 +8,7 @@ process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-moder-'))
 
 const { db } = await import('@/db')
 const { user } = await import('@/db/schema/auth')
+const { userAccount } = await import('@/db/schema/moderation')
 const { share } = await import('@/db/schema/circulation')
 const { eq } = await import('drizzle-orm')
 const { createLibrary } = await import('./libraries')
@@ -45,6 +46,9 @@ await makeUser('u-third', 'Пётр', new Date('2026-03-01'))
 
 describe('роли', () => {
   test('первый зарегистрированный становится админом', async () => {
+    // прогон общий на все файлы: чужой админ из соседнего теста заставил бы
+    // ensureFirstAdmin промолчать, и проверка стала бы зависеть от порядка
+    await db.delete(userAccount)
     await ensureFirstAdmin()
     expect((await accountOf('u-first')).role).toBe('admin')
     expect((await accountOf('u-second')).role).toBe('user')
