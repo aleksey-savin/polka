@@ -16,8 +16,16 @@ export function BarcodeScanner({
   const videoRef = useRef<HTMLVideoElement>(null)
   const [state, setState] = useState<ScannerState>('starting')
 
+  // Колбэк держим в ref: иначе новая функция на каждом рендере родителя
+  // перезапускала камеру, и тот же штрихкод улетал в поиск дважды.
+  const onDetectedRef = useRef(onDetected)
+  useEffect(() => {
+    onDetectedRef.current = onDetected
+  })
+
   useEffect(() => {
     let cancelled = false
+    let fired = false
     let stream: MediaStream | null = null
     let raf = 0
 
@@ -65,11 +73,12 @@ export function BarcodeScanner({
             const codes = await detector.detect(video)
             for (const code of codes) {
               const parsed = parseIsbn(code.rawValue)
-              if (parsed) {
+              if (parsed && !fired) {
+                fired = true
                 ;(navigator as { vibrate?: (ms: number) => boolean }).vibrate?.(
                   80,
                 )
-                onDetected(parsed.isbn13)
+                onDetectedRef.current(parsed.isbn13)
                 return // остановились: родитель закроет/перезапустит сканер
               }
             }
@@ -88,7 +97,7 @@ export function BarcodeScanner({
       cancelAnimationFrame(raf)
       stream?.getTracks().forEach((t) => t.stop())
     }
-  }, [onDetected])
+  }, [])
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-foreground">

@@ -32,7 +32,9 @@ export function ServiceTabs({
               to={tab.to}
               search={tab.to === '/service' ? {} : undefined}
               className={`flex-1 rounded-full py-2 text-center text-[12.5px] font-semibold whitespace-nowrap ${
-                active ? 'bg-foreground text-white' : 'text-muted-foreground'
+                active
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground'
               }`}
             >
               {tab.label}

@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { Database } from 'bun:sqlite'
@@ -17,6 +18,14 @@ export const schema = {
   ...catalog,
   ...circulation,
   ...moderation,
+}
+
+// Тест, забывший подменить DATA_DIR, молча писал бы в рабочую базу — ловим сразу
+if (process.env.NODE_ENV === 'test' && !env.DATA_DIR.startsWith(tmpdir())) {
+  throw new Error(
+    `тесты обязаны открывать временную базу: DATA_DIR=${env.DATA_DIR}. ` +
+      'Задайте process.env.DATA_DIR = mkdtempSync(...) до первого импорта модулей приложения.',
+  )
 }
 
 mkdirSync(env.DATA_DIR, { recursive: true })

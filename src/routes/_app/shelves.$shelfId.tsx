@@ -202,7 +202,7 @@ function ShelfPage() {
                         aria-hidden
                         className={`grid size-6 place-items-center rounded-[7px] border-[1.5px] text-[13px] ${
                           checked
-                            ? 'border-primary bg-primary text-white'
+                            ? 'border-primary bg-primary text-primary-foreground'
                             : 'border-input bg-card text-transparent'
                         }`}
                       >

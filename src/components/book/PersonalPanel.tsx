@@ -107,7 +107,7 @@ export function PersonalPanel({
                       type="button"
                       className={
                         s === status
-                          ? 'min-w-0 flex-1 truncate rounded-full bg-foreground px-1.5 py-2 text-center text-[12.5px] font-semibold text-white sm:flex-none sm:px-3 sm:py-1'
+                          ? 'min-w-0 flex-1 truncate rounded-full bg-foreground px-1.5 py-2 text-center text-[12.5px] font-semibold text-background sm:flex-none sm:px-3 sm:py-1'
                           : 'min-w-0 flex-1 truncate rounded-full px-1.5 py-2 text-center text-[12.5px] font-medium text-muted-foreground sm:flex-none sm:px-3 sm:py-1'
                       }
                       onClick={() =>

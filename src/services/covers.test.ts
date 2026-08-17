@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import { describe, expect, test } from 'bun:test'
 
-process.env.DATA_DIR ??= mkdtempSync(join(tmpdir(), 'polka-test-'))
+process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-test-'))
 
 const { coverAbsolutePath, saveCover } = await import('./covers')
 const { AppError } = await import('./errors')

@@ -131,7 +131,7 @@ function FriendsPage() {
             type="button"
             className={
               tab === key
-                ? 'rounded-full bg-foreground px-3.5 py-2 text-[13px] font-semibold text-white'
+                ? 'rounded-full bg-foreground px-3.5 py-2 text-[13px] font-semibold text-background'
                 : 'rounded-full px-3.5 py-2 text-[13px] font-semibold text-muted-foreground'
             }
             onClick={() => void navigate({ search: { tab: key } })}

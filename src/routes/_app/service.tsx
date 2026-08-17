@@ -106,7 +106,7 @@ function ModerationPage() {
             type="button"
             className={`flex-1 rounded-full py-2 text-[13px] font-semibold ${
               filter === value
-                ? 'bg-foreground text-white'
+                ? 'bg-foreground text-background'
                 : 'text-muted-foreground'
             }`}
             onClick={() => void navigate({ search: { filter: value } })}

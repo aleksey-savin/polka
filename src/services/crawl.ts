@@ -22,6 +22,14 @@ const MAX_ATTEMPTS = 3
 const NON_WORK_TYPES =
   /стать|эссе|предислов|послеслов|коммент|интервью|примечан|отрыв|микрорассказ|прочие|антолог/i
 
+/** Источник не знает этого автора (404). Не ошибка — повторять нечего. */
+class SourceMissing extends Error {
+  constructor(url: string) {
+    super(`нет в источнике: ${url}`)
+    this.name = 'SourceMissing'
+  }
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const pause = () => sleep(4000 + Math.random() * 2500)
 
@@ -33,6 +41,11 @@ async function fetchJson(url: string): Promise<unknown | null> {
       signal: AbortSignal.timeout(12_000),
     })
     const ms = Math.round(performance.now() - started)
+    if (res.status === 404) {
+      // FantLab знает только «своих» авторов: у нефантастики библиографии нет
+      log.info('crawl', 'источник не знает автора', { url, ms })
+      throw new SourceMissing(url)
+    }
     if (!res.ok) {
       log.warn('crawl', 'источник ответил ошибкой', {
         url,
@@ -49,6 +62,7 @@ async function fetchJson(url: string): Promise<unknown | null> {
     log.debug('crawl', 'ответ получен', { url, ms, bytes: text.length })
     return JSON.parse(text) as unknown
   } catch (error) {
+    if (error instanceof SourceMissing) throw error
     log.warn('crawl', 'запрос не удался', {
       url,
       error: error instanceof Error ? error : new Error(String(error)),
@@ -333,6 +347,18 @@ async function runNextTask(): Promise<void> {
       ms: Math.round(performance.now() - started),
     })
   } catch (e) {
+    if (e instanceof SourceMissing) {
+      // повторять бессмысленно: закрываем задачу молча, без стека и бэкофа
+      await db
+        .update(crawlTask)
+        .set({ status: 'failed', error: 'нет в источнике', doneAt: new Date() })
+        .where(eq(crawlTask.id, task.id))
+      log.info('crawl', 'автора нет в источнике', {
+        source: task.source,
+        author: authorRow.name,
+      })
+      return
+    }
     const attempts = task.attempts + 1
     await db
       .update(crawlTask)

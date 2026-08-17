@@ -255,7 +255,7 @@ function AddPage() {
             type="button"
             className={
               mode === m
-                ? 'flex-1 rounded-full bg-foreground py-2 text-[12.5px] font-semibold whitespace-nowrap text-white'
+                ? 'flex-1 rounded-full bg-foreground py-2 text-[12.5px] font-semibold whitespace-nowrap text-background'
                 : 'flex-1 rounded-full py-2 text-[12.5px] font-semibold whitespace-nowrap text-muted-foreground'
             }
             onClick={() => {
