@@ -28,6 +28,7 @@ export const Route = createFileRoute('/_app/unsorted')({
 /** Страница разбора завала: весь список сразу в режиме выбора, без фильтров. */
 function UnsortedPage() {
   const { rows, unrecognized } = Route.useLoaderData()
+  const search = Route.useSearch()
   const router = useRouter()
   const navigate = Route.useNavigate()
   const [selected, setSelected] = useState<Array<string>>([])
@@ -87,6 +88,7 @@ function UnsortedPage() {
       {unrecognized > 0 && (
         <Link
           to="/unrecognized"
+          search={{ from: 'unsorted', lib: search.lib }}
           className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-[12.5px] font-semibold text-destructive"
         >
           Не распознано{' '}

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -22,7 +23,14 @@ import type { RecognizeResult } from '@/services/aiRecognize'
  * OpenLibrary → поиск в интернете → модель. Человек решает: сохранить,
  * отклонить или заполнить руками.
  */
+/** Откуда пришли: из сканера или из «Неразобранного» — от этого крошки. */
+const searchSchema = z.object({
+  from: z.enum(['add', 'unsorted']).optional(),
+  lib: z.string().optional(),
+})
+
 export const Route = createFileRoute('/_app/unrecognized')({
+  validateSearch: searchSchema,
   loader: async () => {
     const [rows, account] = await Promise.all([
       listUnrecognizedFn(),
@@ -42,6 +50,7 @@ const VIA_LABEL: Record<string, string> = {
 
 function UnrecognizedPage() {
   const { rows, isAdmin } = Route.useLoaderData()
+  const search = Route.useSearch()
   const router = useRouter()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [found, setFound] = useState<Record<string, RecognizeResult>>({})
@@ -144,9 +153,19 @@ function UnrecognizedPage() {
   return (
     <div className="mx-auto max-w-[640px] pb-6">
       <p className="mb-4 truncate text-[13px] text-muted-foreground">
-        <Link to="/add" className="hover:text-foreground">
-          Сканер
-        </Link>
+        {search.from === 'unsorted' ? (
+          <Link
+            to="/unsorted"
+            search={{ lib: search.lib }}
+            className="hover:text-foreground"
+          >
+            Неразобранное
+          </Link>
+        ) : (
+          <Link to="/add" className="hover:text-foreground">
+            Сканер
+          </Link>
+        )}
         {' / '}
         Не распознано
       </p>
@@ -257,9 +276,6 @@ function UnrecognizedPage() {
                       {row.isbn13 ?? 'без ISBN'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      <span className="mr-1.5 inline-block rounded-[3px] border-[1.5px] border-destructive/70 px-1 align-[1px] font-mono text-[9.5px] tracking-[0.07em] text-destructive uppercase">
-                        не распознана
-                      </span>
                       {row.publisher && `${row.publisher} · `}
                       {dateHuman(row.createdAt)}
                     </p>

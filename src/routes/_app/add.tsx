@@ -278,6 +278,7 @@ function AddPage() {
       {unrecognized > 0 && (
         <Link
           to="/unrecognized"
+          search={{ from: 'add' }}
           className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-[12.5px] font-semibold text-destructive"
         >
           Не распознано{' '}
