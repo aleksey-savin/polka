@@ -5,35 +5,16 @@ import { book, refBook } from '@/db/schema/catalog'
 import { aiIsbnGuess, aiSuggestion } from '@/db/schema/moderation'
 import { user } from '@/db/schema/auth'
 import { log } from '@/lib/logger'
-import { ask, getAiSettings } from './ai'
 import { syncBookAuthors } from './authors'
 import { AppError } from './errors'
 import { isbnOrigin } from './isbnPrefix'
-import {
-  cleanAnnotation,
-  cleanFoundTitle,
-  cleanPublisher,
-  looksTransliterated,
-} from './find/clean'
+import { cleanAnnotation, cleanFoundTitle, cleanPublisher } from './find/clean'
 import { memberLibraryIds } from './members'
 import { requireModerator } from './moderation'
-import {
-  bestRefBookIdForIsbn,
-  ensureRefWork,
-  fetchWorkEditions,
-} from './reference'
+import { bestRefBookIdForIsbn, ensureRefWork } from './reference'
 import { normalizeForSearch } from './search'
+import type { FindOptions, SourceKey } from './find/types'
 import { resolveSeriesByName } from './series'
-import { adoptExternalWork, searchByTitle } from './titleSearch'
-import {
-  fetchOpenGraph,
-  genSearch,
-  mentionsIsbn,
-  searchCoverImages,
-  searchWeb,
-  spendSearch,
-  webSettings,
-} from './webSearch'
 
 /**
  * Разбор нераспознанных с ИИ (M25).
@@ -51,6 +32,16 @@ export {
   cleanPublisher,
   looksTransliterated,
 } from './find/clean'
+
+/** Имена ступеней такие же, как в «Сервис → Источники». */
+const SOURCE_NAME: Record<string, string> = {
+  reference: 'Свой эталон',
+  fantlab: 'FantLab',
+  google: 'Google Books',
+  openlibrary: 'OpenLibrary',
+  web: 'Яндекс Поиск',
+  neuro: 'Нейропоиск',
+}
 
 export type Verdict = 'confirmed' | 'work-only' | 'unconfirmed' | 'unknown'
 
@@ -204,50 +195,6 @@ async function confirmedFields(refBookId: string) {
   }
 }
 
-/**
- * Проверка гипотезы каталогом. FantLab часто молчит на поиск по ISBN, но по
- * названию находит произведение — и нужное издание оказывается в его списке.
- */
-async function verify(
-  userId: string,
-  isbn13: string,
-  guess: Guess,
-): Promise<{
-  verdict: Verdict
-  refBookId: string | null
-  workId: string | null
-}> {
-  if (!guess.known || !guess.title) {
-    return { verdict: 'unknown', refBookId: null, workId: null }
-  }
-  const query = [guess.title, guess.authors?.split(/[,;]/)[0] ?? '']
-    .join(' ')
-    .trim()
-  const found = await searchByTitle(userId, query)
-
-  let workId = found.reference[0]?.workId ?? null
-  const external = found.external[0]
-  const externalId = external?.sourceId
-  if (!workId && external && externalId) {
-    workId = await adoptExternalWork(
-      externalId,
-      external.title,
-      external.authors,
-      external.year,
-      external.workType,
-      userId,
-    )
-  }
-  if (workId) {
-    // тянет издания произведения в эталон — среди них и ищем наш номер
-    await fetchWorkEditions(userId, workId).catch(() => null)
-  }
-  const refBookId = await bestRefBookIdForIsbn(isbn13)
-  if (refBookId) return { verdict: 'confirmed', refBookId, workId }
-  if (workId) return { verdict: 'work-only', refBookId: null, workId }
-  return { verdict: 'unconfirmed', refBookId: null, workId: null }
-}
-
 /** Разбор одной книги. Тратит запрос к модели только если номер новый. */
 type CoreResult = Omit<RecognizeResult, 'bookId'>
 
@@ -301,414 +248,142 @@ async function writeGuess(
 }
 
 /**
- * Добор недостающего: обложка, аннотация, объём. Чем бы книга ни нашлась,
- * человек должен получить полную карточку сразу — без второго шага.
- */
-async function enrichMissing(base: {
-  title: string
-  authors: string | null
-  coverUrl: string | null
-  annotation: string | null
-  pages: number | null
-  proofUrl: string | null
-}): Promise<{
-  coverUrl: string | null
-  coverOptions: Array<string>
-  annotation: string | null
-  pages: number | null
-}> {
-  let { annotation, pages } = base
-  const covers: Array<string> = []
-  const addCover = (url: string | null | undefined) => {
-    if (url && url.startsWith('http') && !covers.includes(url)) covers.push(url)
-  }
-  // порядок надёжности: страница с номером → каталоги → Google → Картинки
-  if (base.proofUrl) {
-    const page = await fetchOpenGraph(base.proofUrl)
-    addCover(page.image)
-    annotation = annotation ?? cleanAnnotation(page.description ?? null)
-  }
-  addCover(base.coverUrl)
-
-  if (!annotation || !pages || covers.length < 2) {
-    const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
-    const byTitle = await fetchGoogleByTitle(base.title, base.authors)
-    addCover(byTitle?.coverUrl)
-    annotation = annotation ?? byTitle?.annotation ?? null
-    pages = pages ?? byTitle?.pages ?? null
-  }
-  if (covers.length < 4) {
-    for (const url of await searchCoverImages(
-      `${base.title} ${base.authors ?? ''} книга обложка`.trim(),
-      4 - covers.length,
-    )) {
-      addCover(url)
-    }
-  }
-  return {
-    coverUrl: covers[0] ?? null,
-    coverOptions: covers.slice(0, 5),
-    annotation,
-    pages,
-  }
-}
-
-/**
  * Ядро разбора: одна цепочка на все входы — «Не распознано», карточку книги
  * и (дальше) сканер. Эталон → каталоги → Яндекс Поиск → Нейропоиск → модель;
  * каждый следующий шаг только если предыдущий молчит или отвергнут человеком.
  */
+export interface RecognizeOptions {
+  force?: boolean
+  mode?: 'extract' | 'generative'
+  /** Подмена источников в тестах. В бою не передаётся. */
+  adapters?: FindOptions['adapters']
+}
+
 export async function recognizeIsbn(
   userId: string,
   isbn13: string,
-  options: { force?: boolean; mode?: 'extract' | 'generative' } = {},
+  options: RecognizeOptions = {},
 ): Promise<CoreResult> {
-  const fromPrefix = isbnOrigin(isbn13).publisher
-  const web = await webSettings()
+  const { findEdition } = await import('./find/core')
+  const hit = await cached(isbn13)
+  const rejected = options.force ? [] : parseRejected(hit?.rejectedVias)
 
-  let hit = await cached(isbn13)
-  const rejected = parseRejected(hit?.rejectedVias)
-  let variants = parseVariants(hit?.variants)
+  const found = await findEdition(userId, isbn13, {
+    force: options.force,
+    rejected: rejected as Array<SourceKey>,
+    adapters: options.adapters,
+  })
 
-  if (hit && options.force) {
-    await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn13))
-    hit = null
-    rejected.length = 0
-    variants = []
-  }
-  if (hit) {
-    // «не знаю», полученное до включения поиска, — не приговор.
-    // via='model' встречается в старых записях: ступени уже нет (M30.1)
-    const staleWithoutWeb =
-      hit.verdict === 'unknown' &&
-      web.enabled &&
-      (hit.via === null || hit.via === 'model') &&
-      rejected.length === 0
-    if (staleWithoutWeb) {
-      log.info('ai', 'старый ответ по номеру отброшен', {
-        isbn: isbn13,
-        was: hit.verdict,
-        via: hit.via,
-      })
-      hit = null
-    }
-  }
-  if (hit && rejected.includes(hit.via ?? 'model')) hit = null
-  if (
-    hit &&
-    hit.via === 'sources' &&
-    looksTransliterated(isbn13, hit.title, hit.authors) &&
-    web.enabled &&
-    !rejected.includes('web-extract')
-  ) {
-    // карточка с латинским названием уже сохранена — но поиск не доделан
-    log.info('ai', 'каталог дал транслит, идём в поиск', {
-      isbn: isbn13,
-      title: hit.title,
-    })
-    hit = null
-  }
+  const fresh: Array<FoundVariant> = found.findings.map((f) => ({
+    via: f.variantKey,
+    verdict: f.refBookId ? 'confirmed' : 'unconfirmed',
+    title: f.draft.title ?? '',
+    authors: f.draft.authors ?? null,
+    publisher: f.draft.publisher ?? null,
+    year: f.draft.year ?? null,
+    pages: f.draft.pages ?? null,
+    seriesName: f.draft.seriesName ?? null,
+    annotation: f.draft.annotation ?? null,
+    coverUrl: f.draft.coverUrl ?? null,
+    coverOptions: f.covers,
+    refBookId: f.refBookId,
+    workId: f.workId,
+    proofUrl: f.proof?.url ?? null,
+    proofTitle: f.proof?.title ?? null,
+  }))
 
-  if (hit) {
-    const cachedTitle = hit.title ? cleanFoundTitle(hit.title) : hit.title
-    return {
-      isbn13,
-      verdict: hit.verdict,
-      guess: {
-        known: hit.verdict !== 'unknown',
-        title: cachedTitle,
-        authors: hit.authors,
-        publisher: hit.publisher,
-        year: hit.year,
-        seriesName: hit.seriesName,
-      },
-      fromPrefix,
-      refBookId: hit.refBookId,
-      workId: hit.workId,
-      confirmed: hit.refBookId
-        ? await confirmedFields(hit.refBookId)
-        : cachedTitle
-          ? {
-              title: cachedTitle,
-              authors: hit.authors ?? '',
-              publisher: hit.publisher,
-              year: hit.year,
-              pages: hit.pages,
-              seriesName: hit.seriesName,
-              coverUrl: hit.coverUrl,
-              annotation: hit.annotation,
-            }
-          : null,
-      cached: true,
-      askedModel: false,
-      sources: [],
-      coverOptions: parseRejected(hit.coverOptions),
-      variants,
-      variantIndex: Math.max(
-        0,
-        variants.findIndex((v) => v.via === (hit.via ?? 'model')),
-      ),
-      exhausted: hit.verdict === 'unknown' && rejected.length > 0,
-      via: hit.via ?? 'model',
-      proof: hit.proofUrl
-        ? { url: hit.proofUrl, title: hit.proofTitle ?? hit.proofUrl }
-        : null,
-    }
-  }
+  // История копится, а не перезаписывается: человек отверг ступень и пошёл
+  // дальше — найденное раньше должно остаться под стрелками и листаться
+  // бесплатно. «Начать заново» историю стирает намеренно.
+  const known = options.force ? [] : parseVariants(hit?.variants)
+  const variants = [
+    ...known.filter((k) => !fresh.some((f) => f.via === k.via)),
+    ...fresh,
+  ]
 
-  const sources: Array<SourceReport> = []
-  const rejectedJson = JSON.stringify(rejected)
+  const title = found.draft.title ?? null
+  // слабая находка (транслит вместо русского названия) подтверждённой не
+  // считается, даже когда запись есть в эталоне: имя всё равно нечитаемое
+  const solid = found.findings.some((f) => !f.weak && f.refBookId)
+  const verdict: Verdict = solid
+    ? 'confirmed'
+    : title
+      ? 'unconfirmed'
+      : 'unknown'
+  const top = found.findings[0]
 
-  // ── 1. Эталон и каталоги ──
-  if (!rejected.includes('sources')) {
-    const { lookupIsbn } = await import('./metadata/lookup')
-    const direct = await lookupIsbn(userId, isbn13)
-    sources.push(
-      {
-        name: 'FantLab',
-        outcome: direct.sources.includes('fantlab') ? 'нашёл' : 'молчит',
-        detail: null,
-      },
-      {
-        name: 'Google Books',
-        outcome: direct.sources.includes('google') ? 'нашёл' : 'молчит',
-        detail: direct.sources.includes('google')
-          ? null
-          : 'без своего ключа общая квота Google часто исчерпана',
-      },
-      {
-        name: 'OpenLibrary',
-        outcome: direct.sources.includes('openlibrary') ? 'нашёл' : 'молчит',
-        detail: null,
-      },
-    )
-    if (direct.draft.title?.trim()) {
-      // проверенный модератором эталон под это правило не попадает: там
-      // латиница — осознанное решение человека, а не транслит каталога
-      const weak =
-        !direct.sources.includes('manual') &&
-        looksTransliterated(isbn13, direct.draft.title, direct.draft.authors)
-      const refBookId = await bestRefBookIdForIsbn(isbn13)
-      const extra = await enrichMissing({
-        title: direct.draft.title,
-        authors: direct.draft.authors ?? null,
-        coverUrl: direct.draft.coverUrl ?? null,
-        annotation: direct.draft.annotation ?? null,
-        pages: direct.draft.pages ?? null,
-        proofUrl: null,
-      })
-      variants = upsertVariant(variants, {
-        via: 'sources',
-        verdict: weak ? 'unconfirmed' : 'confirmed',
-        title: direct.draft.title,
-        authors: direct.draft.authors ?? null,
-        publisher: direct.draft.publisher ?? null,
-        year: direct.draft.year ?? null,
-        pages: extra.pages,
-        seriesName: direct.draft.seriesName ?? null,
-        annotation: extra.annotation,
-        coverUrl: extra.coverUrl,
-        coverOptions: extra.coverOptions,
-        refBookId,
-        workId: null,
-        proofUrl: null,
-        proofTitle: null,
-      })
-      await writeGuess({
-        isbn13,
-        verdict: weak ? 'unconfirmed' : 'confirmed',
-        title: direct.draft.title,
-        authors: direct.draft.authors ?? null,
-        publisher: direct.draft.publisher ?? null,
-        year: direct.draft.year ?? null,
-        seriesName: direct.draft.seriesName ?? null,
-        pages: extra.pages,
-        annotation: extra.annotation,
-        coverUrl: extra.coverUrl,
-        coverOptions: JSON.stringify(extra.coverOptions),
-        refBookId,
-        workId: null,
-        via: 'sources',
-        rejectedVias: rejectedJson,
-        variants: JSON.stringify(variants),
-      })
-      log.info('ai', 'разбор: ответили источники', {
-        isbn: isbn13,
-        sources: direct.sources.join(','),
-        weak,
-      })
-      // транслит держим про запас: вернём его, если дальше никто не ответит
-      if (!weak)
-        return {
-          isbn13,
-          verdict: 'confirmed',
-          guess: {
-            known: true,
-            title: direct.draft.title,
-            authors: direct.draft.authors ?? null,
-            publisher: direct.draft.publisher ?? null,
-            year: direct.draft.year ?? null,
-            seriesName: direct.draft.seriesName ?? null,
-          },
-          fromPrefix,
-          refBookId,
-          workId: null,
-          confirmed: {
-            title: direct.draft.title,
-            authors: direct.draft.authors ?? '',
-            publisher: direct.draft.publisher ?? null,
-            year: direct.draft.year ?? null,
-            pages: extra.pages,
-            seriesName: direct.draft.seriesName ?? null,
-            coverUrl: extra.coverUrl,
-            annotation: extra.annotation,
-          },
-          cached: false,
-          askedModel: false,
-          sources,
-          coverOptions: extra.coverOptions,
-          variants,
-          variantIndex: variants.length - 1,
-          exhausted: false,
-          via: 'sources',
-          proof: null,
-        }
-    }
-  }
-
-  // ── 2. Яндекс Поиск и Нейропоиск ── порядок и состав из настроек (M30)
-  const { isEnabled } = await import('./bookSources')
-  const webAllowed = await isEnabled('web')
-  const neuroAllowed = await isEnabled('neuro')
-  if (!webAllowed) {
-    sources.push({
-      name: 'Яндекс Поиск',
-      outcome: 'молчит',
-      detail: 'выключен в настройках источников',
-    })
-  } else {
-    const modes: Array<'extract' | 'generative'> = options.mode
-      ? [options.mode]
-      : neuroAllowed && web.paidFallback
-        ? ['extract', 'generative']
-        : ['extract']
-    for (const mode of modes) {
-      const via = mode === 'generative' ? 'web-generative' : 'web-extract'
-      if (rejected.includes(via)) continue
-      const found = await webLookup(
-        userId,
-        isbn13,
-        mode,
-        fromPrefix,
-        rejectedJson,
-        variants,
-      )
-      if (found) {
-        sources.push({
-          name: mode === 'generative' ? 'Нейропоиск' : 'Яндекс Поиск',
-          outcome: 'нашёл',
-          detail: found.proof?.url ?? null,
-        })
-        return { ...found, isbn13, fromPrefix, sources }
-      }
-      sources.push({
-        name: mode === 'generative' ? 'Нейропоиск' : 'Яндекс Поиск',
-        outcome: 'молчит',
-        detail: 'номер не встретился на найденных страницах',
-      })
-    }
-  }
-
-  /*
-   * Ступени «спросить модель по памяти» больше нет (M30.1).
-   *
-   * ISBN — случайное число, а не факт о книге: модель номеров не помнит, зато
-   * охотно сочиняет под них правдоподобные названия. На 29 номерах владельца
-   * она не угадала ни одного, а запросы тратила. Модель осталась там, где
-   * приносит пользу: читает найденные страницы в веб-поиске.
-   */
-
-  // поиск промолчал — отдаём отложенную находку каталога, она всё же лучше
-  // пустой карточки: человек увидит её как «не подтверждено» и решит сам
-  const spare = rejected.includes('sources')
-    ? undefined
-    : variants.find((v) => v.via === 'sources')
-  if (spare) {
-    log.info('ai', 'вернулись к находке каталога', { isbn: isbn13 })
-    return {
-      isbn13,
-      verdict: 'unconfirmed',
-      guess: {
-        known: true,
-        title: spare.title,
-        authors: spare.authors,
-        publisher: spare.publisher,
-        year: spare.year,
-        seriesName: spare.seriesName,
-      },
-      fromPrefix,
-      refBookId: spare.refBookId,
-      workId: spare.workId,
-      confirmed: {
-        title: spare.title,
-        authors: spare.authors ?? '',
-        publisher: spare.publisher,
-        year: spare.year,
-        pages: spare.pages,
-        seriesName: spare.seriesName,
-        coverUrl: spare.coverUrl,
-        annotation: spare.annotation,
-      },
-      cached: false,
-      askedModel: false,
-      sources,
-      coverOptions: spare.coverOptions,
-      variants,
-      variantIndex: variants.findIndex((v) => v.via === 'sources'),
-      exhausted: true,
-      via: 'sources',
-      proof: null,
-    }
-  }
-
-  // все пути отвергнуты или молчат
   await writeGuess({
     isbn13,
-    verdict: 'unknown',
-    via: 'none',
-    rejectedVias: rejectedJson,
+    verdict,
+    title,
+    authors: found.draft.authors ?? null,
+    publisher: found.draft.publisher ?? null,
+    year: found.draft.year ?? null,
+    seriesName: found.draft.seriesName ?? null,
+    pages: found.draft.pages ?? null,
+    annotation: found.draft.annotation ?? null,
+    coverUrl: found.draft.coverUrl ?? null,
+    coverOptions: JSON.stringify(found.covers),
+    refBookId: found.refBookId,
+    workId: found.workId,
+    via: top?.variantKey ?? 'none',
+    proofUrl: found.proof?.url ?? null,
+    proofTitle: found.proof?.title ?? null,
+    rejectedVias: JSON.stringify(rejected),
+    variants: JSON.stringify(variants),
   })
+
   return {
     isbn13,
-    verdict: 'unknown',
+    verdict,
     guess: {
-      known: false,
-      title: null,
-      authors: null,
-      publisher: null,
-      year: null,
-      seriesName: null,
+      known: verdict !== 'unknown',
+      title,
+      authors: found.draft.authors ?? null,
+      publisher: found.draft.publisher ?? null,
+      year: found.draft.year ?? null,
+      seriesName: found.draft.seriesName ?? null,
     },
-    fromPrefix,
-    refBookId: null,
-    workId: null,
-    confirmed: null,
-    cached: false,
-    askedModel: false,
-    sources,
-    coverOptions: [],
+    fromPrefix: isbnOrigin(isbn13).publisher,
+    refBookId: found.refBookId,
+    workId: found.workId,
+    confirmed: title
+      ? {
+          title,
+          authors: found.draft.authors ?? '',
+          publisher: found.draft.publisher ?? null,
+          year: found.draft.year ?? null,
+          pages: found.draft.pages ?? null,
+          seriesName: found.draft.seriesName ?? null,
+          coverUrl: found.draft.coverUrl ?? null,
+          annotation: found.draft.annotation ?? null,
+        }
+      : null,
+    cached: found.cached,
+    askedModel: found.findings.some((f) => f.key === 'web' || f.key === 'neuro'),
+    sources: found.probes.map((p) => ({
+      name: SOURCE_NAME[p.key] ?? p.key,
+      outcome:
+        p.outcome === 'нашёл'
+          ? ('нашёл' as const)
+          : p.outcome === 'ошибка'
+            ? ('ошибка' as const)
+            : ('молчит' as const),
+      detail: p.detail,
+    })),
+    exhausted: found.exhausted,
+    coverOptions: found.covers,
     variants,
-    variantIndex: 0,
-    exhausted: true,
-    via: 'none',
-    proof: null,
+    variantIndex: fresh.length > 0 ? variants.length - fresh.length : 0,
+    via: top?.variantKey ?? 'none',
+    proof: found.proof,
   }
 }
 
 export async function recognizeBook(
   userId: string,
   bookId: string,
-  options: { force?: boolean; mode?: 'extract' | 'generative' } = {},
+  options: RecognizeOptions = {},
 ): Promise<RecognizeResult> {
   const [row] = await db
     .select({
@@ -735,6 +410,7 @@ export async function recognizeBook(
 export async function nextVariant(
   userId: string,
   bookId: string,
+  options: RecognizeOptions = {},
 ): Promise<RecognizeResult> {
   const [row] = await db
     .select({
@@ -773,181 +449,14 @@ export async function nextVariant(
       rejected: rejected.join(','),
     })
   }
-  const core = await recognizeIsbn(userId, row.isbn13)
+  const core = await recognizeIsbn(userId, row.isbn13, options)
   return { ...core, bookId }
 }
 
-const WEB_SYSTEM = [
-  'Ты читаешь фрагменты веб-страниц и выписываешь выходные данные книги.',
-  'Отвечай строго одним JSON-объектом, без пояснений.',
-  'Поля: known (boolean), title, authors, publisher, year (число), pages (число), series, annotation, sourceUrl.',
-  'annotation — описание книги из фрагментов (о чём она), без слов про магазин, цену и доставку; если описания нет, верни null.',
-  'Бери только то, что есть во фрагментах; sourceUrl — адрес страницы, откуда взял.',
-  'Если во фрагментах нет книги с этим ISBN — верни {"known": false}.',
-].join(' ')
-
-/**
- * Веб-поиск с извлечением. Правило приёмки: номер должен встретиться в тексте
- * найденной страницы, иначе результат не берём.
- */
-async function webLookup(
-  userId: string,
-  isbn13: string,
-  mode: 'extract' | 'generative',
-  fromPrefix: string | null,
-  rejectedJson: string,
-  knownVariants: Array<FoundVariant>,
-): Promise<Omit<
-  RecognizeResult,
-  'bookId' | 'isbn13' | 'fromPrefix' | 'sources'
-> | null> {
-  let payload = ''
-  interface Proof {
-    url: string
-    title: string
-  }
-  // ссылку набираем внутри колбэка расхода — держим в объекте, иначе TS
-  // считает переменную навсегда null
-  const box: { proof: Proof | null } = { proof: null }
-
-  try {
-    if (mode === 'generative') {
-      await spendSearch(userId, async () => {
-        const answer = await genSearch(
-          `Книга с ISBN ${isbn13}: название, автор, издательство, год, число страниц.`,
-        )
-        const cited =
-          answer.sources.find((src) => src.used) ?? answer.sources[0]
-        if (cited)
-          box.proof = { url: cited.url, title: cited.title || cited.url }
-        payload = [
-          answer.text,
-          ...answer.sources.map((src) => `${src.url} ${src.title}`),
-        ].join('\n')
-        return `${answer.sources.length} источников`
-      })
-    } else {
-      await spendSearch(userId, async () => {
-        const hits = await searchWeb(`ISBN ${isbn13}`)
-        const withIsbn = hits.filter(
-          (hit) =>
-            mentionsIsbn(hit.text, isbn13) || mentionsIsbn(hit.title, isbn13),
-        )
-        const useful = withIsbn.length > 0 ? withIsbn : hits
-        const first = withIsbn[0]
-        if (first)
-          box.proof = { url: first.url, title: first.title || first.url }
-        payload = useful
-          .slice(0, 8)
-          .map((hit) => `${hit.url}\n${hit.title}\n${hit.text}`)
-          .join('\n\n')
-        return `${hits.length} результатов, с номером ${withIsbn.length}`
-      })
-    }
-  } catch (error) {
-    log.warn('web', 'поиск по номеру не удался', {
-      isbn: isbn13,
-      message: error instanceof Error ? error.message : String(error),
-    })
-    return null
-  }
-
-  // без номера в тексте доверять нечему
-  if (!payload.trim() || !mentionsIsbn(payload, isbn13)) return null
-
-  const answer = await ask(
-    userId,
-    `ISBN: ${isbn13}. Фрагменты найденных страниц:\n\n${payload.slice(0, 6000)}`,
-    { system: WEB_SYSTEM, maxTokens: 400 },
-  )
-  const guess = parseGuess(answer.text)
-  if (!guess.known || !guess.title) return null
-
-  const checked = await verify(userId, isbn13, guess)
-  const via = mode === 'generative' ? 'web-generative' : 'web-extract'
-  const settings = await getAiSettings()
-
-  // в сниппетах нет ни обложки, ни описания — добираем общим путём
-  const extra = await enrichMissing({
-    title: guess.title,
-    authors: guess.authors,
-    coverUrl: null,
-    annotation: guess.annotation ?? null,
-    pages: null,
-    proofUrl: box.proof?.url ?? null,
-  })
-
-  const variants = upsertVariant(knownVariants, {
-    via,
-    verdict: checked.refBookId ? 'confirmed' : 'unconfirmed',
-    title: guess.title,
-    authors: guess.authors,
-    publisher: guess.publisher ?? fromPrefix,
-    year: guess.year,
-    pages: extra.pages,
-    seriesName: guess.seriesName,
-    annotation: extra.annotation,
-    coverUrl: extra.coverUrl,
-    coverOptions: extra.coverOptions,
-    refBookId: checked.refBookId,
-    workId: checked.workId,
-    proofUrl: box.proof?.url ?? null,
-    proofTitle: box.proof?.title ?? null,
-  })
-
-  await writeGuess({
-    isbn13,
-    // страница с номером — подтверждение не хуже каталога
-    verdict: checked.refBookId ? 'confirmed' : 'unconfirmed',
-    title: guess.title,
-    authors: guess.authors,
-    publisher: guess.publisher ?? fromPrefix,
-    year: guess.year,
-    seriesName: guess.seriesName,
-    pages: extra.pages,
-    annotation: extra.annotation,
-    coverUrl: extra.coverUrl,
-    coverOptions: JSON.stringify(extra.coverOptions),
-    refBookId: checked.refBookId,
-    workId: checked.workId,
-    model: settings.model,
-    via,
-    proofUrl: box.proof?.url ?? null,
-    proofTitle: box.proof?.title ?? null,
-    rawJson: answer.text.slice(0, 2000),
-    rejectedVias: rejectedJson,
-    variants: JSON.stringify(variants),
-  })
-
-  log.info('web', 'номер найден в интернете', { isbn: isbn13, via })
-
-  return {
-    verdict: checked.refBookId ? 'confirmed' : 'unconfirmed',
-    guess,
-    refBookId: checked.refBookId,
-    workId: checked.workId,
-    confirmed: checked.refBookId
-      ? await confirmedFields(checked.refBookId)
-      : {
-          title: guess.title,
-          authors: guess.authors ?? '',
-          publisher: guess.publisher ?? fromPrefix,
-          year: guess.year,
-          pages: extra.pages,
-          seriesName: guess.seriesName,
-          coverUrl: extra.coverUrl,
-          annotation: extra.annotation,
-        },
-    cached: false,
-    askedModel: true,
-    coverOptions: extra.coverOptions,
-    variants,
-    variantIndex: variants.length - 1,
-    exhausted: false,
-    via,
-    proof: box.proof,
-  }
-}
+/** Каталоги — обычное дозаполнение; модель участвует только в веб-ступенях. */
+const FROM_AI = (via: string | null): boolean =>
+  // у веб-ступени ключ варианта с номером: web#1, web#2 …
+  Boolean(via && (via.startsWith('web') || via.startsWith('neuro')))
 
 /** Снимок полей, которые меняет разбор: им же и откатываем. */
 function snapshot(row: typeof book.$inferSelect) {
@@ -1075,7 +584,7 @@ export async function applyRecognition(
 
   // находка каталогов — обычное дозаполнение, а не работа модели:
   // пометка «Заполнил ИИ» и очередь модератора здесь ни к чему
-  if (hit.via !== 'sources') {
+  if (FROM_AI(hit.via)) {
     await db.insert(aiSuggestion).values({
       bookId,
       isbn13: row.isbn13,
@@ -1438,6 +947,7 @@ export async function proposeForBook(
   mode: UpdateMode = 'fill',
   variantVia?: string,
   fresh = false,
+  options: RecognizeOptions = {},
 ): Promise<Proposal | null> {
   const [row] = await db.select().from(book).where(eq(book.id, bookId))
   if (!row) throw new AppError('Книга не найдена', 'not_found')
@@ -1446,7 +956,7 @@ export async function proposeForBook(
   // штатная цепочка: эталон → каталоги → Яндекс Поиск → Нейропоиск;
   // «искать заново» забывает и кэш, и отвергнутые пути — тупика быть не должно
   const found = row.isbn13
-    ? await recognizeIsbn(userId, row.isbn13, { force: fresh })
+    ? await recognizeIsbn(userId, row.isbn13, { ...options, force: fresh })
     : null
   const shown =
     found?.variants.find((v) => v.via === variantVia) ??
@@ -1454,20 +964,17 @@ export async function proposeForBook(
     found?.variants[found.variants.length - 1] ??
     null
 
-  // без ISBN остаётся поиск по названию: обложка и описание тоже нужны
-  const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
-  const byTitle =
-    shown === null ? await fetchGoogleByTitle(row.title, row.authors) : null
-
+  // добор по названию живёт в цепочке (enrichDraft) и подчиняется настройкам:
+  // ходить отсюда в Google напрямую значило бы снова обойти «Источники»
   const draft = {
-    title: shown?.title ?? byTitle?.title ?? null,
-    authors: shown?.authors ?? byTitle?.authors ?? null,
-    publisher: shown?.publisher ?? byTitle?.publisher ?? null,
-    year: shown?.year ?? byTitle?.year ?? null,
-    pages: shown?.pages ?? byTitle?.pages ?? null,
-    annotation: shown?.annotation ?? byTitle?.annotation ?? null,
-    coverUrl: shown?.coverUrl ?? byTitle?.coverUrl ?? null,
-    seriesName: shown?.seriesName ?? byTitle?.seriesName ?? null,
+    title: shown?.title ?? null,
+    authors: shown?.authors ?? null,
+    publisher: shown?.publisher ?? null,
+    year: shown?.year ?? null,
+    pages: shown?.pages ?? null,
+    annotation: shown?.annotation ?? null,
+    coverUrl: shown?.coverUrl ?? null,
+    seriesName: shown?.seriesName ?? null,
   }
   if (!draft.title) return null
 
@@ -1649,7 +1156,7 @@ export async function backfillAiQueue(): Promise<number> {
   if (rows.length === 0) return 0
   const { enqueue } = await import('./moderation')
   // находки каталогов проверять незачем: там не было модели
-  const fromAi = rows.filter((row) => row.via !== 'sources')
+  const fromAi = rows.filter((row) => FROM_AI(row.via))
   for (const row of fromAi) {
     await enqueue('ai_book', row.bookId, row.appliedBy, true)
   }

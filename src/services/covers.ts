@@ -290,8 +290,16 @@ export async function searchCoversForBook(
   const [row] = await db.select().from(book).where(eq(book.id, bookId))
   if (!row) throw new AppError('Книга не найдена', 'not_found')
 
-  const { searchCoverImages } = await import('./webSearch')
-  const { spendSearch } = await import('./webSearch')
+  // поиск картинок — платная услуга того же облака: без включённой ступени
+  // он ходить не должен, иначе настройка «Источники» снова врёт
+  const { isEnabled } = await import('./bookSources')
+  if (!(await isEnabled('neuro'))) {
+    throw new AppError(
+      'Поиск обложек выключен в настройках источников',
+      'invalid',
+    )
+  }
+  const { searchCoverImages, spendSearch } = await import('./webSearch')
   let urls: Array<string> = []
   await spendSearch(userId, async () => {
     urls = await searchCoverImages(

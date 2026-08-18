@@ -4,6 +4,9 @@ import { join } from 'node:path'
 
 import { afterAll, describe, expect, test } from 'bun:test'
 
+import type { MetadataDraft } from './metadata/types'
+import type { SourceAdapter, SourceKey } from './find/types'
+
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-airec-'))
 process.env.BETTER_AUTH_SECRET = 'test-secret-for-ai-recognize'
 
@@ -37,6 +40,7 @@ const {
   cleanAnnotation,
 } = await import('./aiRecognize')
 const { isbnOrigin } = await import('./isbnPrefix')
+const { ADAPTERS: REAL_ADAPTERS } = await import('./find/adapters')
 
 const ME = 'rec-user'
 await db.insert(user).values({
@@ -79,53 +83,71 @@ await saveAiSettings({
 })
 
 /**
- * Веб-находка в кэше. Ступени «спросить модель по памяти» больше нет, а веб-
- * поиск в тестах наружу не ходит — поэтому находку кладём напрямую.
+ * Подставные источники (M32).
+ *
+ * Сеть живёт в адаптерах, поэтому тесты подставляют их целиком, а не пишут
+ * находку в кэш руками: так проверяется настоящая цепочка, включая отказы.
  */
-async function webFound(
-  isbn13: string,
-  fields: {
-    title: string
-    authors?: string
-    publisher?: string | null
-    year?: number | null
-    verdict?: 'confirmed' | 'unconfirmed'
-  },
-) {
-  await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn13))
-  await db.insert(aiIsbnGuess).values({
-    isbn13,
-    verdict: fields.verdict ?? 'unconfirmed',
-    title: fields.title,
-    authors: fields.authors ?? 'Автор',
-    publisher: fields.publisher ?? null,
-    year: fields.year ?? null,
-    via: 'web-extract',
-    proofUrl: 'https://www.labirint.ru/books/1/',
-    proofTitle: 'labirint.ru',
-    variants: JSON.stringify([
-      {
-        via: 'web-extract',
-        verdict: fields.verdict ?? 'unconfirmed',
-        title: fields.title,
-        authors: fields.authors ?? 'Автор',
-        publisher: fields.publisher ?? null,
-        year: fields.year ?? null,
-        pages: null,
-        seriesName: null,
-        annotation: null,
-        coverUrl: null,
-        coverOptions: [],
-        refBookId: null,
-        workId: null,
-        proofUrl: 'https://www.labirint.ru/books/1/',
-        proofTitle: 'labirint.ru',
-      },
-    ]),
-  })
+const stub = (
+  key: SourceKey,
+  drafts: Array<MetadataDraft> = [],
+  paid = false,
+): SourceAdapter => ({
+  key,
+  paid,
+  timeoutMs: 500,
+  probe: async () =>
+    drafts.map((draft, index) => ({
+      key,
+      variantKey: drafts.length > 1 ? `${key}#${index + 1}` : key,
+      draft,
+      proof:
+        key === 'web' || key === 'neuro'
+          ? { url: 'https://www.labirint.ru/books/1/', title: 'labirint.ru' }
+          : null,
+      refBookId: null,
+      workId: null,
+      covers: [],
+      weak: false,
+    })),
+})
+
+/** Что «нашёл» Яндекс Поиск в этом тесте: ставится перед вызовом разбора. */
+let webDrafts: Array<MetadataDraft> = []
+
+/**
+ * Подменяем только сетевые ступени. Эталон — своя база, он должен работать
+ * по-настоящему: половина тестов как раз про то, что находка приходит оттуда.
+ */
+const ADAPTERS = (): Partial<Record<SourceKey, SourceAdapter>> => ({
+  reference: REAL_ADAPTERS.reference,
+  fantlab: stub('fantlab'),
+  google: stub('google'),
+  openlibrary: stub('openlibrary'),
+  web: stub('web', webDrafts, true),
+  neuro: stub('neuro', [], true),
+})
+
+/** Веб-находка: цепочка дойдёт до Яндекс Поиска и получит её. */
+function webFound(fields: {
+  title: string
+  authors?: string
+  publisher?: string | null
+  year?: number | null
+}) {
+  webDrafts = [
+    {
+      title: fields.title,
+      authors: fields.authors ?? 'Автор',
+      publisher: fields.publisher ?? undefined,
+      year: fields.year ?? undefined,
+    },
+  ]
 }
 
 async function unrecognizedBook(isbn13: string) {
+  // находку прошлого теста не наследуем: у каждого своя
+  webDrafts = []
   const created = await createBook(ME, {
     title: isbn13,
     authors: '',
@@ -179,7 +201,7 @@ describe('разбор нераспознанного', () => {
   test('честное «не знаю» не заполняет карточку', async () => {
     const id = await unrecognizedBook('9785999999993')
     answer = '{"known":false}'
-    const result = await recognizeBook(ME, id)
+    const result = await recognizeBook(ME, id, { adapters: ADAPTERS() })
     expect(result.verdict).toBe('unknown')
     expect(result.confirmed).toBeNull()
     await expect(applyRecognition(ME, id)).rejects.toThrow(/вручную/i)
@@ -187,12 +209,12 @@ describe('разбор нераспознанного', () => {
 
   test('неподтверждённое применяется с пометкой и откатывается', async () => {
     const id = await unrecognizedBook('9785171111113')
-    await webFound('9785171111113', {
+    webFound({
       title: 'Небывалая книга',
       authors: 'Иван Иванов',
       year: 2020,
     })
-    const result = await recognizeBook(ME, id)
+    const result = await recognizeBook(ME, id, { adapters: ADAPTERS() })
     expect(result.verdict).toBe('unconfirmed')
     expect(result.fromPrefix).toBe('АСТ')
 
@@ -223,7 +245,7 @@ describe('разбор нераспознанного', () => {
     const id = await unrecognizedBook(isbn)
     answer =
       '{"known":true,"title":"Правда о деле Гарри Квеберта","authors":"Жоэль Диккер","year":2012}'
-    const result = await recognizeBook(ME, id)
+    const result = await recognizeBook(ME, id, { adapters: ADAPTERS() })
     expect(result.verdict).toBe('confirmed')
     expect(result.confirmed?.pages).toBe(608)
 
@@ -240,7 +262,7 @@ describe('разбор нераспознанного', () => {
     const id = await unrecognizedBook(isbn)
     await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn))
 
-    const result = await recognizeBook(ME, id)
+    const result = await recognizeBook(ME, id, { adapters: ADAPTERS() })
     expect(result.askedModel).toBe(false)
     expect(result.verdict).toBe('confirmed')
     expect(calls).toBe(before) // запрос к модели не потрачен
@@ -268,7 +290,7 @@ describe('разбор нераспознанного', () => {
     })
     await db.insert(sourceSetting).values({ id: 'default', webEnabled: true })
 
-    const result = await recognizeBook(ME, id)
+    const result = await recognizeBook(ME, id, { adapters: ADAPTERS() })
     // прошлогодний отказ не отдали из кэша, а прошли цепочку заново
     expect(result.cached).toBe(false)
 
@@ -278,7 +300,7 @@ describe('разбор нераспознанного', () => {
   test('повторный разбор того же номера модель не тревожит', async () => {
     const before = calls
     const id = await unrecognizedBook('9785171111113')
-    const result = await recognizeBook(ME, id)
+    const result = await recognizeBook(ME, id, { adapters: ADAPTERS() })
     expect(result.cached).toBe(true)
     expect(calls).toBe(before)
   })
@@ -315,11 +337,15 @@ describe('решение человека', () => {
     })
 
     // ветка «заполнить» название не трогает
-    const fill = await proposeForBook(ME, created.id, 'fill')
+    const fill = await proposeForBook(ME, created.id, 'fill', undefined, false, {
+      adapters: ADAPTERS(),
+    })
     expect(fill?.fills.some((f) => f.field === 'title')).toBe(false)
 
     // ветка «заменить» предлагает заменить название целиком
-    const replace = await proposeForBook(ME, created.id, 'replace')
+    const replace = await proposeForBook(ME, created.id, 'replace', undefined, false, {
+      adapters: ADAPTERS(),
+    })
     expect(replace?.mode).toBe('replace')
     expect(replace?.fills.some((f) => f.field === 'title')).toBe(true)
     expect(replace?.current.title).toBe('Iskusstvo voyny')
@@ -340,7 +366,9 @@ describe('решение человека', () => {
       shelfId: shelf.id,
     })
     // источники в тестах молчат, поэтому предложения быть не должно
-    expect(await proposeForBook(ME, created.id)).toBeNull()
+    expect(await proposeForBook(ME, created.id, 'fill', undefined, false, {
+        adapters: ADAPTERS(),
+      })).toBeNull()
 
     const [row] = await db.select().from(book).where(eq(book.id, created.id))
     // и ничего не затёрлось
@@ -349,7 +377,7 @@ describe('решение человека', () => {
 })
 
 describe('искать дальше', () => {
-  test('отвергнутый источник не возвращается, цепочка идёт к модели', async () => {
+  test('отвергнутый источник не возвращается, цепочка идёт дальше', async () => {
     const isbn = '9785389215566'
     await db.insert(refBook).values({
       source: 'fantlab',
@@ -361,12 +389,12 @@ describe('искать дальше', () => {
     })
     const id = await unrecognizedBook(isbn)
 
-    const first = await recognizeBook(ME, id)
-    expect(first.via).toBe('sources')
+    const first = await recognizeBook(ME, id, { adapters: ADAPTERS() })
+    expect(first.via).toBe('reference')
     expect(first.guess.title).toBe('Vzglyad nazad')
 
     // латиница не устроила — идём дальше; других путей в тестах нет
-    const second = await nextVariant(ME, id)
+    const second = await nextVariant(ME, id, { adapters: ADAPTERS() })
     expect(second.guess.title).toBeNull()
     expect(second.exhausted).toBe(true)
     // найденное раньше не потеряно: оно осталось в истории вариантов
@@ -388,16 +416,16 @@ describe('история вариантов', () => {
     })
     const id = await unrecognizedBook(isbn)
 
-    const first = await recognizeBook(ME, id)
+    const first = await recognizeBook(ME, id, { adapters: ADAPTERS() })
     expect(first.variants.length).toBe(1)
-    expect(first.variants[0]?.via).toBe('sources')
+    expect(first.variants[0]?.via).toBe('reference')
 
     // «промазал»: отверг хороший вариант — история его сохранила
-    const second = await nextVariant(ME, id)
-    expect(second.variants.map((v) => v.via)).toContain('sources')
+    const second = await nextVariant(ME, id, { adapters: ADAPTERS() })
+    expect(second.variants.map((v) => v.via)).toContain('reference')
 
     // тупика нет: сохранить можно и отвергнутый первый вариант
-    await applyRecognition(ME, id, undefined, 'sources')
+    await applyRecognition(ME, id, undefined, 'reference')
     const [saved] = await db.select().from(book).where(eq(book.id, id))
     expect(saved?.title).toBe('Vzglyad nazad')
     expect(saved?.publisher).toBe('Piter')
@@ -409,10 +437,10 @@ describe('история вариантов', () => {
       await db.select({ id: book.id }).from(book).where(eq(book.isbn13, isbn))
     )[0]!.id
     answer = '{"known":false}'
-    const fresh = await recognizeBook(ME, id, { force: true })
+    const fresh = await recognizeBook(ME, id, { force: true, adapters: ADAPTERS() })
     // эталонная запись снова находится первой ступенью, история новая
     expect(fresh.variants.length).toBe(1)
-    expect(fresh.via).toBe('sources')
+    expect(fresh.via).toBe('reference')
   })
 })
 
@@ -431,7 +459,7 @@ describe('старый кэш без via', () => {
     })
 
     answer = '{"known":false}'
-    const next = await nextVariant(ME, id)
+    const next = await nextVariant(ME, id, { adapters: ADAPTERS() })
     // старый вариант не вернулся: путь «model» отвергнут, дальше пусто
     expect(next.guess.title).not.toBe('Психиатрия')
     expect(next.guess.title).toBeNull()
@@ -457,12 +485,12 @@ describe('модерация и эталон', () => {
   test('утверждение заводит запись эталона, отклонение — откатывает', async () => {
     const isbn = '9785042222221'
     const id = await unrecognizedBook(isbn)
-    await webFound(isbn, {
+    webFound({
       title: 'Проверяемая книга',
       authors: 'Пётр Петров',
       year: 2019,
     })
-    await recognizeBook(ME, id)
+    await recognizeBook(ME, id, { adapters: ADAPTERS() })
     await applyRecognition(ME, id)
 
     const queue = await listAiReview(ME)
@@ -484,8 +512,8 @@ describe('модерация и эталон', () => {
   test('отклонение требует причины и возвращает книгу в нераспознанные', async () => {
     const isbn = '9785043333339'
     const id = await unrecognizedBook(isbn)
-    await webFound(isbn, { title: 'Выдумка', authors: 'Никто', year: 2021 })
-    await recognizeBook(ME, id)
+    webFound({ title: 'Выдумка', authors: 'Никто', year: 2021 })
+    await recognizeBook(ME, id, { adapters: ADAPTERS() })
     await applyRecognition(ME, id)
     const row = (await listAiReview(ME)).find((r) => r.isbn13 === isbn)!
 
@@ -606,7 +634,7 @@ describe('транслит из каталога', () => {
     })
     const id = await unrecognizedBook(isbn)
 
-    const found = await recognizeBook(ME, id)
+    const found = await recognizeBook(ME, id, { adapters: ADAPTERS() })
     // ответ есть, но подтверждённым его не считаем: имя нечитаемое
     expect(found.verdict).toBe('unconfirmed')
     expect(found.guess.title).toBe('Deti-bilingvy')
@@ -626,7 +654,7 @@ describe('транслит из каталога', () => {
     })
     const id = await unrecognizedBook(isbn)
 
-    const found = await recognizeBook(ME, id)
+    const found = await recognizeBook(ME, id, { adapters: ADAPTERS() })
     expect(found.verdict).toBe('confirmed')
     expect(found.exhausted).toBe(false)
   })
@@ -651,7 +679,9 @@ describe('обновление данных карточки', () => {
       shelfId: shelf.id,
     })
 
-    const proposal = await proposeForBook(ME, created.id, 'replace')
+    const proposal = await proposeForBook(ME, created.id, 'replace', undefined, false, {
+      adapters: ADAPTERS(),
+    })
     expect(proposal?.fills).toEqual([])
     // нечего применять — но и тупика нет: шторка покажет «искать дальше»
     expect(proposal?.suggestionId).toBeNull()

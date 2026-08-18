@@ -53,22 +53,27 @@ const finding = (
 /** Одна находка или пусто — каталоги отвечают именно так. */
 const one = (found: Finding | null): Array<Finding> => (found ? [found] : [])
 
-/** Первый непустой черновик из набора результатов источника. */
-const firstDraft = (results: Array<SourceResult> | null): MetadataDraft | null =>
-  results?.find((r) => r.draft.title)?.draft ?? null
+/** Первая непустая запись из набора результатов источника. */
+const firstResult = (
+  results: Array<SourceResult> | null,
+): SourceResult | null => results?.find((r) => r.draft.title) ?? null
 
 const reference: SourceAdapter = {
   key: 'reference',
   paid: false,
   timeoutMs: 2_000,
   probe: async (ctx) => {
-    const draft = firstDraft(await refLookup(ctx.isbn13))
-    if (!draft) return []
+    const hit = firstResult(await refLookup(ctx.isbn13))
+    if (!hit) return []
     return one(
-      finding('reference', draft, ctx.isbn13, {
+      finding('reference', hit.draft, ctx.isbn13, {
         refBookId: await bestRefBookIdForIsbn(ctx.isbn13),
-        // в эталоне латиница — осознанное решение модератора, а не транслит
-        weak: false,
+        // у записи, утверждённой модератором, латиница — осознанный выбор
+        // человека; у пришедшей из каталога это обычный транслит
+        weak:
+          hit.source === 'manual'
+            ? false
+            : looksTransliterated(ctx.isbn13, hit.draft.title, hit.draft.authors),
       }),
     )
   },

@@ -65,6 +65,8 @@ export async function findEdition(
   const probes: Array<SourceProbe> = []
   const findings: Array<Finding> = []
   let truncated = false
+  /** Ступень пропущена только потому, что книга нашлась раньше нужного. */
+  let skippedByEarlyHit = false
 
   for (const step of chain) {
     const key = step.adapter.key
@@ -84,6 +86,7 @@ export async function findEdition(
     // за платное не платим, если бесплатное уже дало годный ответ: цепочка
     // лесенкой — это её главный смысл, а не побочный эффект
     if (step.adapter.paid && findings.some((f) => !f.weak && f.draft.title)) {
+      skippedByEarlyHit = true
       probes.push({
         key,
         outcome: 'молчит',
@@ -150,7 +153,10 @@ export async function findEdition(
     })
     // бесплатные каталоги опрашиваем целиком: их ответы дополняют друг друга.
     // платную ступень, которая уже дала название, повторять незачем
-    if (step.adapter.paid && first.draft.title) break
+    if (step.adapter.paid && first.draft.title) {
+      skippedByEarlyHit = true
+      break
+    }
   }
 
   const merged = mergeFindings(findings, order)
@@ -178,7 +184,9 @@ export async function findEdition(
     covers: enriched.covers,
     cached: false,
     truncated,
-    exhausted: !truncated && findings.length === 0,
+    // идти больше некуда: цепочка прошла до конца и ни одна ступень не
+    // отложена — ни по бюджету, ни потому что книга нашлась раньше
+    exhausted: !truncated && !skippedByEarlyHit,
   }
 
   const written = await safely('запись кэша', trace, () =>

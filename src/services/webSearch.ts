@@ -399,7 +399,6 @@ export async function fetchOpenGraph(url: string): Promise<{
   image: string | null
   description: string | null
 }> {
-  if (process.env.NODE_ENV === 'test') return { image: null, description: null }
   try {
     const res = await fetch(url, {
       headers: {
@@ -438,7 +437,6 @@ export async function searchCoverImages(
   query: string,
   limit = 3,
 ): Promise<Array<string>> {
-  if (process.env.NODE_ENV === 'test') return []
   const creds = await aiCredentials()
   if (!creds) return []
   try {

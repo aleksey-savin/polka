@@ -55,8 +55,6 @@ export function parseGoogleBooks(json: unknown): MetadataDraft | null {
 export async function fetchGoogleBooks(
   isbn13: string,
 ): Promise<SourceResult | null> {
-  // тесты герметичны: наружу не ходим
-  if (process.env.NODE_ENV === 'test') return null
   try {
     const stored = await googleBooksKey()
     const key = stored ? `&key=${stored}` : ''
@@ -110,7 +108,6 @@ export async function fetchGoogleByTitle(
   title: string,
   authors: string | null,
 ): Promise<MetadataDraft | null> {
-  if (process.env.NODE_ENV === 'test') return null
   const short = title.split(/[:—]/)[0]?.trim() ?? title
   const surname =
     authors

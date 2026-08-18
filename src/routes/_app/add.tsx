@@ -16,7 +16,7 @@ import { createBookFn } from '@/server/books'
 import { getLibraryOverviewFn, listMyLibrariesFn } from '@/server/libraries'
 import { lookupIsbnFn } from '@/server/lookup'
 import { countUnrecognizedFn } from '@/server/unrecognized'
-import { SOURCE_LABEL } from '@/services/metadata/types'
+import { SOURCE_NAME } from '@/services/metadata/lookup'
 import type { LookupResult } from '@/services/metadata/lookup'
 
 export const Route = createFileRoute('/_app/add')({
@@ -155,7 +155,7 @@ function AddPage() {
             {lookup.sources.length > 0 ? (
               <>
                 Найдено:{' '}
-                <b>{lookup.sources.map((s) => SOURCE_LABEL[s]).join(' + ')}</b>{' '}
+                <b>{lookup.sources.map((s) => SOURCE_NAME[s] ?? s).join(' + ')}</b>{' '}
                 — проверьте и поправьте.
               </>
             ) : (

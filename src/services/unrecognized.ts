@@ -2,11 +2,10 @@ import { and, count, desc, eq, inArray, isNotNull, or } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { book, library, shelf } from '@/db/schema/catalog'
+import { log } from '@/lib/logger'
 import { AppError } from './errors'
 import { isbnOrigin } from './isbnPrefix'
 import { memberLibraryIds } from './members'
-import { normalizeForSearch } from './search'
-import { syncBookAuthors } from './authors'
 
 /**
  * Книги, отсканированные пачкой: есть ISBN, названия нет (M18).
@@ -98,51 +97,34 @@ export async function retryLookup(
     )
   if (rows.length === 0) throw new AppError('Книги не найдены', 'not_found')
 
-  const { lookupIsbn } = await import('./metadata/lookup')
+  const { findEdition } = await import('./find/core')
+  const { applyDraftToBook } = await import('./bookWriter')
   const { saveCoverFromUrl } = await import('./covers')
-  const { resolveSeriesByName } = await import('./series')
 
   let resolved = 0
   let missed = 0
   for (const row of rows) {
-    const result = await lookupIsbn(userId, row.isbn13!)
-    const draft = result.draft
-    if (!draft.title?.trim()) {
+    const found = await findEdition(userId, row.isbn13!)
+    if (!found.draft.title?.trim()) {
       missed++
       continue
     }
-    const seriesId = draft.seriesName
-      ? await resolveSeriesByName(userId, draft.seriesName)
-      : null
-    await db
-      .update(book)
-      .set({
-        title: draft.title.trim(),
-        titleNorm: normalizeForSearch(draft.title),
-        authors: draft.authors ?? '',
-        authorsNorm: normalizeForSearch(draft.authors ?? ''),
-        publisher: draft.publisher ?? null,
-        year: draft.year ?? null,
-        pages: draft.pages ?? null,
-        annotation: draft.annotation ?? null,
-        language: draft.language ?? 'ru',
-        coverType: draft.coverType ?? null,
-        heightMm: draft.heightMm ?? null,
-        seriesId,
-        unrecognized: false,
-        updatedAt: new Date(),
-      })
-      .where(eq(book.id, row.id))
-    await syncBookAuthors(row.id, draft.authors ?? '', draft.fantlabAuthors)
-    if (!row.coverPath && draft.coverUrl) {
+    // единственный писатель карточки: раньше здесь был свой набор полей,
+    // отличавшийся от того, что писал разбор с ИИ
+    await applyDraftToBook(row.id, found.draft, { userId })
+    if (!row.coverPath && found.draft.coverUrl) {
       try {
-        const saved = await saveCoverFromUrl(row.id, draft.coverUrl)
+        const saved = await saveCoverFromUrl(row.id, found.draft.coverUrl)
         await db
           .update(book)
           .set({ coverPath: saved.path, coverColor: saved.color })
           .where(eq(book.id, row.id))
-      } catch {
-        // обложка — best-effort, карточка уже дозаполнена
+      } catch (error) {
+        // обложка — best-effort, но молчать об отказе нельзя
+        log.warn('find', 'обложка не сохранилась', {
+          bookId: row.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
       }
     }
     resolved++

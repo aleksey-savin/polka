@@ -160,8 +160,6 @@ interface FantlabMatch {
 
 /** FantLab: он хорошо знает русскую классику, в том числе издания 90-х. */
 async function searchFantlab(query: string): Promise<Array<TitleHitWork>> {
-  // в тестах наружу не ходим: источник капризен, а прогон должен быть герметичным
-  if (process.env.NODE_ENV === 'test') return []
   const started = performance.now()
   try {
     const url = `https://api.fantlab.ru/search-works?q=${encodeURIComponent(query)}&page=1`
@@ -214,7 +212,12 @@ export async function searchByTitle(
     searchMine(userId, trimmed),
     searchReference(trimmed),
   ])
-  const external = await searchFantlab(trimmed)
+  // внешний источник спрашиваем, только если он включён в настройках:
+  // выключенный FantLab не должен отвечать в обход списка источников
+  const { isEnabled } = await import('./bookSources')
+  const external = (await isEnabled('fantlab'))
+    ? await searchFantlab(trimmed)
+    : []
 
   // то, что уже лежит в эталоне, второй раз из источника не показываем
   const known = new Set(reference.map((r) => normalizeForSearch(r.title)))
