@@ -33,6 +33,16 @@ export {
   looksTransliterated,
 } from './find/clean'
 
+/** Ключи ступеней нынешней цепочки: всё остальное — история прошлой схемы. */
+const KNOWN_STEPS = new Set([
+  'reference',
+  'fantlab',
+  'google',
+  'openlibrary',
+  'web',
+  'neuro',
+])
+
 /** Имена ступеней такие же, как в «Сервис → Источники». */
 const SOURCE_NAME: Record<string, string> = {
   reference: 'Свой эталон',
@@ -315,7 +325,14 @@ export async function recognizeIsbn(
   // История копится, а не перезаписывается: человек отверг ступень и пошёл
   // дальше — найденное раньше должно остаться под стрелками и листаться
   // бесплатно. «Начать заново» историю стирает намеренно.
-  const known = options.force ? [] : parseVariants(hit?.variants)
+  // История до M32 писала псевдо-ключи ('sources', 'web-extract', 'model'):
+  // их данные уже перекрыты находками нынешней цепочки, а в списке они
+  // множили варианты и путали листание. Берём только знакомые ступени.
+  const known = options.force
+    ? []
+    : parseVariants(hit?.variants).filter((v) =>
+        KNOWN_STEPS.has(v.via.split('#')[0] ?? v.via),
+      )
   const variants = [
     ...known.filter((k) => !fresh.some((f) => f.via === k.via)),
     ...fresh,

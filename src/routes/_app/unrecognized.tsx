@@ -42,13 +42,18 @@ export const Route = createFileRoute('/_app/unrecognized')({
   component: UnrecognizedPage,
 })
 
+/** Ключи ступеней (M32); у веб-поиска вариантов несколько: web#1, web#2… */
 const VIA_LABEL: Record<string, string> = {
-  sources: 'Каталоги',
-  'web-extract': 'Яндекс Поиск',
-  'web-generative': 'Нейропоиск',
-  // старые записи: ступени «модель по памяти» больше нет (M30.1)
-  model: 'Догадка модели',
+  reference: 'Свой эталон',
+  fantlab: 'FantLab',
+  google: 'Google Books',
+  openlibrary: 'OpenLibrary',
+  web: 'Яндекс Поиск',
+  neuro: 'Нейропоиск',
 }
+
+const viaLabel = (via: string): string =>
+  VIA_LABEL[via.split('#')[0] ?? via] ?? via
 
 function UnrecognizedPage() {
   const { rows, isAdmin } = Route.useLoaderData()
@@ -307,7 +312,7 @@ function UnrecognizedPage() {
                           вариант {idx + 1} из {variants.length}
                         </span>
                         <span className="rounded-full bg-stamp/10 px-2.5 py-0.5 text-[11px] font-semibold text-stamp">
-                          {VIA_LABEL[shown.via] ?? shown.via}
+                          {viaLabel(shown.via)}
                         </span>
                         <span className="ml-auto flex gap-1.5">
                           <button

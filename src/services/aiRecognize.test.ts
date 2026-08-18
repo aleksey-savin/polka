@@ -621,6 +621,46 @@ describe('эталон не запирает поиск', () => {
   })
 })
 
+describe('история вариантов из прошлой схемы', () => {
+  test('старые псевдо-ключи в список не попадают', async () => {
+    const isbn = '9785042777806'
+    const id = await unrecognizedBook(isbn)
+    // так писала цепочка до M32: один общий ключ на все каталоги
+    await db.insert(aiIsbnGuess).values({
+      isbn13: isbn,
+      verdict: 'unconfirmed',
+      title: 'Старая находка',
+      authors: 'Автор',
+      via: 'sources',
+      variants: JSON.stringify([
+        {
+          via: 'sources',
+          verdict: 'unconfirmed',
+          title: 'Старая находка',
+          authors: 'Автор',
+          publisher: null,
+          year: null,
+          pages: null,
+          seriesName: null,
+          annotation: null,
+          coverUrl: null,
+          coverOptions: [],
+          refBookId: null,
+          workId: null,
+          proofUrl: null,
+          proofTitle: null,
+        },
+      ]),
+    })
+    webFound({ title: 'Свежая находка', authors: 'Автор' })
+
+    const found = await recognizeBook(ME, id, { adapters: ADAPTERS() })
+    const keys = found.variants.map((v) => v.via)
+    expect(keys).not.toContain('sources')
+    expect(found.variants[found.variantIndex]?.title).toBe('Свежая находка')
+  })
+})
+
 describe('модерация и эталон', () => {
   test('утверждение заводит запись эталона, отклонение — откатывает', async () => {
     const isbn = '9785042222221'

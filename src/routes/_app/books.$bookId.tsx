@@ -84,12 +84,18 @@ export const Route = createFileRoute('/_app/books/$bookId')({
 })
 
 /** Откуда взялся вариант — та же подпись, что в разборе нераспознанных. */
+/** Ключи ступеней (M32); у веб-поиска вариантов несколько: web#1, web#2… */
 const VIA_LABEL: Record<string, string> = {
-  sources: 'Каталоги',
-  'web-extract': 'Яндекс Поиск',
-  'web-generative': 'Нейропоиск',
-  model: 'Догадка модели',
+  reference: 'Свой эталон',
+  fantlab: 'FantLab',
+  google: 'Google Books',
+  openlibrary: 'OpenLibrary',
+  web: 'Яндекс Поиск',
+  neuro: 'Нейропоиск',
 }
+
+const viaLabel = (via: string): string =>
+  VIA_LABEL[via.split('#')[0] ?? via] ?? via
 
 const LANG_LABEL: Record<string, string> = {
   ru: 'русский',
@@ -257,9 +263,9 @@ function BookCardPage() {
   async function searchFurther() {
     if (!proposal) return
     const mode = proposal.mode
-    const next = proposal.variants.find(
-      (v, index) => index !== proposal.variantIndex && v.via !== proposal.via,
-    )
+    // следующий по порядку, а не «первый не текущий»: иначе листание качается
+    // между двумя вариантами и до остальных не доходит
+    const next = proposal.variants[proposal.variantIndex + 1]
     const exhausted = proposal.exhausted
     await closeProposal()
     if (next) {
@@ -1104,7 +1110,7 @@ function BookCardPage() {
                     {proposal.variants.length}
                   </span>
                   <span className="rounded-full bg-stamp/10 px-2.5 py-0.5 text-[11px] font-semibold text-stamp">
-                    {VIA_LABEL[proposal.via] ?? proposal.via}
+                    {viaLabel(proposal.via)}
                   </span>
                 </div>
               )}
