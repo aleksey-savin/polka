@@ -113,7 +113,9 @@ export async function createBook(
   if (!title) {
     throw new AppError('Нужно название книги или ISBN', 'invalid')
   }
-  const unrecognized = input.unrecognized ?? !input.title.trim()
+  // Без названия книга — болванка, что бы ни прислал клиент: иначе скан по
+  // одному ISBN теряется в «Неразобранном» и в «Не распознано» не попадает.
+  const unrecognized = !input.title.trim() || (input.unrecognized ?? false)
   const seriesId = input.seriesName
     ? await resolveSeriesByName(userId, input.seriesName)
     : null

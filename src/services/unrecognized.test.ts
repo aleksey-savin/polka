@@ -117,3 +117,22 @@ describe('форма: куда положить', () => {
     expect(card.lists.map((l) => l.id)).toContain(listId)
   })
 })
+
+describe('сохранение без названия', () => {
+  test('скан по одному ISBN попадает в «Не распознано»', async () => {
+    const created = await createBook(ALEX, {
+      title: '',
+      isbn13: '9785001007302',
+      libraryId: library.id,
+      // клиент раньше присылал именно так — и книга терялась
+      unrecognized: false,
+    })
+    const [row] = await db.select().from(book).where(eq(book.id, created.id))
+    expect(row?.unrecognized).toBe(true)
+    // названием служит сам номер, чтобы строка не выглядела пустой
+    expect(row?.title).toBe('9785001007302')
+
+    const list = await listUnrecognized(ALEX)
+    expect(list.some((r) => r.id === created.id)).toBe(true)
+  })
+})

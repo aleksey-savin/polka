@@ -93,7 +93,12 @@ export function toBookInput(v: BookFormValue) {
     heightMm: v.heightMm ? Number(v.heightMm) : null,
     fantlabAuthors: v.fantlabAuthors.length > 0 ? v.fantlabAuthors : undefined,
     refWorkId: v.refWorkId || null,
-    unrecognized: false as boolean,
+    /*
+     * Книга без названия — болванка из сканера: её место в «Не распознано».
+     * Раньше здесь всегда стоял false, и сохранённый по одному ISBN скан
+     * оседал в «Неразобранном» без имени и без шанса быть найденным.
+     */
+    unrecognized: !v.title.trim(),
   }
 }
 
