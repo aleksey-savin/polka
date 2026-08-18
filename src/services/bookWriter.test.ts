@@ -94,6 +94,25 @@ describe('запись найденного в карточку', () => {
     expect(row.year).toBe(1999)
   })
 
+  test('название-болванка считается пустым: номер уступает названию', async () => {
+    const isbn = '9785171636951'
+    const created = await createBook(ME, {
+      title: isbn,
+      authors: '',
+      isbn13: isbn,
+      libraryId: lib.id,
+      shelfId: shelfRow.id,
+    })
+    await db
+      .update(book)
+      .set({ unrecognized: true })
+      .where(eq(book.id, created.id))
+    // режим «только пустое» обязан заменить номер: иначе фоновая доигровка
+    // никогда не дописала бы книгу, отсканированную пачкой
+    await applyDraftToBook(created.id, { title: 'Зона' }, { mode: 'fill' })
+    expect((await read(created.id)).title).toBe('Зона')
+  })
+
   test('пустой черновик карточку не трогает', async () => {
     const created = await makeBook('Болванка 5')
     await applyDraftToBook(created.id, {})

@@ -43,11 +43,19 @@ export async function applyDraftToBook(
   if (!row) return
   const fill = options.mode === 'fill'
 
+  // у болванки из сканера названием служит сам номер (инвариант M18):
+  // формально поле не пустое, но заполнять его — прямая задача доигровки
+  const titleIsPlaceholder = row.unrecognized && row.title === row.isbn13
+
   const patch: Record<string, unknown> = {}
   const put = (field: string, value: unknown) => {
     if (value === null || value === undefined || value === '') return
     const current = (row as unknown as Record<string, unknown>)[field]
-    const empty = current === null || current === undefined || current === ''
+    const empty =
+      current === null ||
+      current === undefined ||
+      current === '' ||
+      (field === 'title' && titleIsPlaceholder)
     if (fill && !empty) return
     if (current === value) return
     patch[field] = value

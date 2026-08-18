@@ -118,5 +118,9 @@ if (existsSync(migrationsFolder)) {
     background('запуск краулера', () =>
       import('@/services/crawl').then((m) => m.startCrawlWorker()),
     )
+    // доигровка поиска, оборванного по бюджету при быстром сканировании (M32)
+    background('запуск доигровки поиска', () =>
+      import('@/services/find/queue').then((m) => m.startFindWorker()),
+    )
   }
 }

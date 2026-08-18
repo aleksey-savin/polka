@@ -237,6 +237,35 @@ export const refWork = sqliteTable(
 )
 
 /** Очередь фонового наполнения: щадящий воркер в server-процессе. */
+/**
+ * Доигровка оборванного поиска (M32).
+ *
+ * Сканер в быстром режиме показывает найденное бесплатными каталогами и идёт
+ * дальше, а платные ступени доигрывает воркер — человек над стопкой книг не
+ * ждёт по минуте на каждую.
+ */
+export const findTask = sqliteTable(
+  'find_task',
+  {
+    id: id(),
+    bookId: text('book_id')
+      .notNull()
+      .references(() => book.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
+    isbn13: text('isbn13').notNull(),
+    status: text('status', { enum: ['pending', 'done', 'failed'] })
+      .notNull()
+      .default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    scheduledAt: integer('scheduled_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    doneAt: integer('done_at', { mode: 'timestamp' }),
+    error: text('error'),
+  },
+  (t) => [uniqueIndex('find_task_book').on(t.bookId)],
+)
+
 export const crawlTask = sqliteTable(
   'crawl_task',
   {
