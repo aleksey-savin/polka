@@ -8,6 +8,7 @@ import { fetchOpenLibrary } from '@/services/metadata/openLibrary'
 import { bestRefBookIdForIsbn, refLookup } from '@/services/reference'
 import {
   fetchOpenGraph,
+  fetchPageText,
   genSearch,
   mentionsIsbn,
   searchCoverImages,
@@ -132,14 +133,13 @@ const openlibrary: SourceAdapter = {
 }
 
 export const WEB_SYSTEM = [
-  'Ты читаешь фрагменты веб-страниц и выписываешь выходные данные книги.',
-  'Отвечай строго JSON-массивом, без пояснений: по одному объекту на каждую страницу, где книга нашлась.',
-  'Поля объекта: known (boolean), sourceUrl (адрес той самой страницы), title, authors, publisher, year (число), pages (число), series, annotation.',
-  'sourceUrl обязателен и должен точно совпадать с адресом страницы из входных данных.',
-  'Не объединяй данные разных страниц в один объект: у разных магазинов бывают разные издания одной книги.',
-  'annotation — описание книги из фрагментов (о чём она), без слов про магазин, цену и доставку; если описания нет, верни null.',
-  'Бери только то, что есть во фрагментах.',
-  'Если книги с этим ISBN нет ни на одной странице — верни пустой массив.',
+  'Ты читаешь текст страницы книжного магазина или библиотеки и выписываешь выходные данные книги.',
+  'Отвечай строго одним JSON-объектом, без пояснений.',
+  'Поля: known (boolean), title, authors, publisher, year (число), pages (число), series, language, annotation.',
+  'На странице обычно есть таблица характеристик — ISBN, автор, издательство, серия, год, число страниц, язык — и отдельно описание книги. Бери данные оттуда.',
+  'authors — как напечатано на странице, в том числе по-русски; не переводи и не транслитерируй.',
+  'annotation — описание книги со страницы (о чём она), без слов про магазин, цену, доставку и отзывы; если описания нет, верни null.',
+  'Бери только то, что есть в тексте. Если книги с этим ISBN на странице нет — верни {"known": false}.',
 ].join(' ')
 
 /**
@@ -250,49 +250,71 @@ async function readFromWeb(
     return `${box.pages.length} страниц`
   })
 
-  // страницы без номера отбрасываем до всякой модели: доверять нечему
-  const useful = box.pages
+  // Сниппет — только повод открыть страницу: в нём две строки, ни аннотации,
+  // ни нормальных ФИО автора. Отбираем кандидатов и проваливаемся в каждого.
+  const candidates = box.pages
     .filter(
       (page) =>
         mentionsIsbn(page.text, ctx.isbn13) ||
         mentionsIsbn(page.title, ctx.isbn13),
     )
     .slice(0, MAX_VARIANTS_PER_STEP)
-  if (useful.length === 0) {
-    ctx.trace.info('номер на найденных страницах не встретился', { step: key })
+  if (candidates.length === 0) {
+    ctx.trace.info('номер в выдаче не встретился', { step: key })
     return []
   }
 
-  const payload = useful
-    .map((page) => `URL: ${page.url}\n${page.title}\n${page.text}`)
-    .join('\n\n')
-  const answer = await ask(
-    ctx.userId,
-    `ISBN: ${ctx.isbn13}. Фрагменты найденных страниц:\n\n${payload.slice(0, 6000)}`,
-    { system: WEB_SYSTEM, maxTokens: 1200 },
-  )
-
-  const byUrl = new Map(useful.map((page) => [page.url, page]))
   const found: Array<Finding> = []
-  for (const parsed of parseGuessDrafts(answer.text)) {
-    // ссылка обязана быть одной из поданных: без неё нечего показать человеку
-    // как доказательство, а выдуманный адрес хуже отсутствия варианта
-    const page = parsed.sourceUrl ? byUrl.get(parsed.sourceUrl) : undefined
-    if (!page) continue
-    if (found.some((f) => f.proof?.url === page.url)) continue
+  for (const page of candidates) {
+    if (ctx.leftMs() < 12_000) {
+      ctx.trace.info('на чтение страниц не хватило времени', {
+        step: key,
+        leftMs: ctx.leftMs(),
+        read: found.length,
+      })
+      break
+    }
+
+    const text = await fetchPageText(page.url)
+    if (!text) continue
+    // Номер должен встретиться в тексте самой страницы, а не только в
+    // сниппете: совпадение в выдаче бывает случайным (M26, усилено M32).
+    if (!mentionsIsbn(text, ctx.isbn13)) {
+      ctx.trace.info('на странице номера не оказалось', {
+        step: key,
+        url: page.url,
+      })
+      continue
+    }
+
+    const answer = await ask(
+      ctx.userId,
+      `ISBN: ${ctx.isbn13}. Страница ${page.url}:\n\n${text.slice(0, 7000)}`,
+      { system: WEB_SYSTEM, maxTokens: 700 },
+    )
+    const parsed = parseGuessDrafts(answer.text)[0]
+    if (!parsed) continue
+
     found.push(
       finding(key, parsed.draft, ctx.isbn13, {
         variantKey: `${key}#${found.length + 1}`,
         proof: { url: page.url, title: page.title || page.url },
       }),
     )
+    ctx.trace.info('страница прочитана', {
+      step: key,
+      url: page.url,
+      title: parsed.draft.title,
+      annotation: Boolean(parsed.draft.annotation),
+    })
   }
-  ctx.trace.info('страницы разобраны', {
+
+  ctx.trace.info('чтение страниц закончено', {
     step: key,
-    pages: useful.length,
+    candidates: candidates.length,
     variants: found.length,
   })
-  return found.slice(0, MAX_VARIANTS_PER_STEP)
+  return found
 }
 
 const web: SourceAdapter = {

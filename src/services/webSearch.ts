@@ -417,6 +417,71 @@ export async function fetchOpenGraph(url: string): Promise<{
   }
 }
 
+/**
+ * Текст страницы для чтения моделью (M32).
+ *
+ * Сниппет выдачи — две строки вроде «ISBN 9789859051586. Тематика.
+ * Воспитание и педагогика»: ни аннотации, ни нормальных ФИО автора там нет.
+ * А на самой странице лежит всё — издательство, серия, год, объём, описание.
+ * Поэтому в найденную страницу проваливаемся и читаем её целиком.
+ */
+export function htmlToText(html: string): string {
+  return (
+    html
+      // служебные блоки выкидываем целиком: в них нет данных о книге,
+      // зато есть километры кода, которые съели бы весь контекст модели
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+      .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      // таблица характеристик — главный источник: строки не должны слипаться
+      .replace(/<\/(tr|li|p|div|h[1-6]|dt|dd|section)>/gi, '\n')
+      .replace(/<\/(td|th|span)>/gi, ' · ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;|&apos;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/ ?\n ?/g, '\n')
+      .replace(/·\s*·/g, '·')
+      .replace(/\n{2,}/g, '\n')
+      .trim()
+  )
+}
+
+/** Скачать страницу и вычистить до читаемого текста. Best-effort. */
+export async function fetchPageText(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        // без человекоподобного агента магазины отдают заглушку
+        'user-agent':
+          'Mozilla/5.0 (compatible; PolkaBot/1.0; +https://polka.saviny.ru)',
+        accept: 'text/html',
+      },
+      signal: AbortSignal.timeout(9000),
+    })
+    if (!res.ok) {
+      log.info('find', 'страница не отдалась', { url, status: res.status })
+      return null
+    }
+    const html = (await res.text()).slice(0, 400_000)
+    const text = htmlToText(html)
+    return text.length > 0 ? text : null
+  } catch (error) {
+    log.info('find', 'страница не прочиталась', {
+      url,
+      message: error instanceof Error ? error.message : String(error),
+    })
+    return null
+  }
+}
+
 /** Разбор выдачи Яндекс Картинок: ссылки на сами изображения. */
 export function parseImageXml(xml: string): Array<string> {
   const urls: Array<string> = []

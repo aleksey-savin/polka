@@ -7,8 +7,14 @@ import { describe, expect, test } from 'bun:test'
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-web-'))
 process.env.BETTER_AUTH_SECRET = 'test-secret-for-web-search'
 
-const { parseSearchXml, mentionsIsbn, bareIsbn, parseOpenGraph } =
-  await import('./webSearch')
+const {
+  parseSearchXml,
+  mentionsIsbn,
+  bareIsbn,
+  parseOpenGraph,
+  htmlToText,
+  fetchPageText,
+} = await import('./webSearch')
 
 /** Выдача Yandex Search API приходит XML внутри base64. */
 const XML = `<?xml version="1.0" encoding="utf-8"?>
@@ -131,5 +137,98 @@ describe('открытые теги страницы', () => {
       image: null,
       description: null,
     })
+  })
+})
+
+describe('текст страницы для модели', () => {
+  test('таблица характеристик не слипается в строку', () => {
+    // так устроена карточка на market.yandex.ru: пары «поле — значение»
+    const html = `
+      <table>
+        <tr><td>ISBN</td><td>9789859051586</td></tr>
+        <tr><td>Автор</td><td>Абделила-Боэр Барбара</td></tr>
+        <tr><td>Год издания</td><td>2020</td></tr>
+        <tr><td>Количество страниц</td><td>256</td></tr>
+      </table>`
+    const text = htmlToText(html)
+    expect(text).toContain('ISBN · 9789859051586')
+    expect(text).toContain('Автор · Абделила-Боэр Барбара')
+    // строки разделены, иначе модель не поймёт, где кончается одно поле
+    expect(text.split('\n').length).toBeGreaterThan(3)
+  })
+
+  test('скрипты и стили выкидываются целиком', () => {
+    const html = `
+      <script>var a = "ISBN 1111111111111"; alert(1)</script>
+      <style>.book { color: red }</style>
+      <p>Описание книги про билингвов</p>`
+    const text = htmlToText(html)
+    expect(text).toBe('Описание книги про билингвов')
+  })
+
+  test('html-мнемоники разворачиваются', () => {
+    expect(htmlToText('<p>Дети &amp; родители &quot;дома&quot;</p>')).toBe(
+      'Дети & родители "дома"',
+    )
+  })
+
+  test('пустая страница даёт пустую строку', () => {
+    expect(htmlToText('<script>x</script>')).toBe('')
+  })
+
+  test('номер со страницы находится проверкой приёмки', () => {
+    const text = htmlToText('<tr><td>ISBN</td><td>978-985-905-158-6</td></tr>')
+    expect(mentionsIsbn(text, '9789859051586')).toBe(true)
+  })
+})
+
+describe('провал в страницу', () => {
+  test('страница скачивается и чистится до данных', async () => {
+    // карточка магазина: таблица характеристик плюс описание
+    const server = Bun.serve({
+      port: 0,
+      fetch: () =>
+        new Response(
+          `<html><head><script>var x=1</script></head><body>
+             <h1>Дети-билингвы: практический путеводитель для родителей</h1>
+             <table>
+               <tr><td>ISBN</td><td>978-985-905-158-6</td></tr>
+               <tr><td>Автор</td><td>Абделила-Боэр Барбара</td></tr>
+               <tr><td>Издательство</td><td>Дискурс</td></tr>
+               <tr><td>Количество страниц</td><td>256</td></tr>
+             </table>
+             <p>Что делать, если ребёнок растёт в двуязычной среде?</p>
+           </body></html>`,
+          { headers: { 'content-type': 'text/html' } },
+        ),
+    })
+    try {
+      const text = await fetchPageText(`http://localhost:${server.port}/book`)
+      expect(text).not.toBeNull()
+      // номер на странице есть — правило приёмки выполнено
+      expect(mentionsIsbn(text!, '9789859051586')).toBe(true)
+      // данные, которых нет в сниппете выдачи
+      expect(text).toContain('Абделила-Боэр Барбара')
+      expect(text).toContain('Дискурс')
+      expect(text).toContain('двуязычной среде')
+      // служебное не попало
+      expect(text).not.toContain('var x')
+    } finally {
+      server.stop(true)
+    }
+  })
+
+  test('страница не отдалась — null, а не исключение', async () => {
+    const server = Bun.serve({
+      port: 0,
+      fetch: () => new Response('нет', { status: 404 }),
+    })
+    try {
+      expect(
+        await fetchPageText(`http://localhost:${server.port}/x`),
+      ).toBeNull()
+    } finally {
+      server.stop(true)
+    }
   })
 })
