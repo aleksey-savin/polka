@@ -8,7 +8,13 @@ import { log } from '@/lib/logger'
 import { ask, getAiSettings } from './ai'
 import { syncBookAuthors } from './authors'
 import { AppError } from './errors'
-import { isCyrillicRegion, isbnOrigin } from './isbnPrefix'
+import { isbnOrigin } from './isbnPrefix'
+import {
+  cleanAnnotation,
+  cleanFoundTitle,
+  cleanPublisher,
+  looksTransliterated,
+} from './find/clean'
 import { memberLibraryIds } from './members'
 import { requireModerator } from './moderation'
 import {
@@ -37,6 +43,14 @@ import {
  * поиск, и если каталог находит издание с этим номером, данные берутся из
  * каталога. Всё остальное живёт с честной пометкой «не подтверждено».
  */
+
+// чистилки живут в подсистеме поиска: ими пользуются и адаптеры источников
+export {
+  cleanAnnotation,
+  cleanFoundTitle,
+  cleanPublisher,
+  looksTransliterated,
+} from './find/clean'
 
 export type Verdict = 'confirmed' | 'work-only' | 'unconfirmed' | 'unknown'
 
@@ -116,31 +130,6 @@ export interface RecognizeResult {
   proof: { url: string; title: string } | null
 }
 
-/** Магазинный мусор в названиях: точка в конце, «(тв. переплёт)», ISBN. */
-export function cleanFoundTitle(raw: string): string {
-  return raw
-    .replace(
-      /\s*\((?=[^)]*(?:переплёт|переплет|обложк|isbn|97[89][\d -]{10,}))[^)]*\)/gi,
-      '',
-    )
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/(?<!\.)\.$/, '')
-    .trim()
-}
-
-/** Издатель в источниках часто закавычен: «"Манн, Иванов и Фербер"». */
-export function cleanPublisher(raw: string | null): string | null {
-  if (!raw) return raw
-  const cleaned = raw
-    .trim()
-    .replace(/^["'«„]+/, '')
-    .replace(/["'»“]+$/, '')
-    .replace(/\s*(?:ООО|ЗАО|ОАО|АО|ИП)\s+(?=\S)/i, '')
-    .trim()
-  return cleaned.length > 0 ? cleaned : null
-}
-
 /** Достаём объект из ответа: модели любят обрамлять JSON текстом и ```. */
 export function parseGuess(text: string): Guess {
   const empty: Guess = {
@@ -179,18 +168,6 @@ export function parseGuess(text: string): Guess {
     seriesName: str(o.series) ?? str(o.seriesName),
     annotation: cleanAnnotation(str(o.annotation)),
   }
-}
-
-/** Мусор магазинов: «Купить книгу … доставка … отзывы» — это не аннотация. */
-const SHOP_NOISE =
-  /(купить|заказать|интернет-магазин|доставка|цена|скидк|отзывы покупателей|наличии)/i
-
-export function cleanAnnotation(raw: string | null): string | null {
-  const text = raw?.replace(/\s+/g, ' ').trim() ?? ''
-  if (text.length < 60) return null
-  // страничные описания часто начинаются с карточки товара — такое не берём
-  if (SHOP_NOISE.test(text.slice(0, 120))) return null
-  return text.slice(0, 2000)
 }
 
 /** Разбирать и откатывать можно только свои книги и книги своих библиотек. */
@@ -374,25 +351,6 @@ async function enrichMissing(base: {
     annotation,
     pages,
   }
-}
-
-const CYRILLIC = /[\u0400-\u04FF]/
-
-/**
- * Транслит вместо названия — обычная беда каталогов: Google Books хранит
- * русские издания латиницей («Deti-bilingvy»), без издательства и аннотации.
- * Формально ответ есть, а карточка получается нечитаемой, поэтому цепочку на
- * такой находке не останавливаем: она остаётся запасным вариантом, а поиск
- * идёт дальше — за живой страницей на русском.
- */
-export function looksTransliterated(
-  isbn13: string,
-  title: string | null | undefined,
-  authors: string | null | undefined,
-): boolean {
-  if (!title?.trim()) return false
-  if (CYRILLIC.test(title) || CYRILLIC.test(authors ?? '')) return false
-  return isCyrillicRegion(isbn13)
 }
 
 /**

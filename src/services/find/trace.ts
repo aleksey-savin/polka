@@ -10,11 +10,11 @@ import { log } from '@/lib/logger'
  */
 export interface Trace {
   id: string
-  info(message: string, fields?: Record<string, unknown>): void
-  warn(message: string, fields?: Record<string, unknown>): void
-  error(message: string, fields?: Record<string, unknown>): void
+  info: (message: string, fields?: Record<string, unknown>) => void
+  warn: (message: string, fields?: Record<string, unknown>) => void
+  error: (message: string, fields?: Record<string, unknown>) => void
   /** Сколько миллисекунд идёт этот поиск. */
-  ms(): number
+  ms: () => number
 }
 
 export function startTrace(isbn13: string, userId: string): Trace {

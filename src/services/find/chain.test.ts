@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { beforeEach, describe, expect, test } from 'bun:test'
+import type { SourceAdapter, SourceKey } from './types'
 
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-chain-'))
 process.env.BETTER_AUTH_SECRET = 'test-secret-for-chain'
@@ -12,7 +13,6 @@ const { user } = await import('@/db/schema/auth')
 const { bookSource, userAccount } = await import('@/db/schema/moderation')
 const { resolveChain } = await import('./chain')
 const { setEnabled, moveSource } = await import('@/services/bookSources')
-import type { SourceAdapter, SourceKey } from './types'
 
 const ME = 'chain-admin'
 await db.insert(user).values({

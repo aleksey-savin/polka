@@ -9,12 +9,12 @@
  */
 export interface Deadline {
   /** Осталось миллисекунд; 0 — время вышло. */
-  left(): number
-  expired(): boolean
+  left: () => number
+  expired: () => boolean
   /** Хватит ли остатка на ступень, которая может занять `needMs`. */
-  enoughFor(needMs: number): boolean
+  enoughFor: (needMs: number) => boolean
   /** Сколько миллисекунд уже потрачено. */
-  spent(): number
+  spent: () => number
 }
 
 export function deadline(budgetMs: number): Deadline {

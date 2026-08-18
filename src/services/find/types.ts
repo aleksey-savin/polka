@@ -126,13 +126,13 @@ export interface SourceAdapter {
    * разными изданиями, и запирать их в один вариант — терять работу, за
    * которую уже заплачено. Каталоги отдают ровно одну находку.
    */
-  probe(ctx: FindContext): Promise<Array<Finding>>
+  probe: (ctx: FindContext) => Promise<Array<Finding>>
   /**
    * Добор недостающего (обложка, аннотация, объём) по названию и автору.
    * Есть не у каждой ступени.
    */
-  enrich?(
+  enrich?: (
     ctx: FindContext,
     draft: MetadataDraft,
-  ): Promise<{ draft: Partial<MetadataDraft>; covers: Array<string> }>
+  ) => Promise<{ draft: Partial<MetadataDraft>; covers: Array<string> }>
 }
