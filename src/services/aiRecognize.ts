@@ -1317,17 +1317,30 @@ export async function dismissRecognition(
 
 export interface Proposal {
   suggestionId: string
-  /** Какие поля заполнятся: показываем человеку до применения. */
+  /** Какая ветка: заполнить пустое или заменить всё. */
+  mode: UpdateMode
+  /** Какие поля изменятся: показываем человеку до применения. */
   fills: Array<{ field: string; label: string; value: string }>
   title: string
   authors: string
   coverUrl: string | null
   annotation: string | null
+  /** Что в карточке сейчас — для сравнения «было → станет». */
+  current: {
+    title: string
+    authors: string
+    publisher: string | null
+    year: number | null
+  }
+  /** Найденные варианты: их листают стрелками, как в разборе. */
+  variants: Array<FoundVariant>
+  variantIndex: number
   proof: { url: string; title: string } | null
   via: string
 }
 
 const FIELD_LABEL: Record<string, string> = {
+  title: 'название',
   publisher: 'издательство',
   year: 'год',
   pages: 'страниц',
@@ -1342,58 +1355,60 @@ const FIELD_LABEL: Record<string, string> = {
  * она ушла, а обложки и аннотации может не быть. Заполняем только пустые поля —
  * введённое руками не трогаем.
  */
+export type UpdateMode = 'fill' | 'replace'
+
+/**
+ * Обновление данных карточки (M31): две ветки, а не переключатель.
+ *
+ * «Найти недостающее» трогает только пустые поля, «Заменить данные»
+ * перезаписывает карточку целиком. Разные намерения и разная цена ошибки,
+ * поэтому и вызовы разные. Поиск — общий: та же цепочка с порядком из
+ * настроек, что и в разборе нераспознанных.
+ */
 export async function proposeForBook(
   userId: string,
   bookId: string,
+  mode: UpdateMode = 'fill',
+  variantVia?: string,
 ): Promise<Proposal | null> {
   const [row] = await db.select().from(book).where(eq(book.id, bookId))
   if (!row) throw new AppError('Книга не найдена', 'not_found')
   await assertBookAccess(userId, row)
 
-  // 1. что уже известно по номеру: веб-находка хранит и страницу-доказательство
-  const webHit = row.isbn13 ? await cached(row.isbn13) : null
+  // штатная цепочка: эталон → каталоги → Яндекс Поиск → Нейропоиск
+  const found = row.isbn13 ? await recognizeIsbn(userId, row.isbn13, {}) : null
+  const shown =
+    found?.variants.find((v) => v.via === variantVia) ??
+    found?.variants[found.variantIndex] ??
+    found?.variants[found.variants.length - 1] ??
+    null
 
-  // 2. каталоги по номеру — там наше конкретное издание
-  let draft: Record<string, unknown> = {}
-  if (row.isbn13) {
-    const { lookupIsbn } = await import('./metadata/lookup')
-    const byIsbn = await lookupIsbn(userId, row.isbn13).catch(() => null)
-    if (byIsbn?.draft.title) draft = { ...byIsbn.draft }
-  }
+  // без ISBN остаётся поиск по названию: обложка и описание тоже нужны
+  const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
+  const byTitle =
+    shown === null ? await fetchGoogleByTitle(row.title, row.authors) : null
 
-  // 3. обложка и аннотация: Google по названию, затем страница из веб-находки
-  const title =
-    (draft.title as string | undefined) ?? webHit?.title ?? row.title
-  const authors =
-    (draft.authors as string | undefined) ?? webHit?.authors ?? row.authors
-  if (!draft.coverUrl || !draft.annotation) {
-    const { fetchGoogleByTitle } = await import('./metadata/googleBooks')
-    const byTitle = await fetchGoogleByTitle(title, authors)
-    draft = {
-      ...byTitle,
-      ...Object.fromEntries(
-        Object.entries(draft).filter(([, v]) => v !== null && v !== undefined),
-      ),
-    }
+  const draft = {
+    title: shown?.title ?? byTitle?.title ?? null,
+    authors: shown?.authors ?? byTitle?.authors ?? null,
+    publisher: shown?.publisher ?? byTitle?.publisher ?? null,
+    year: shown?.year ?? byTitle?.year ?? null,
+    pages: shown?.pages ?? byTitle?.pages ?? null,
+    annotation: shown?.annotation ?? byTitle?.annotation ?? null,
+    coverUrl: shown?.coverUrl ?? byTitle?.coverUrl ?? null,
+    seriesName: shown?.seriesName ?? byTitle?.seriesName ?? null,
   }
-  if ((!draft.coverUrl || !draft.annotation) && webHit?.proofUrl) {
-    const page = await fetchOpenGraph(webHit.proofUrl)
-    draft.coverUrl = draft.coverUrl ?? page.image ?? undefined
-    draft.annotation = draft.annotation ?? page.description ?? undefined
-  }
-  // данные веб-находки — как основа, если каталоги промолчали
-  draft.publisher = draft.publisher ?? webHit?.publisher ?? undefined
-  draft.year = draft.year ?? webHit?.year ?? undefined
-  draft.pages = draft.pages ?? webHit?.pages ?? undefined
-  draft.annotation = draft.annotation ?? webHit?.annotation ?? undefined
-  draft.coverUrl = draft.coverUrl ?? webHit?.coverUrl ?? undefined
+  if (!draft.title) return null
 
   const fills: Proposal['fills'] = []
   const patch: Record<string, unknown> = {}
   const put = (field: string, value: unknown) => {
     if (value === null || value === undefined || value === '') return
     const current = (row as unknown as Record<string, unknown>)[field]
-    if (current !== null && current !== undefined && current !== '') return
+    const empty = current === null || current === undefined || current === ''
+    // «найти недостающее» правит только пустое, «заменить» — всё
+    if (mode === 'fill' && !empty) return
+    if (mode === 'replace' && current === value) return
     patch[field] = value
     fills.push({
       field,
@@ -1401,12 +1416,13 @@ export async function proposeForBook(
       value: String(value).slice(0, 120),
     })
   }
-  put('authors', authors === row.authors ? null : authors)
+  if (mode === 'replace') put('title', draft.title)
+  put('authors', draft.authors)
   put('publisher', draft.publisher)
   put('year', draft.year)
   put('pages', draft.pages)
   put('annotation', draft.annotation)
-  if (!row.coverPath && draft.coverUrl) {
+  if (draft.coverUrl && (mode === 'replace' || !row.coverPath)) {
     patch.coverUrl = draft.coverUrl
     fills.push({ field: 'coverUrl', label: 'обложка', value: 'нашлась' })
   }
@@ -1417,8 +1433,9 @@ export async function proposeForBook(
     .values({
       bookId,
       isbn13: row.isbn13 ?? '',
-      verdict: 'confirmed',
+      verdict: shown?.verdict ?? 'unconfirmed',
       status: 'proposed',
+      via: shown?.via ?? 'sources',
       beforeJson: JSON.stringify(snapshot(row)),
       afterJson: JSON.stringify(patch),
       appliedBy: userId,
@@ -1426,22 +1443,34 @@ export async function proposeForBook(
     .returning({ id: aiSuggestion.id })
   if (!created) throw new AppError('Не удалось сохранить предложение')
 
-  log.info('ai', 'дозаполнение предложено', {
+  log.info('ai', 'обновление данных предложено', {
     bookId,
+    mode,
     fields: fills.map((f) => f.field).join(','),
   })
 
   return {
     suggestionId: created.id,
+    mode,
     fills,
-    title,
-    authors,
-    coverUrl: (draft.coverUrl as string | undefined) ?? null,
-    annotation: (draft.annotation as string | undefined) ?? null,
-    proof: webHit?.proofUrl
-      ? { url: webHit.proofUrl, title: webHit.proofTitle ?? webHit.proofUrl }
+    title: draft.title,
+    authors: draft.authors ?? row.authors,
+    coverUrl: draft.coverUrl,
+    annotation: draft.annotation,
+    current: {
+      title: row.title,
+      authors: row.authors,
+      publisher: row.publisher,
+      year: row.year,
+    },
+    variants: found?.variants ?? [],
+    variantIndex: shown
+      ? (found?.variants.findIndex((v) => v.via === shown.via) ?? 0)
+      : 0,
+    proof: shown?.proofUrl
+      ? { url: shown.proofUrl, title: shown.proofTitle ?? shown.proofUrl }
       : null,
-    via: webHit ? (webHit.via ?? 'model') : 'sources',
+    via: shown?.via ?? 'sources',
   }
 }
 
@@ -1467,10 +1496,13 @@ export async function applyProposal(
 
   if (Object.keys(patch).length > 0) {
     const authors = typeof patch.authors === 'string' ? patch.authors : null
+    const title = typeof patch.title === 'string' ? patch.title : null
     await db
       .update(book)
       .set({
         ...patch,
+        // поиск ищет по нормализованным полям: меняем их вместе с исходными
+        ...(title ? { titleNorm: normalizeForSearch(title) } : {}),
         ...(authors ? { authorsNorm: normalizeForSearch(authors) } : {}),
         updatedAt: new Date(),
       })
@@ -1525,13 +1557,19 @@ export async function dismissProposal(
  */
 export async function backfillAiQueue(): Promise<number> {
   const rows = await db
-    .select({ bookId: aiSuggestion.bookId, appliedBy: aiSuggestion.appliedBy })
+    .select({
+      bookId: aiSuggestion.bookId,
+      appliedBy: aiSuggestion.appliedBy,
+      via: aiSuggestion.via,
+    })
     .from(aiSuggestion)
     .where(eq(aiSuggestion.status, 'applied'))
   if (rows.length === 0) return 0
   const { enqueue } = await import('./moderation')
-  for (const row of rows) {
+  // находки каталогов проверять незачем: там не было модели
+  const fromAi = rows.filter((row) => row.via !== 'sources')
+  for (const row of fromAi) {
     await enqueue('ai_book', row.bookId, row.appliedBy, true)
   }
-  return rows.length
+  return fromAi.length
 }

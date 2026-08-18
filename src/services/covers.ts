@@ -273,3 +273,52 @@ export function authorPhotoAbsolutePath(relativePath: string): string {
   }
   return join(env.DATA_DIR, relativePath)
 }
+
+/**
+ * Обложки для книги через Яндекс Картинки (M31).
+ *
+ * Тот же поиск, что собирает варианты при разборе находок: запрос строится из
+ * названия и автора. Тратит один поиск из суточного лимита.
+ */
+export async function searchCoversForBook(
+  userId: string,
+  bookId: string,
+): Promise<Array<string>> {
+  const { db } = await import('@/db')
+  const { book } = await import('@/db/schema/catalog')
+  const { eq } = await import('drizzle-orm')
+  const [row] = await db.select().from(book).where(eq(book.id, bookId))
+  if (!row) throw new AppError('Книга не найдена', 'not_found')
+
+  const { searchCoverImages } = await import('./webSearch')
+  const { spendSearch } = await import('./webSearch')
+  let urls: Array<string> = []
+  await spendSearch(userId, async () => {
+    urls = await searchCoverImages(
+      `${row.title} ${row.authors} обложка книги`.trim(),
+      6,
+    )
+    return `${urls.length} картинок`
+  })
+  return urls
+}
+
+/** Поставить книге обложку по ссылке — из найденных вариантов. */
+export async function setCoverFromUrl(
+  userId: string,
+  bookId: string,
+  url: string,
+): Promise<void> {
+  if (!url.startsWith('http')) throw new AppError('Странная ссылка', 'invalid')
+  const { requireBookAccess } = await import('./books')
+  await requireBookAccess(userId, bookId)
+
+  const { db } = await import('@/db')
+  const { book } = await import('@/db/schema/catalog')
+  const { eq } = await import('drizzle-orm')
+  const saved = await saveCoverFromUrl(bookId, url)
+  await db
+    .update(book)
+    .set({ coverPath: saved.path, coverColor: saved.color })
+    .where(eq(book.id, bookId))
+}

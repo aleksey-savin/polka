@@ -1,0 +1,1 @@
+ALTER TABLE `ai_suggestion` ADD `via` text;

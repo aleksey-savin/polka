@@ -113,8 +113,21 @@ export const dismissRecognitionFn = createServerFn({ method: 'POST' })
 /** «Найти данные» на карточке книги: дозаполнение пустых полей. */
 export const proposeForBookFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
-  .validator(z.object({ bookId: z.string() }))
-  .handler(({ context, data }) => proposeForBook(context.user.id, data.bookId))
+  .validator(
+    z.object({
+      bookId: z.string(),
+      mode: z.enum(['fill', 'replace']).optional(),
+      variantVia: z.string().optional(),
+    }),
+  )
+  .handler(({ context, data }) =>
+    proposeForBook(
+      context.user.id,
+      data.bookId,
+      data.mode ?? 'fill',
+      data.variantVia,
+    ),
+  )
 
 export const applyProposalFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])

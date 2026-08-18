@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link, useRouter } from '@tanstack/react-router'
@@ -36,6 +36,8 @@ export function AddToListButton({
   variant = 'icon',
   active = false,
   onChanged,
+  open: openProp,
+  onOpenChange,
 }: {
   target: ItemTarget
   /** Название книги — в шапке шторки. */
@@ -45,9 +47,18 @@ export function AddToListButton({
   /** Книга уже в каком-то списке — кнопка отмечена галочкой. */
   active?: boolean
   onChanged?: () => void
+  /** Управляемый режим: шторку открывает меню, своей кнопки нет (M31). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const controlled = openProp !== undefined
+  const open = controlled ? openProp : ownOpen
+  const setOpen = (next: boolean) => {
+    if (controlled) onOpenChange?.(next)
+    else setOwnOpen(next)
+  }
   const [picks, setPicks] = useState<Array<ListPick> | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [draft, setDraft] = useState({ wishlist: '', collection: '' })
@@ -57,6 +68,14 @@ export function AddToListButton({
   async function load() {
     setPicks(await listsForTargetFn({ data: target }))
   }
+
+  useEffect(() => {
+    if (controlled && open) {
+      setPicks(null)
+      setConflictId(null)
+      void load()
+    }
+  }, [controlled, open])
 
   function openSheet() {
     setOpen(true)
@@ -148,9 +167,10 @@ export function AddToListButton({
     items: picks?.filter((p) => p.kind === kind) ?? [],
   }))
 
+  // в управляемом режиме своей кнопки нет: шторку открывает пункт меню
   return (
     <>
-      {variant === 'wide' ? (
+      {controlled ? null : variant === 'wide' ? (
         <Button
           variant="outline"
           className={`h-11 w-full ${active ? 'border-primary bg-accent/60 text-accent-foreground' : ''}`}

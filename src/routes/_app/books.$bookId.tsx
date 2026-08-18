@@ -1,13 +1,15 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import {
+  ArrowLeftRight,
   Ellipsis,
   Eye,
   EyeOff,
   Gift,
   Heart,
-  Image as ImageIcon,
-  ImageOff,
+  ListPlus,
+  RefreshCw,
+  Share2,
   Sparkles,
   Trash2,
   TriangleAlert,
@@ -47,7 +49,12 @@ import {
   setBookHiddenFn,
 } from '@/server/books'
 import { dateHuman, dateRu, dateShort } from '@/lib/dates'
-import { removeCoverFn, uploadCoverFn } from '@/server/covers'
+import {
+  removeCoverFn,
+  searchCoversFn,
+  setCoverFromUrlFn,
+  uploadCoverFn,
+} from '@/server/covers'
 import {
   aiMarkFn,
   applyProposalFn,
@@ -75,6 +82,14 @@ export const Route = createFileRoute('/_app/books/$bookId')({
   component: BookCardPage,
 })
 
+/** Откуда взялся вариант — та же подпись, что в разборе нераспознанных. */
+const VIA_LABEL: Record<string, string> = {
+  sources: 'Каталоги',
+  'web-extract': 'Яндекс Поиск',
+  'web-generative': 'Нейропоиск',
+  model: 'Догадка модели',
+}
+
 const LANG_LABEL: Record<string, string> = {
   ru: 'русский',
   en: 'английский',
@@ -87,7 +102,11 @@ function BookCardPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [coverOpen, setCoverOpen] = useState(false)
   const [proposal, setProposal] = useState<Proposal | null>(null)
-  const [finding, setFinding] = useState(false)
+  const [finding, setFinding] = useState<'fill' | 'replace' | null>(null)
+  const [listsOpen, setListsOpen] = useState(false)
+  const [covers, setCovers] = useState<Array<string> | null>(null)
+  const [pickedCover, setPickedCover] = useState<string | null>(null)
+  const [searchingCovers, setSearchingCovers] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [lendOpen, setLendOpen] = useState(false)
   const [giftOpen, setGiftOpen] = useState(false)
@@ -200,40 +219,120 @@ function BookCardPage() {
     })
   }
 
-  const incomplete =
-    !book.coverPath || !book.annotation || !book.publisher || !book.year
-
-  async function findData() {
-    setFinding(true)
+  /** Обе ветки идут одной цепочкой источников, отличается только запись. */
+  async function findData(mode: 'fill' | 'replace', variantVia?: string) {
+    setFinding(mode)
     try {
-      const found = await proposeForBookFn({ data: { bookId: book.id } })
+      const found = await proposeForBookFn({
+        data: { bookId: book.id, mode, variantVia },
+      })
       if (!found) {
-        toast.info('Нечего добавить — всё уже заполнено или ничего не нашлось')
+        toast.info(
+          mode === 'fill'
+            ? 'Нечего добавить — всё заполнено или ничего не нашлось'
+            : 'Замены нет — ничего не нашлось',
+        )
         return
       }
       setProposal(found)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Не получилось')
     } finally {
-      setFinding(false)
+      setFinding(null)
+    }
+  }
+
+  /** Обложки из Яндекс Картинок — тот же поиск, что в разборе находок. */
+  async function findCovers() {
+    setSearchingCovers(true)
+    try {
+      const found = await searchCoversFn({ data: { bookId: book.id } })
+      setCovers(found)
+      setPickedCover(found[0] ?? null)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setSearchingCovers(false)
+    }
+  }
+
+  async function useFoundCover(url: string) {
+    setCoverBusy(true)
+    try {
+      await setCoverFromUrlFn({ data: { bookId: book.id, url } })
+      setCovers(null)
+      setPickedCover(null)
+      setCoverOpen(false)
+      toast.success('Обложка поставлена')
+      refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setCoverBusy(false)
+    }
+  }
+
+  /** Поделиться книгой: то, что нужно при рекомендации. */
+  async function share() {
+    const text =
+      [
+        book.authors ? `${book.authors}. ${book.title}` : book.title,
+        [book.publisher, book.year].filter(Boolean).join(', '),
+      ]
+        .filter(Boolean)
+        .join(' (') + (book.publisher || book.year ? ')' : '')
+    try {
+      // системное меню есть не везде: на десктопе кладём в буфер
+      const shareApi = (
+        navigator as { share?: (data: ShareData) => Promise<void> }
+      ).share
+      if (shareApi) {
+        await shareApi.call(navigator, { title: book.title, text })
+        return
+      }
+      await navigator.clipboard.writeText(text)
+      toast.success('Скопировано')
+    } catch {
+      // пользователь закрыл системное меню — это не ошибка
     }
   }
 
   const menuEntries: Array<ActionMenuEntry> = [
-    ...(incomplete
+    {
+      key: 'fill',
+      label: finding === 'fill' ? 'Ищу…' : 'Найти недостающее',
+      sub: 'заполнит пустое: обложку, описание, год',
+      icon: <Sparkles />,
+      onSelect: () => void findData('fill'),
+    },
+    {
+      key: 'replace',
+      label: finding === 'replace' ? 'Ищу…' : 'Заменить данные',
+      sub: 'перезапишет карточку целиком',
+      icon: <RefreshCw />,
+      onSelect: () => void findData('replace'),
+    },
+    'separator',
+    ...(book.status !== 'wishlist'
       ? ([
           {
-            key: 'find-data',
-            label: finding ? 'Ищу…' : 'Найти данные',
-            sub: 'заполнит пустые поля: обложку, описание, год',
-            icon: <Sparkles />,
-            onSelect: () => void findData(),
+            key: 'move',
+            label: 'Переместить на полку',
+            icon: <ArrowLeftRight />,
+            onSelect: () => setMoveOpen(true),
           },
-          'separator',
         ] satisfies Array<ActionMenuEntry>)
       : []),
+    {
+      key: 'lists',
+      label: 'В список',
+      sub: 'вишлист или подборка',
+      icon: <ListPlus />,
+      onSelect: () => setListsOpen(true),
+    },
     ...(canCirculate
       ? ([
+          'separator',
           {
             key: 'gift',
             label: 'Подарить',
@@ -247,9 +346,9 @@ function BookCardPage() {
             onSelect: () =>
               void run('lost', () => markLostFn({ data: { bookId: book.id } })),
           },
-          'separator',
         ] satisfies Array<ActionMenuEntry>)
       : []),
+    'separator',
     {
       key: 'hidden',
       label: book.hidden ? 'Не скрывать' : 'Скрыть',
@@ -269,26 +368,8 @@ function BookCardPage() {
     },
     'separator',
     {
-      key: 'cover',
-      label: book.coverPath ? 'Заменить обложку' : 'Загрузить обложку',
-      icon: <ImageIcon />,
-      onSelect: () => fileRef.current?.click(),
-    },
-    ...(book.coverPath
-      ? ([
-          {
-            key: 'cover-off',
-            label: 'Убрать обложку',
-            icon: <ImageOff />,
-            onSelect: () =>
-              void removeCoverFn({ data: { bookId: book.id } }).then(refresh),
-          },
-        ] satisfies Array<ActionMenuEntry>)
-      : []),
-    'separator',
-    {
       key: 'delete',
-      label: 'Удалить',
+      label: 'Удалить книгу',
       icon: <Trash2 />,
       danger: true,
       onSelect: () => setDeleteOpen(true),
@@ -642,17 +723,15 @@ function BookCardPage() {
             Редактировать
           </Link>
         </Button>
-        {book.status !== 'wishlist' && (
-          <Button variant="outline" onClick={() => setMoveOpen(true)}>
-            Переместить
-          </Button>
-        )}
-        <AddToListButton
-          target={{ bookId: book.id }}
-          title={book.title}
-          subtitle={book.authors}
-          active={book.lists.length > 0}
-        />
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-11"
+          aria-label="Поделиться"
+          onClick={() => void share()}
+        >
+          <Share2 aria-hidden />
+        </Button>
         <ActionMenu
           caption={book.title}
           trigger={
@@ -869,13 +948,56 @@ function BookCardPage() {
               У книги пока нет обложки — загрузите фото или скан.
             </p>
           )}
+          {covers !== null && (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {covers.length === 0 ? (
+                <p className="col-span-3 text-[13px] text-muted-foreground">
+                  Картинок не нашлось — загрузите файл.
+                </p>
+              ) : (
+                covers.map((url) => (
+                  <button
+                    key={url}
+                    type="button"
+                    className={`overflow-hidden rounded-[5px] ${
+                      pickedCover === url
+                        ? 'ring-2 ring-primary ring-offset-2'
+                        : ''
+                    }`}
+                    onClick={() => setPickedCover(url)}
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="aspect-[7/10] w-full object-cover"
+                    />
+                  </button>
+                ))
+              )}
+            </div>
+          )}
           <DrawerFooter className="gap-2">
+            {pickedCover && (
+              <Button
+                loading={coverBusy}
+                onClick={() => void useFoundCover(pickedCover)}
+              >
+                Поставить выбранную
+              </Button>
+            )}
             <Button
               variant="outline"
               loading={coverBusy}
               onClick={() => fileRef.current?.click()}
             >
-              {book.coverPath ? 'Заменить обложку' : 'Загрузить обложку'}
+              {book.coverPath ? 'Заменить файлом' : 'Загрузить файл'}
+            </Button>
+            <Button
+              variant="outline"
+              loading={searchingCovers}
+              onClick={() => void findCovers()}
+            >
+              Найти в Яндекс Картинках
             </Button>
             {book.coverPath && (
               <Button
@@ -893,6 +1015,14 @@ function BookCardPage() {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+      <AddToListButton
+        target={{ bookId: book.id }}
+        title={book.title}
+        subtitle={book.authors}
+        active={book.lists.length > 0}
+        open={listsOpen}
+        onOpenChange={setListsOpen}
+      />
       <LendDialog
         bookId={book.id}
         bookTitle={book.title}
@@ -920,10 +1050,23 @@ function BookCardPage() {
       >
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>Нашлось</DrawerTitle>
+            <DrawerTitle>
+              {proposal?.mode === 'replace' ? 'Заменить данные' : 'Нашлось'}
+            </DrawerTitle>
           </DrawerHeader>
           {proposal && (
             <>
+              {proposal.variants.length > 1 && (
+                <div className="mb-2.5 flex items-center gap-2.5">
+                  <span className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+                    вариант {proposal.variantIndex + 1} из{' '}
+                    {proposal.variants.length}
+                  </span>
+                  <span className="rounded-full bg-stamp/10 px-2.5 py-0.5 text-[11px] font-semibold text-stamp">
+                    {VIA_LABEL[proposal.via] ?? proposal.via}
+                  </span>
+                </div>
+              )}
               <div className="flex gap-3">
                 {proposal.coverUrl && (
                   <img
@@ -939,24 +1082,64 @@ function BookCardPage() {
                   <p className="text-[13px] text-muted-foreground">
                     {proposal.authors}
                   </p>
-                  <p className="mt-1.5 text-[12.5px] text-muted-foreground">
-                    Заполнится:{' '}
-                    {proposal.fills.map((fill) => fill.label).join(', ')}
-                  </p>
+                  {proposal.proof && (
+                    <a
+                      href={proposal.proof.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="mt-1.5 inline-block text-[12px] text-accent-foreground underline underline-offset-2"
+                    >
+                      ISBN найден на {proposal.proof.title}
+                    </a>
+                  )}
                 </div>
               </div>
-              {proposal.annotation && (
-                <p className="mt-3 line-clamp-4 text-[13px] leading-snug text-muted-foreground">
+
+              {proposal.mode === 'replace' ? (
+                <div className="mt-3 grid gap-2 text-[12.5px] sm:grid-cols-2">
+                  <div className="rounded-xl bg-muted px-3 py-2">
+                    <b className="block font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
+                      сейчас у вас
+                    </b>
+                    {[
+                      proposal.current.title,
+                      proposal.current.authors,
+                      proposal.current.publisher,
+                      proposal.current.year,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </div>
+                  <div className="rounded-xl bg-accent/50 px-3 py-2 text-accent-foreground">
+                    <b className="block font-mono text-[10px] tracking-[0.08em] uppercase opacity-80">
+                      станет
+                    </b>
+                    {proposal.fills.map((fill) => fill.value).join(' · ')}
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 text-[12.5px] text-muted-foreground">
+                  Заполнится:{' '}
+                  <b className="text-foreground">
+                    {proposal.fills.map((fill) => fill.label).join(', ')}
+                  </b>
+                  . Название и автор остаются вашими.
+                </p>
+              )}
+
+              {proposal.annotation && proposal.mode === 'fill' && (
+                <p className="mt-2 line-clamp-4 text-[13px] leading-snug text-muted-foreground">
                   {proposal.annotation}
                 </p>
               )}
               <p className="mt-2 text-[12.5px] text-muted-foreground">
-                Уже заполненные поля не меняются.
+                Оценка, рецензия, полка и списки не меняются.
               </p>
             </>
           )}
           <DrawerFooter>
             <Button
+              variant={proposal?.mode === 'replace' ? 'destructive' : 'default'}
               className="h-12 w-full text-[15px]"
               onClick={() => {
                 if (!proposal) return
@@ -964,7 +1147,9 @@ function BookCardPage() {
                   data: { suggestionId: proposal.suggestionId },
                 })
                   .then(() => {
-                    toast.success('Сохранили')
+                    toast.success(
+                      proposal.mode === 'replace' ? 'Заменили' : 'Заполнили',
+                    )
                     setProposal(null)
                     void router.invalidate()
                   })
@@ -975,10 +1160,29 @@ function BookCardPage() {
                   )
               }}
             >
-              Сохранить
+              {proposal?.mode === 'replace' ? 'Заменить' : 'Заполнить'}
             </Button>
+            {proposal && proposal.variants.length > 1 && (
+              <Button
+                variant="outline"
+                className="h-12 w-full text-[15px]"
+                loading={finding !== null}
+                onClick={() => {
+                  const next =
+                    proposal.variants[
+                      (proposal.variantIndex + 1) % proposal.variants.length
+                    ]
+                  void dismissProposalFn({
+                    data: { suggestionId: proposal.suggestionId },
+                  })
+                  void findData(proposal.mode, next?.via)
+                }}
+              >
+                Искать дальше
+              </Button>
+            )}
             <Button
-              variant="outline"
+              variant="ghost"
               className="h-12 w-full text-[15px]"
               onClick={() => {
                 if (!proposal) return
@@ -988,7 +1192,7 @@ function BookCardPage() {
                 setProposal(null)
               }}
             >
-              Не то
+              Отмена
             </Button>
           </DrawerFooter>
         </DrawerContent>

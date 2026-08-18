@@ -19,6 +19,7 @@ const { createShelf } = await import('./shelves')
 const { createBook } = await import('./books')
 const { userAccount } = await import('@/db/schema/moderation')
 const {
+  applyProposal,
   applyRecognition,
   backfillAiQueue,
   cleanFoundTitle,
@@ -300,6 +301,32 @@ describe('решение человека', () => {
       expect(guess.verdict).toBe('unknown')
       expect(guess.title).toBeNull()
     }
+  })
+
+  test('«заменить» правит и название, «заполнить» — только пустое', async () => {
+    const created = await createBook(ME, {
+      title: 'Iskusstvo voyny',
+      authors: 'Сунь-цзы',
+      isbn13: '9785171636951', // это издание лежит в эталоне
+      libraryId: library.id,
+      shelfId: shelf.id,
+    })
+
+    // ветка «заполнить» название не трогает
+    const fill = await proposeForBook(ME, created.id, 'fill')
+    expect(fill?.fills.some((f) => f.field === 'title')).toBe(false)
+
+    // ветка «заменить» предлагает заменить название целиком
+    const replace = await proposeForBook(ME, created.id, 'replace')
+    expect(replace?.mode).toBe('replace')
+    expect(replace?.fills.some((f) => f.field === 'title')).toBe(true)
+    expect(replace?.current.title).toBe('Iskusstvo voyny')
+
+    await applyProposal(ME, replace!.suggestionId)
+    const [after] = await db.select().from(book).where(eq(book.id, created.id))
+    expect(after?.title).toBe('Правда о деле Гарри Квеберта')
+    // поиск ищет по нормализованным полям — они тоже обновились
+    expect(after?.titleNorm).toContain('правда')
   })
 
   test('дозаполнение заполняет только пустые поля', async () => {

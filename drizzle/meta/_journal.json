@@ -218,6 +218,13 @@
       "when": 1787040981638,
       "tag": "0030_slippery_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1787050897836,
+      "tag": "0031_smart_rick_jones",
+      "breakpoints": true
     }
   ]
 }

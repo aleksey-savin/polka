@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
@@ -59,4 +60,22 @@ export const removeCoverFn = createServerFn({ method: 'POST' })
       .update(book)
       .set({ coverPath: null, coverColor: null, updatedAt: new Date() })
       .where(eq(book.id, data.bookId))
+  })
+
+/** Обложки из Яндекс Картинок — тем же поиском, что в разборе находок (M31). */
+export const searchCoversFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ bookId: z.string() }))
+  .handler(async ({ context, data }) => {
+    const { searchCoversForBook } = await import('@/services/covers')
+    return searchCoversForBook(context.user.id, data.bookId)
+  })
+
+/** Поставить найденную обложку по ссылке. */
+export const setCoverFromUrlFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ bookId: z.string(), url: z.string() }))
+  .handler(async ({ context, data }) => {
+    const { setCoverFromUrl } = await import('@/services/covers')
+    await setCoverFromUrl(context.user.id, data.bookId, data.url)
   })

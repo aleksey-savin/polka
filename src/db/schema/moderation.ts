@@ -271,6 +271,8 @@ export const aiSuggestion = sqliteTable(
     })
       .notNull()
       .default('applied'),
+    /** Каким путём получены данные: sources · web-extract · web-generative. */
+    via: text('via'),
     /** Снимок карточки до применения — им и откатываем. */
     beforeJson: text('before_json').notNull(),
     afterJson: text('after_json').notNull(),
