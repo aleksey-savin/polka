@@ -102,6 +102,10 @@ if (existsSync(migrationsFolder)) {
     background('назначение первого админа', () =>
       import('@/services/moderation').then((m) => m.ensureFirstAdmin()),
     )
+    // находки ИИ, применённые до слияния очередей (M29)
+    background('перенос находок ИИ в очередь', () =>
+      import('@/services/aiRecognize').then((m) => m.backfillAiQueue()),
+    )
     // кавычки у издательства из источников: «"Манн, Иванов и Фербер"» (M26.4)
     background('чистка издательств', () =>
       import('@/services/books').then((m) => m.backfillPublishers()),

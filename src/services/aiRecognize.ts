@@ -1132,11 +1132,10 @@ export async function applyRecognition(
       appliedBy: userId,
     })
     // в общую очередь модерации — с меткой «нашёл ИИ» (M29): отдельного
-    // раздела «Проверка находок» больше нет
-    if (hit.refBookId) {
-      const { enqueue } = await import('./moderation')
-      await enqueue('ref_book', hit.refBookId, userId, true)
-    }
+    // раздела «Проверка находок» больше нет. Ставим саму книгу: у веб-находки
+    // подтверждённой записи эталона может и не быть, а проверять данные надо.
+    const { enqueue } = await import('./moderation')
+    await enqueue('ai_book', bookId, userId, true)
   }
   return { verdict: hit.verdict }
 }
@@ -1621,4 +1620,23 @@ export async function dismissProposal(
     .update(aiSuggestion)
     .set({ status: 'rejected', reviewedBy: userId, reviewedAt: new Date() })
     .where(eq(aiSuggestion.id, suggestionId))
+}
+
+/**
+ * Перенос уже применённых находок в общую очередь (M29).
+ *
+ * До слияния они жили в отдельном разделе «Проверка находок» — после выката
+ * их не было видно нигде. Ставится один раз: enqueue не плодит дубли.
+ */
+export async function backfillAiQueue(): Promise<number> {
+  const rows = await db
+    .select({ bookId: aiSuggestion.bookId, appliedBy: aiSuggestion.appliedBy })
+    .from(aiSuggestion)
+    .where(eq(aiSuggestion.status, 'applied'))
+  if (rows.length === 0) return 0
+  const { enqueue } = await import('./moderation')
+  for (const row of rows) {
+    await enqueue('ai_book', row.bookId, row.appliedBy, true)
+  }
+  return rows.length
 }

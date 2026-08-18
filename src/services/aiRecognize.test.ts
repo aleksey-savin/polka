@@ -20,6 +20,7 @@ const { createBook } = await import('./books')
 const { userAccount } = await import('@/db/schema/moderation')
 const {
   applyRecognition,
+  backfillAiQueue,
   cleanFoundTitle,
   cleanPublisher,
   dismissRecognition,
@@ -478,5 +479,31 @@ describe('чистка издательства', () => {
     expect(cleanPublisher('Альпина нон-фикшн')).toBe('Альпина нон-фикшн')
     expect(cleanPublisher(null)).toBeNull()
     expect(cleanPublisher('  ')).toBeNull()
+  })
+})
+
+describe('находки ИИ в очереди модерации', () => {
+  test('применённая находка попадает в общую очередь с меткой', async () => {
+    const isbn = '9785171111113'
+    const [target] = await db
+      .select({ id: book.id })
+      .from(book)
+      .where(eq(book.isbn13, isbn))
+    const { moderationItem } = await import('@/db/schema/moderation')
+    const [item] = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.targetId, target!.id))
+    expect(item?.kind).toBe('ai_book')
+    expect(item?.fromAi).toBe(true)
+  })
+
+  test('перенос старых находок не плодит дубли', async () => {
+    const { moderationItem } = await import('@/db/schema/moderation')
+    const before = (await db.select().from(moderationItem)).length
+    await backfillAiQueue()
+    await backfillAiQueue()
+    const after = (await db.select().from(moderationItem)).length
+    expect(after).toBe(before)
   })
 })

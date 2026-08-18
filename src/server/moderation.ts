@@ -137,10 +137,8 @@ export const serviceOverviewFn = createServerFn({ method: 'GET' })
   .handler(async ({ context }) => {
     const account = await accountOf(context.user.id)
     const isAdmin = account.role === 'admin'
-    const [pending, aiPending] = await Promise.all([
-      pendingCount(context.user.id),
-      import('@/services/aiRecognize').then((m) => m.pendingAiReview()),
-    ])
+    const pending = await pendingCount(context.user.id)
+    const aiPending = 0
     if (!isAdmin) {
       return {
         isAdmin,

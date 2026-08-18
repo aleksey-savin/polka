@@ -44,7 +44,13 @@ export const userAccount = sqliteTable('user_account', {
     .$defaultFn(() => new Date()),
 })
 
-export type ModerationKind = 'book_cover' | 'share' | 'ref_work' | 'ref_book'
+export type ModerationKind =
+  | 'book_cover'
+  | 'share'
+  | 'ref_work'
+  | 'ref_book'
+  /** Карточка книги, заполненная ИИ: модератор проверяет данные (M29). */
+  | 'ai_book'
 
 /** Очередь: объект публикуется сразу, проверяется потом. */
 export const moderationItem = sqliteTable(
@@ -52,7 +58,8 @@ export const moderationItem = sqliteTable(
   {
     id: id(),
     kind: text('kind', {
-      enum: ['book_cover', 'share', 'ref_work', 'ref_book'],
+      // ai_book — карточка книги, заполненная ИИ: проверяем данные, а не файл
+      enum: ['book_cover', 'share', 'ref_work', 'ref_book', 'ai_book'],
     }).notNull(),
     /** id книги / ссылки / записи эталона — своей таблицы у объекта нет. */
     targetId: text('target_id').notNull(),

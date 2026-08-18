@@ -48,6 +48,7 @@ const KIND_LABEL: Record<QueueRow['kind'], string> = {
   share: 'публичная ссылка',
   ref_work: 'эталон · произведение',
   ref_book: 'эталон · издание',
+  ai_book: 'книга · заполнил ии',
 }
 
 const REASONS = [
@@ -63,7 +64,7 @@ const REASONS = [
 function targetLink(
   item: QueueRow,
 ): { to: string; params?: Record<string, string> } | null {
-  if (item.kind === 'book_cover') {
+  if (item.kind === 'book_cover' || item.kind === 'ai_book') {
     return { to: '/books/$bookId', params: { bookId: item.targetId } }
   }
   if (item.kind === 'ref_work') {
@@ -344,7 +345,7 @@ function ModerationPage() {
                       size="sm"
                       onClick={() => {
                         setToReference(
-                          item.kind === 'ref_book' || item.kind === 'ref_work',
+                          item.kind !== 'book_cover' && item.kind !== 'share',
                         )
                         setApproving(item)
                       }}
@@ -365,7 +366,9 @@ function ModerationPage() {
                     </Button>
                   )}
                   {item.status === 'pending' &&
-                    (item.kind === 'ref_book' || item.kind === 'ref_work') && (
+                    (item.kind === 'ref_book' ||
+                      item.kind === 'ref_work' ||
+                      item.kind === 'ai_book') && (
                       <Button
                         size="sm"
                         variant="outline"

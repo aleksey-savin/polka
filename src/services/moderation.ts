@@ -163,6 +163,7 @@ const KIND_TITLE: Record<ModerationKind, string> = {
   share: 'Публичная ссылка',
   ref_work: 'Эталон · произведение',
   ref_book: 'Эталон · издание',
+  ai_book: 'Книга · заполнил ИИ',
 }
 
 /** Очередь модератора: жалобы вперёд, дальше — по свежести. */
@@ -313,7 +314,7 @@ async function describeTarget(
   kind: ModerationKind,
   targetId: string,
 ): Promise<{ title: string; subtitle: string; coverUrl: string | null }> {
-  if (kind === 'book_cover') {
+  if (kind === 'ai_book' || kind === 'book_cover') {
     const [row] = await db
       .select({
         title: book.title,
@@ -732,6 +733,17 @@ export async function getDraft(
 
   // копию делаем из того, что видно модератору
   const view = await describeTarget(item.kind, item.targetId)
+  if (item.kind === 'ai_book') {
+    const [row] = await db.select().from(book).where(eq(book.id, item.targetId))
+    if (row) {
+      return {
+        title: row.title,
+        authors: row.authors,
+        publisher: row.publisher,
+        year: row.year,
+      }
+    }
+  }
   if (item.kind === 'ref_book') {
     const [row] = await db
       .select()
@@ -794,7 +806,12 @@ export async function approveItem(
   if (!item) throw new AppError('Объект не найден', 'not_found')
 
   let publishedRefId: string | null = null
-  if (toReference && (item.kind === 'ref_book' || item.kind === 'ref_work')) {
+  if (
+    toReference &&
+    (item.kind === 'ref_book' ||
+      item.kind === 'ref_work' ||
+      item.kind === 'ai_book')
+  ) {
     const draft = await getDraft(userId, itemId)
     if (draft) {
       const { normalizeForSearch } = await import('./search')
@@ -806,7 +823,14 @@ export async function approveItem(
                 .from(refBook)
                 .where(eq(refBook.id, item.targetId))
             )[0]?.isbn13 ?? null)
-          : null
+          : item.kind === 'ai_book'
+            ? ((
+                await db
+                  .select({ isbn13: book.isbn13 })
+                  .from(book)
+                  .where(eq(book.id, item.targetId))
+              )[0]?.isbn13 ?? null)
+            : null
       const [created] = await db
         .insert(refBook)
         .values({
