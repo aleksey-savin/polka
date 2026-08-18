@@ -59,7 +59,6 @@ import {
   aiMarkFn,
   applyProposalFn,
   dismissProposalFn,
-  nextVariantFn,
   proposeForBookFn,
   revertRecognitionFn,
 } from '@/server/aiRecognize'
@@ -231,11 +230,12 @@ function BookCardPage() {
     mode: 'fill' | 'replace',
     variantVia?: string,
     fresh = false,
+    rejectVia?: string,
   ) {
     setFinding(mode)
     try {
       const found = await proposeForBookFn({
-        data: { bookId: book.id, mode, variantVia, fresh },
+        data: { bookId: book.id, mode, variantVia, fresh, rejectVia },
       })
       if (!found) {
         toast.info('Ничего не нашлось — заполните карточку руками')
@@ -266,8 +266,9 @@ function BookCardPage() {
     // следующий по порядку, а не «первый не текущий»: иначе листание качается
     // между двумя вариантами и до остальных не доходит
     const next = proposal.variants[proposal.variantIndex + 1]
-    const exhausted = proposal.exhausted
+    const { exhausted, via } = proposal
     await closeProposal()
+    // уже найденное листается без запросов в сеть
     if (next) {
       await findData(mode, next.via)
       return
@@ -277,16 +278,9 @@ function BookCardPage() {
       await findData(mode, undefined, true)
       return
     }
-    setFinding(mode)
-    try {
-      await nextVariantFn({ data: { bookId: book.id } })
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Не получилось')
-      setFinding(null)
-      return
-    }
-    setFinding(null)
-    await findData(mode)
+    // отказ и следующая ступень — одним вызовом: два подряд заставляли ждать
+    // два полных прохода цепочки
+    await findData(mode, undefined, false, via)
   }
 
   /** Обложки из Яндекс Картинок — тот же поиск, что в разборе находок. */

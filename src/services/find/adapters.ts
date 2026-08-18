@@ -202,6 +202,25 @@ function parseOneGuess(
   return { draft, sourceUrl: str(o.sourceUrl) ?? null }
 }
 
+/**
+ * Похожа ли картинка со страницы на обложку книги.
+ *
+ * `og:image` у страниц выдачи и маркетплейсов часто оказывается логотипом или
+ * спрайтом: подставив такую картинку, мы перечеркнём человеку нормальную
+ * обложку ради иконки поисковика. Отсеиваем по адресу — это дёшево и ловит
+ * почти все случаи.
+ */
+const NOT_A_COVER =
+  /(logo|sprite|favicon|placeholder|stub|banner|icon|share|default)/i
+const STATIC_HOSTS = /(yastatic\.net|mc\.yandex|googletagmanager|gstatic\.com)/i
+
+export function looksLikeCover(url: string | null): url is string {
+  if (!url?.startsWith('http')) return false
+  if (url.endsWith('.svg')) return false
+  if (STATIC_HOSTS.test(url)) return false
+  return !NOT_A_COVER.test(url)
+}
+
 /** Страница-кандидат: у каждой находки будет своя ссылка-доказательство. */
 interface WebPage {
   url: string
@@ -294,11 +313,17 @@ const web: SourceAdapter = {
     const proof = ctx.soFar.find((f) => f.proof)?.proof
     if (!proof) return { draft: {}, covers: [] }
     const page = await fetchOpenGraph(proof.url)
+    const cover = looksLikeCover(page.image) ? page.image : null
+    if (page.image && !cover) {
+      ctx.trace.info('картинка со страницы не похожа на обложку', {
+        url: page.image.slice(0, 120),
+      })
+    }
     return {
       draft: draft.annotation
         ? {}
         : { annotation: cleanAnnotation(page.description) ?? undefined },
-      covers: page.image ? [page.image] : [],
+      covers: cover ? [cover] : [],
     }
   },
 }

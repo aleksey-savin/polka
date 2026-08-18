@@ -119,6 +119,8 @@ export const proposeForBookFn = createServerFn({ method: 'POST' })
       mode: z.enum(['fill', 'replace']).optional(),
       variantVia: z.string().optional(),
       fresh: z.boolean().optional(),
+      /** «Искать дальше»: отвергнуть этот путь и продолжить цепочку. */
+      rejectVia: z.string().optional(),
     }),
   )
   .handler(({ context, data }) =>
@@ -128,6 +130,8 @@ export const proposeForBookFn = createServerFn({ method: 'POST' })
       data.mode ?? 'fill',
       data.variantVia,
       data.fresh ?? false,
+      {},
+      data.rejectVia,
     ),
   )
 

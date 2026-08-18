@@ -1,6 +1,15 @@
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { describe, expect, test } from 'bun:test'
 
-import { ADAPTERS, parseGuessDrafts } from './adapters'
+// адаптеры тянут @/db через reference: временная база нужна до импорта
+process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-adapters-'))
+process.env.BETTER_AUTH_SECRET = 'test-secret-for-adapters-module'
+
+const { ADAPTERS, looksLikeCover, parseGuessDrafts } =
+  await import('./adapters')
 
 describe('реестр адаптеров', () => {
   test('в реестре все шесть ступеней', () => {
@@ -73,5 +82,27 @@ describe('разбор ответа модели', () => {
   test('без sourceUrl вариант остаётся, ссылку проверит адаптер', () => {
     const found = parseGuessDrafts('[{"known":true,"title":"Зона"}]')
     expect(found[0]?.sourceUrl).toBeNull()
+  })
+})
+
+describe('картинка со страницы', () => {
+  test('обложка магазина принимается', () => {
+    expect(looksLikeCover('https://cv1.litres.ru/pub/c/cover/12345.jpg')).toBe(
+      true,
+    )
+  })
+
+  test('логотип поисковика — не обложка', () => {
+    // ровно этот случай: со страницы выдачи приезжал логотип Яндекса и
+    // перечёркивал человеку нормальную обложку книги
+    expect(looksLikeCover('https://yastatic.net/s3/home/logo.png')).toBe(false)
+    expect(looksLikeCover('https://shop.ru/img/logo-header.png')).toBe(false)
+    expect(looksLikeCover('https://shop.ru/i/sprite.svg')).toBe(false)
+    expect(looksLikeCover('https://shop.ru/img/placeholder.jpg')).toBe(false)
+  })
+
+  test('пустое и не-http отсеиваются', () => {
+    expect(looksLikeCover(null)).toBe(false)
+    expect(looksLikeCover('data:image/png;base64,iVBOR')).toBe(false)
   })
 })

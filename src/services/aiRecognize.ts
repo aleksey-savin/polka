@@ -475,6 +475,58 @@ export async function recognizeBook(
  * «Искать дальше»: человек отверг показанный вариант — помечаем путь и
  * продолжаем цепочку со следующей ступени. Отвергнутое не показывается снова.
  */
+/**
+ * Отказ от показанного варианта: путь помечается отвергнутым, и цепочка
+ * пойдёт дальше. Негодную запись эталона заодно отправляем модератору —
+ * сам себя общий каталог не чинит.
+ */
+async function rejectVariant(isbn13: string, via?: string): Promise<void> {
+  const hit = await cached(isbn13)
+  if (!hit || hit.verdict === 'unknown') return
+  const rejectedVia = via ?? hit.via ?? 'model'
+  const rejected = parseRejected(hit.rejectedVias)
+  if (!rejected.includes(rejectedVia)) rejected.push(rejectedVia)
+  await db
+    .update(aiIsbnGuess)
+    .set({
+      rejectedVias: JSON.stringify(rejected),
+      // сам вариант очищаем, чтобы кэш не вернул его же
+      verdict: 'unknown',
+      title: null,
+      authors: null,
+      coverUrl: null,
+      annotation: null,
+    })
+    .where(eq(aiIsbnGuess.isbn13, isbn13))
+  log.info('find', 'вариант отвергнут, ищем дальше', {
+    isbn: isbn13,
+    rejected: rejected.join(','),
+  })
+
+  if (rejectedVia === 'reference' && hit.refBookId) {
+    try {
+      const { enqueue } = await import('./moderation')
+      await enqueue(
+        'ref_book',
+        hit.refBookId,
+        null,
+        false,
+        'Проверить актуальность: владелец отверг данные и продолжил поиск',
+      )
+      log.info('find', 'запись эталона помечена на проверку', {
+        isbn: isbn13,
+        refBookId: hit.refBookId,
+      })
+    } catch (error) {
+      // пометка не должна мешать поиску, но молчать о ней нельзя
+      log.warn('find', 'не удалось пометить запись эталона', {
+        isbn: isbn13,
+        message: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+}
+
 export async function nextVariant(
   userId: string,
   bookId: string,
@@ -493,55 +545,7 @@ export async function nextVariant(
   await assertBookAccess(userId, row)
   if (!row.isbn13) throw new AppError('У книги нет ISBN', 'invalid')
 
-  const hit = await cached(row.isbn13)
-  if (hit && hit.verdict !== 'unknown') {
-    // записи до появления колонки via — модельные: колонка появилась вместе
-    // с веб-поиском, раньше путь был один
-    const via = hit.via ?? 'model'
-    const rejected = parseRejected(hit.rejectedVias)
-    if (!rejected.includes(via)) rejected.push(via)
-    await db
-      .update(aiIsbnGuess)
-      .set({
-        rejectedVias: JSON.stringify(rejected),
-        // сам вариант очищаем, чтобы кэш не вернул его же
-        verdict: 'unknown',
-        title: null,
-        authors: null,
-        coverUrl: null,
-        annotation: null,
-      })
-      .where(eq(aiIsbnGuess.isbn13, row.isbn13))
-    log.info('find', 'вариант отвергнут, ищем дальше', {
-      isbn: row.isbn13,
-      rejected: rejected.join(','),
-    })
-
-    // Человек отверг то, что дал общий эталон, — значит запись негодная.
-    // Сам себя каталог не чинит: помечаем её модератору на проверку.
-    if (via === 'reference' && hit.refBookId) {
-      try {
-        const { enqueue } = await import('./moderation')
-        await enqueue(
-          'ref_book',
-          hit.refBookId,
-          null,
-          false,
-          'Проверить актуальность: владелец отверг данные и продолжил поиск',
-        )
-        log.info('find', 'запись эталона помечена на проверку', {
-          isbn: row.isbn13,
-          refBookId: hit.refBookId,
-        })
-      } catch (error) {
-        // пометка не должна мешать поиску, но молчать о ней нельзя
-        log.warn('find', 'не удалось пометить запись эталона', {
-          isbn: row.isbn13,
-          message: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-  }
+  await rejectVariant(row.isbn13)
   const core = await recognizeIsbn(userId, row.isbn13, options)
   return { ...core, bookId }
 }
@@ -1041,12 +1045,21 @@ export async function proposeForBook(
   variantVia?: string,
   fresh = false,
   options: RecognizeOptions = {},
+  /** Отвергнуть показанное и искать дальше — тем же вызовом. */
+  rejectVia?: string,
 ): Promise<Proposal | null> {
   const [row] = await db.select().from(book).where(eq(book.id, bookId))
   if (!row) throw new AppError('Книга не найдена', 'not_found')
   await assertBookAccess(userId, row)
 
-  // штатная цепочка: эталон → каталоги → Яндекс Поиск → Нейропоиск;
+  // «Искать дальше» отвергает вариант и продолжает цепочку тем же вызовом:
+  // раньше UI дёргал nextVariant и proposeForBook подряд, и человек ждал два
+  // полных прохода — до полутора минут без единого признака жизни
+  if (rejectVia && row.isbn13) {
+    await rejectVariant(row.isbn13, rejectVia)
+  }
+
+  // штатная цепочка: порядок из настроек источников;
   // «искать заново» забывает и кэш, и отвергнутые пути — тупика быть не должно
   const found = row.isbn13
     ? await recognizeIsbn(userId, row.isbn13, { ...options, force: fresh })
