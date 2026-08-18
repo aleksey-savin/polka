@@ -121,6 +121,12 @@ export const savedShare = sqliteTable(
 export const lookupCache = sqliteTable('lookup_cache', {
   isbn13: text('isbn13').primaryKey(),
   source: text('source').notNull(),
+  /**
+   * Отпечаток цепочки, при которой получен ответ (M32). Настройки изменились —
+   * запись промахивается и перезаполняется: иначе выключенный Google
+   * продолжал бы отдавать свои данные из кэша.
+   */
+  chain: text('chain'),
   rawJson: text('raw_json').notNull(),
   fetchedAt: integer('fetched_at', { mode: 'timestamp' })
     .notNull()

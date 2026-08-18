@@ -1,0 +1,1 @@
+ALTER TABLE `lookup_cache` ADD `chain` text;
