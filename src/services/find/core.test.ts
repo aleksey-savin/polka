@@ -14,6 +14,7 @@ const { user } = await import('@/db/schema/auth')
 const { bookSource, userAccount } = await import('@/db/schema/moderation')
 const { lookupCache } = await import('@/db/schema/circulation')
 const { findEdition } = await import('./core')
+const { QUICK_BUDGET_MS } = await import('./types')
 const { setEnabled, moveSource } = await import('@/services/bookSources')
 const { looksTransliterated } = await import('./clean')
 
@@ -218,6 +219,42 @@ describe('ядро поиска', () => {
     const result = await findEdition(ME, ISBN, { adapters: silent })
     expect(result.draft.title).toBeUndefined()
     expect(result.exhausted).toBe(true)
+  })
+
+  test('бесплатные каталоги опрашиваются разом, а не по очереди', async () => {
+    // по очереди три ступени по 300 мс заняли бы 900 мс: столько складывались
+    // таймауты до M32, и быстрый режим не успевал ни одного каталога
+    const slow = registry({
+      fantlab: answering('fantlab', null, { delayMs: 300 }),
+      google: answering('google', null, { delayMs: 300 }),
+      openlibrary: answering('openlibrary', null, { delayMs: 300 }),
+    })
+    const started = performance.now()
+    await findEdition(ME, ISBN, { adapters: slow })
+    expect(performance.now() - started).toBeLessThan(700)
+  })
+
+  test('быстрого бюджета хватает на каталоги', async () => {
+    const slow = registry({
+      fantlab: answering('fantlab', { title: 'Зона' }, { delayMs: 300 }),
+      google: answering('google', null, { delayMs: 300 }),
+    })
+    const result = await findEdition(ME, ISBN, {
+      budgetMs: QUICK_BUDGET_MS,
+      adapters: slow,
+    })
+    expect(result.draft.title).toBe('Зона')
+    expect(asked).toContain('fantlab')
+  })
+
+  test('отчёт идёт в порядке цепочки, а не в порядке ответов', async () => {
+    const uneven = registry({
+      fantlab: answering('fantlab', null, { delayMs: 200 }),
+      google: answering('google', null, { delayMs: 10 }),
+    })
+    const result = await findEdition(ME, ISBN, { adapters: uneven })
+    const keys = result.probes.map((p) => p.key)
+    expect(keys.indexOf('fantlab')).toBeLessThan(keys.indexOf('google'))
   })
 
   test('ступень отдаёт несколько вариантов — все попадают в находки', async () => {

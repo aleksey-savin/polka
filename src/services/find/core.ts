@@ -68,24 +68,111 @@ export async function findEdition(
   /** Ступень пропущена только потому, что книга нашлась раньше нужного. */
   let skippedByEarlyHit = false
 
-  for (const step of chain) {
+  /** Причина, по которой ступень не спрашивали; null — спрашиваем. */
+  const skipReason = (step: (typeof chain)[number]): SourceProbe | null => {
     const key = step.adapter.key
     if (rejected.has(key)) {
-      probes.push({
-        key,
-        outcome: 'выключен',
-        detail: 'отвергнут человеком',
-        ms: 0,
-      })
-      continue
+      return { key, outcome: 'выключен', detail: 'отвергнут человеком', ms: 0 }
     }
     if (!step.enabled) {
-      probes.push({ key, outcome: 'выключен', detail: step.reason, ms: 0 })
+      return { key, outcome: 'выключен', detail: step.reason, ms: 0 }
+    }
+    return null
+  }
+
+  /** Спросить ступень и записать, чем это кончилось. */
+  const ask = async (step: (typeof chain)[number]): Promise<void> => {
+    const key = step.adapter.key
+    const ctx: FindContext = {
+      userId,
+      isbn13,
+      soFar: findings,
+      trace,
+      leftMs: () => budget.left(),
+    }
+    const got = await safely(
+      `ступень ${key}`,
+      trace,
+      () => step.adapter.probe(ctx),
+      step.adapter.timeoutMs,
+    )
+    if (got.failure) {
+      probes.push({ key, outcome: 'ошибка', detail: got.failure, ms: got.ms })
+      return
+    }
+    if (!got.value || got.value.length === 0) {
+      probes.push({ key, outcome: 'молчит', detail: null, ms: got.ms })
+      trace.info('ступень промолчала', { step: key, ms: got.ms })
+      return
+    }
+    findings.push(...got.value)
+    const first = got.value[0]!
+    probes.push({
+      key,
+      outcome: 'нашёл',
+      // у веб-ступени вариантов может быть несколько — говорим сколько
+      detail:
+        got.value.length > 1
+          ? `${got.value.length} варианта`
+          : (first.proof?.url ?? null),
+      ms: got.ms,
+    })
+    trace.info('ступень ответила', {
+      step: key,
+      title: first.draft.title,
+      variants: got.value.length,
+      ms: got.ms,
+    })
+  }
+
+  // ── Бесплатные ступени — разом ──
+  //
+  // Они не мешают друг другу и дополняют ответы: спрашивать их по очереди
+  // значит складывать таймауты (3 + 5 + 4 с там, где хватает 6). Так же
+  // делал прежний `lookupIsbn` через Promise.allSettled.
+  const free = chain.filter((step) => !step.adapter.paid)
+  const freeToAsk: typeof chain = []
+  for (const step of free) {
+    const skip = skipReason(step)
+    if (skip) {
+      probes.push(skip)
       continue
     }
-    // за платное не платим, если бесплатное уже дало годный ответ: цепочка
-    // лесенкой — это её главный смысл, а не побочный эффект
-    if (step.adapter.paid && findings.some((f) => !f.weak && f.draft.title)) {
+    freeToAsk.push(step)
+  }
+  if (freeToAsk.length > 0) {
+    const needMs = Math.max(...freeToAsk.map((s) => s.adapter.timeoutMs))
+    if (budget.enoughFor(needMs)) {
+      await Promise.all(freeToAsk.map((step) => ask(step)))
+    } else {
+      truncated = true
+      for (const step of freeToAsk) {
+        probes.push({
+          key: step.adapter.key,
+          outcome: 'не успели',
+          detail: `осталось ${budget.left()} мс`,
+          ms: 0,
+        })
+      }
+      trace.info('каталоги отложены: не хватает бюджета', {
+        leftMs: budget.left(),
+        needMs,
+      })
+    }
+  }
+
+  // ── Платные ступени — по очереди ──
+  //
+  // Лесенка: за платное не платим, если бесплатное уже дало годный ответ.
+  // Это главный смысл порядка, а не побочный эффект.
+  for (const step of chain.filter((s) => s.adapter.paid)) {
+    const key = step.adapter.key
+    const skip = skipReason(step)
+    if (skip) {
+      probes.push(skip)
+      continue
+    }
+    if (findings.some((f) => !f.weak && f.draft.title)) {
       skippedByEarlyHit = true
       probes.push({
         key,
@@ -109,55 +196,18 @@ export async function findEdition(
       })
       continue
     }
-
-    const ctx: FindContext = {
-      userId,
-      isbn13,
-      soFar: findings,
-      trace,
-      leftMs: () => budget.left(),
-    }
-    const got = await safely(
-      `ступень ${key}`,
-      trace,
-      () => step.adapter.probe(ctx),
-      step.adapter.timeoutMs,
-    )
-    if (got.failure) {
-      probes.push({ key, outcome: 'ошибка', detail: got.failure, ms: got.ms })
-      continue
-    }
-    if (!got.value || got.value.length === 0) {
-      probes.push({ key, outcome: 'молчит', detail: null, ms: got.ms })
-      trace.info('ступень промолчала', { step: key, ms: got.ms })
-      continue
-    }
-
-    findings.push(...got.value)
-    const first = got.value[0]!
-    probes.push({
-      key,
-      outcome: 'нашёл',
-      // у веб-ступени вариантов может быть несколько — говорим сколько
-      detail:
-        got.value.length > 1
-          ? `${got.value.length} варианта`
-          : (first.proof?.url ?? null),
-      ms: got.ms,
-    })
-    trace.info('ступень ответила', {
-      step: key,
-      title: first.draft.title,
-      variants: got.value.length,
-      ms: got.ms,
-    })
-    // бесплатные каталоги опрашиваем целиком: их ответы дополняют друг друга.
+    await ask(step)
     // платную ступень, которая уже дала название, повторять незачем
-    if (step.adapter.paid && first.draft.title) {
+    if (findings.some((f) => f.key === key && f.draft.title)) {
       skippedByEarlyHit = true
       break
     }
   }
+
+  // отчёт и находки выстраиваем по цепочке: параллельный опрос не должен
+  // менять порядок на экране
+  probes.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
+  findings.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
 
   const merged = mergeFindings(findings, order)
   const ctx: FindContext = {
