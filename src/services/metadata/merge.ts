@@ -6,15 +6,18 @@ export interface MergedLookup {
   coverCandidates: Array<string>
 }
 
-/** Приоритет библиографических полей: FantLab → Google → Open Library. */
-const BIB_ORDER: Array<MetadataSource> = [
+/**
+ * Порядок по умолчанию — только для вызовов вне подсистемы поиска (M32).
+ * Там приоритет полей задаётся порядком цепочки из настроек, а не константой.
+ */
+const DEFAULT_ORDER: Array<MetadataSource> = [
   'manual',
   'fantlab',
   'google',
   'openlibrary',
 ]
-/** Аннотация обычно лучше у Google. */
-const ANNOTATION_ORDER: Array<MetadataSource> = [
+/** Аннотация обычно лучше у Google — эмпирика, проверенная на фикстурах. */
+const DEFAULT_ANNOTATION_ORDER: Array<MetadataSource> = [
   'manual',
   'google',
   'fantlab',
@@ -35,6 +38,8 @@ const BIB_FIELDS = [
 
 export function mergeResults(
   results: Array<SourceResult | null>,
+  order: Array<MetadataSource> = DEFAULT_ORDER,
+  annotationOrder: Array<MetadataSource> = DEFAULT_ANNOTATION_ORDER,
 ): MergedLookup {
   const bySource = new Map<MetadataSource, MetadataDraft>()
   for (const r of results) {
@@ -43,7 +48,7 @@ export function mergeResults(
 
   const draft: MetadataDraft = {}
   for (const field of BIB_FIELDS) {
-    for (const source of BIB_ORDER) {
+    for (const source of order) {
       const value = bySource.get(source)?.[field]
       if (value !== undefined && value !== '') {
         draft[field] = value as never
@@ -51,7 +56,7 @@ export function mergeResults(
       }
     }
   }
-  for (const source of ANNOTATION_ORDER) {
+  for (const source of annotationOrder) {
     const annotation = bySource.get(source)?.annotation
     if (annotation) {
       draft.annotation = annotation
@@ -62,14 +67,14 @@ export function mergeResults(
   const flAuthors = bySource.get('fantlab')?.fantlabAuthors
   if (flAuthors && flAuthors.length > 0) draft.fantlabAuthors = flAuthors
 
-  const coverCandidates = BIB_ORDER.map(
-    (s) => bySource.get(s)?.coverUrl,
-  ).filter((u): u is string => Boolean(u))
+  const coverCandidates = order
+    .map((s) => bySource.get(s)?.coverUrl)
+    .filter((u): u is string => Boolean(u))
   if (coverCandidates.length > 0) draft.coverUrl = coverCandidates[0]
 
   return {
     draft,
-    sources: BIB_ORDER.filter((s) => bySource.has(s)),
+    sources: order.filter((s) => bySource.has(s)),
     coverCandidates,
   }
 }

@@ -14,24 +14,13 @@ import { ensureAuthor, parseAuthors } from './authors'
 import { editionsInLists, listsForOne, listsForTargets } from './lists'
 import { memberLibraryIds } from './members'
 import { normalizeForSearch } from './search'
-import type {
-  MetadataDraft,
-  MetadataSource,
-  SourceResult,
-} from './metadata/types'
+import type { MetadataDraft, SourceResult } from './metadata/types'
 import type { ListBadge } from './lists'
 
 /**
  * Эталонный каталог: неизменяемые справочные записи со своими ID;
  * source/sourceRef — только метки происхождения для дедупа.
  */
-
-const SOURCE_PRIORITY: Array<MetadataSource> = [
-  'manual',
-  'fantlab',
-  'google',
-  'openlibrary',
-]
 
 /** Издания эталона по ISBN → SourceResult'ы для обычного merge. */
 export async function refLookup(
@@ -181,12 +170,14 @@ export async function ensureRefWork(
 /** Эталонное издание для связи book.refBookId (приоритет FantLab). */
 export async function bestRefBookIdForIsbn(
   isbn13: string,
+  order: Array<string> = ['fantlab', 'google', 'openlibrary'],
 ): Promise<string | null> {
   const rows = await db
     .select({ id: refBook.id, source: refBook.source })
     .from(refBook)
     .where(eq(refBook.isbn13, isbn13))
-  for (const source of SOURCE_PRIORITY) {
+  // 'manual' всегда впереди: это решение модератора, а не выбор источника
+  for (const source of ['manual', ...order]) {
     const hit = rows.find((r) => r.source === source)
     if (hit) return hit.id
   }
