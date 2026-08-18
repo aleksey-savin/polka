@@ -33,6 +33,8 @@ const {
   recognizeBook,
   rejectRecognition,
   revertRecognition,
+  looksTransliterated,
+  cleanAnnotation,
 } = await import('./aiRecognize')
 const { isbnOrigin } = await import('./isbnPrefix')
 
@@ -322,7 +324,7 @@ describe('решение человека', () => {
     expect(replace?.fills.some((f) => f.field === 'title')).toBe(true)
     expect(replace?.current.title).toBe('Iskusstvo voyny')
 
-    await applyProposal(ME, replace!.suggestionId)
+    await applyProposal(ME, replace!.suggestionId!)
     const [after] = await db.select().from(book).where(eq(book.id, created.id))
     expect(after?.title).toBe('Правда о деле Гарри Квеберта')
     // поиск ищет по нормализованным полям — они тоже обновились
@@ -570,5 +572,106 @@ describe('находки ИИ в очереди модерации', () => {
     await backfillAiQueue()
     const after = (await db.select().from(moderationItem)).length
     expect(after).toBe(before)
+  })
+})
+
+describe('транслит из каталога', () => {
+  test('латиница у постсоветского номера — транслит, у зарубежного — нет', () => {
+    // как Google Books записывает русские издания
+    expect(
+      looksTransliterated('9789859051586', 'Deti-bilingvy', 'Barbara'),
+    ).toBe(true)
+    expect(looksTransliterated('9785171636951', 'Iskusstvo voyny', null)).toBe(
+      true,
+    )
+    // кириллица в любом поле — уже не транслит
+    expect(looksTransliterated('9785171636951', 'Дети-билингвы', null)).toBe(
+      false,
+    )
+    // настоящее английское издание не трогаем
+    expect(looksTransliterated('9780262033848', 'Introduction', 'Cormen')).toBe(
+      false,
+    )
+  })
+
+  test('на транслите цепочка не останавливается, но находку не теряет', async () => {
+    const isbn = '9789859051586'
+    await db.insert(refBook).values({
+      source: 'google',
+      sourceRef: 'g-translit',
+      isbn13: isbn,
+      title: 'Deti-bilingvy',
+      titleNorm: 'deti-bilingvy',
+      authors: 'Barbara Abdelilah-Bauer',
+    })
+    const id = await unrecognizedBook(isbn)
+
+    const found = await recognizeBook(ME, id)
+    // ответ есть, но подтверждённым его не считаем: имя нечитаемое
+    expect(found.verdict).toBe('unconfirmed')
+    expect(found.guess.title).toBe('Deti-bilingvy')
+    // веб в тестах молчит, поэтому дальше идти некуда
+    expect(found.exhausted).toBe(true)
+  })
+
+  test('проверенный модератором эталон транслитом не считается', async () => {
+    const isbn = '9785904584016'
+    await db.insert(refBook).values({
+      source: 'manual',
+      sourceRef: 'manual-latin',
+      isbn13: isbn,
+      title: 'Sapiens',
+      titleNorm: 'sapiens',
+      authors: 'Yuval Noah Harari',
+    })
+    const id = await unrecognizedBook(isbn)
+
+    const found = await recognizeBook(ME, id)
+    expect(found.verdict).toBe('confirmed')
+    expect(found.exhausted).toBe(false)
+  })
+})
+
+describe('обновление данных карточки', () => {
+  test('когда менять нечего, предложение остаётся для «искать дальше»', async () => {
+    const isbn = '9785904584023'
+    await db.insert(refBook).values({
+      source: 'manual',
+      sourceRef: 'manual-same',
+      isbn13: isbn,
+      title: 'Тень горы',
+      titleNorm: 'тень горы',
+      authors: 'Грегори Дэвид Робертс',
+    })
+    const created = await createBook(ME, {
+      title: 'Тень горы',
+      authors: 'Грегори Дэвид Робертс',
+      isbn13: isbn,
+      libraryId: library.id,
+      shelfId: shelf.id,
+    })
+
+    const proposal = await proposeForBook(ME, created.id, 'replace')
+    expect(proposal?.fills).toEqual([])
+    // нечего применять — но и тупика нет: шторка покажет «искать дальше»
+    expect(proposal?.suggestionId).toBeNull()
+    expect(proposal?.title).toBe('Тень горы')
+  })
+})
+
+describe('аннотация со страницы', () => {
+  test('карточка товара за аннотацию не сходит', () => {
+    expect(
+      cleanAnnotation(
+        'Купить книгу «Дети-билингвы» в интернет-магазине, цена 790 ₽, доставка по России за 2 дня, отзывы покупателей.',
+      ),
+    ).toBeNull()
+    // слишком короткое — это подпись, а не описание
+    expect(cleanAnnotation('Книга о детях.')).toBeNull()
+    const real =
+      'Барбара Абделила-Боэр рассказывает, как растить ребёнка в двух языках: ' +
+      'что происходит с речью в первые годы, почему дети отказываются говорить ' +
+      'на «домашнем» языке и что делать родителям.'
+    expect(cleanAnnotation(real)).toBe(real)
   })
 })

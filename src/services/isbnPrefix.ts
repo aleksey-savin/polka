@@ -99,6 +99,34 @@ export interface IsbnOrigin {
 const digits = (isbn: string) => isbn.replace(/[^0-9Xx]/g, '')
 
 /**
+ * Регистрационные группы стран, где книги печатают кириллицей.
+ * Латинское название у такого номера — почти всегда транслит каталога.
+ */
+const CYRILLIC_GROUPS = [
+  '5', // Россия и бывший СССР
+  '985', // Беларусь
+  '966', // Украина
+  '617', // Украина (вторая группа)
+  '601', // Казахстан
+  '9967', // Киргизия
+  '9975', // Молдавия
+]
+
+/** Номер выдан там, где пишут кириллицей. */
+export function isCyrillicRegion(isbn: string | null | undefined): boolean {
+  if (!isbn) return false
+  const clean = digits(isbn)
+  const body =
+    clean.length === 13 && clean.startsWith('978')
+      ? clean.slice(3)
+      : clean.length === 10
+        ? clean
+        : null
+  if (!body) return false
+  return CYRILLIC_GROUPS.some((group) => body.startsWith(group))
+}
+
+/**
  * Что известно о номере без всяких источников.
  * Для 979-х (новая группа) издателя не определяем — своей таблицы там нет.
  */

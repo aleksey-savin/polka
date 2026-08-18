@@ -118,6 +118,7 @@ export const proposeForBookFn = createServerFn({ method: 'POST' })
       bookId: z.string(),
       mode: z.enum(['fill', 'replace']).optional(),
       variantVia: z.string().optional(),
+      fresh: z.boolean().optional(),
     }),
   )
   .handler(({ context, data }) =>
@@ -126,6 +127,7 @@ export const proposeForBookFn = createServerFn({ method: 'POST' })
       data.bookId,
       data.mode ?? 'fill',
       data.variantVia,
+      data.fresh ?? false,
     ),
   )
 

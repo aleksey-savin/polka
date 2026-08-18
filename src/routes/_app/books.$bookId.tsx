@@ -59,6 +59,7 @@ import {
   aiMarkFn,
   applyProposalFn,
   dismissProposalFn,
+  nextVariantFn,
   proposeForBookFn,
   revertRecognitionFn,
 } from '@/server/aiRecognize'
@@ -220,18 +221,18 @@ function BookCardPage() {
   }
 
   /** Обе ветки идут одной цепочкой источников, отличается только запись. */
-  async function findData(mode: 'fill' | 'replace', variantVia?: string) {
+  async function findData(
+    mode: 'fill' | 'replace',
+    variantVia?: string,
+    fresh = false,
+  ) {
     setFinding(mode)
     try {
       const found = await proposeForBookFn({
-        data: { bookId: book.id, mode, variantVia },
+        data: { bookId: book.id, mode, variantVia, fresh },
       })
       if (!found) {
-        toast.info(
-          mode === 'fill'
-            ? 'Нечего добавить — всё заполнено или ничего не нашлось'
-            : 'Замены нет — ничего не нашлось',
-        )
+        toast.info('Ничего не нашлось — заполните карточку руками')
         return
       }
       setProposal(found)
@@ -240,6 +241,46 @@ function BookCardPage() {
     } finally {
       setFinding(null)
     }
+  }
+
+  /** Закрыть шторку: предложение снимаем, если оно вообще записывалось. */
+  async function closeProposal() {
+    const suggestionId = proposal?.suggestionId ?? null
+    setProposal(null)
+    if (suggestionId) await dismissProposalFn({ data: { suggestionId } })
+  }
+
+  /**
+   * «Искать дальше»: сначала показываем уже найденные варианты, а когда они
+   * кончились — отвергаем текущий путь и идём на следующую ступень цепочки.
+   */
+  async function searchFurther() {
+    if (!proposal) return
+    const mode = proposal.mode
+    const next = proposal.variants.find(
+      (v, index) => index !== proposal.variantIndex && v.via !== proposal.via,
+    )
+    const exhausted = proposal.exhausted
+    await closeProposal()
+    if (next) {
+      await findData(mode, next.via)
+      return
+    }
+    // пути кончились — забываем всё найденное и проходим цепочку заново
+    if (exhausted) {
+      await findData(mode, undefined, true)
+      return
+    }
+    setFinding(mode)
+    try {
+      await nextVariantFn({ data: { bookId: book.id } })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+      setFinding(null)
+      return
+    }
+    setFinding(null)
+    await findData(mode)
   }
 
   /** Обложки из Яндекс Картинок — тот же поиск, что в разборе находок. */
@@ -1045,12 +1086,7 @@ function BookCardPage() {
       <Drawer
         open={proposal !== null}
         onOpenChange={(open) => {
-          if (!open && proposal) {
-            void dismissProposalFn({
-              data: { suggestionId: proposal.suggestionId },
-            })
-            setProposal(null)
-          }
+          if (!open) void closeProposal()
         }}
       >
         <DrawerContent>
@@ -1100,104 +1136,100 @@ function BookCardPage() {
                 </div>
               </div>
 
-              {proposal.mode === 'replace' ? (
-                <div className="mt-3 grid gap-2 text-[12.5px] sm:grid-cols-2">
-                  <div className="rounded-xl bg-muted px-3 py-2">
-                    <b className="block font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
-                      сейчас у вас
-                    </b>
-                    {[
-                      proposal.current.title,
-                      proposal.current.authors,
-                      proposal.current.publisher,
-                      proposal.current.year,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </div>
-                  <div className="rounded-xl bg-accent/50 px-3 py-2 text-accent-foreground">
-                    <b className="block font-mono text-[10px] tracking-[0.08em] uppercase opacity-80">
-                      станет
-                    </b>
-                    {proposal.fills.map((fill) => fill.value).join(' · ')}
-                  </div>
-                </div>
-              ) : (
-                <p className="mt-3 text-[12.5px] text-muted-foreground">
-                  Заполнится:{' '}
-                  <b className="text-foreground">
-                    {proposal.fills.map((fill) => fill.label).join(', ')}
-                  </b>
-                  . Название и автор остаются вашими.
+              {proposal.fills.length === 0 ? (
+                <p className="mt-3 rounded-xl bg-muted px-3 py-2.5 text-[13px] text-muted-foreground">
+                  {proposal.mode === 'replace'
+                    ? 'Это ровно то, что уже записано в карточке. Ищите дальше, если издание не то.'
+                    : 'Пустых полей нет — дозаполнять нечего.'}
                 </p>
+              ) : (
+                <div className="mt-3 grid gap-1.5">
+                  {proposal.fills.map((fill) => (
+                    <div
+                      key={fill.field}
+                      className="rounded-xl bg-muted px-3 py-2"
+                    >
+                      <b className="block font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
+                        {fill.label}
+                      </b>
+                      {fill.was && (
+                        <s className="block text-[12.5px] text-muted-foreground decoration-muted-foreground/60">
+                          {fill.was}
+                        </s>
+                      )}
+                      {fill.field === 'coverUrl' ? (
+                        <img
+                          src={fill.value}
+                          alt=""
+                          className="mt-1 aspect-[7/10] w-[46px] rounded-[3px] object-cover"
+                        />
+                      ) : (
+                        <span
+                          className={`block text-[13px] leading-snug ${
+                            fill.field === 'annotation' ? 'line-clamp-4' : ''
+                          }`}
+                        >
+                          {fill.value}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
 
-              {proposal.annotation && proposal.mode === 'fill' && (
-                <p className="mt-2 line-clamp-4 text-[13px] leading-snug text-muted-foreground">
-                  {proposal.annotation}
-                </p>
-              )}
               <p className="mt-2 text-[12.5px] text-muted-foreground">
-                Оценка, рецензия, полка и списки не меняются.
+                {proposal.mode === 'fill'
+                  ? 'Название и автор остаются вашими. Оценка, рецензия, полка и списки не меняются.'
+                  : 'Оценка, рецензия, полка и списки не меняются.'}
               </p>
             </>
           )}
           <DrawerFooter>
-            <Button
-              variant={proposal?.mode === 'replace' ? 'destructive' : 'default'}
-              className="h-12 w-full text-[15px]"
-              onClick={() => {
-                if (!proposal) return
-                void applyProposalFn({
-                  data: { suggestionId: proposal.suggestionId },
-                })
-                  .then(() => {
-                    toast.success(
-                      proposal.mode === 'replace' ? 'Заменили' : 'Заполнили',
+            {proposal && proposal.suggestionId !== null && (
+              <Button
+                variant={
+                  proposal.mode === 'replace' ? 'destructive' : 'default'
+                }
+                className="h-12 w-full text-[15px]"
+                onClick={() => {
+                  const suggestionId = proposal.suggestionId
+                  if (suggestionId === null) return
+                  void applyProposalFn({ data: { suggestionId } })
+                    .then(() => {
+                      toast.success(
+                        proposal.mode === 'replace' ? 'Заменили' : 'Заполнили',
+                      )
+                      setProposal(null)
+                      void router.invalidate()
+                    })
+                    .catch((e: unknown) =>
+                      toast.error(
+                        e instanceof Error ? e.message : 'Не получилось',
+                      ),
                     )
-                    setProposal(null)
-                    void router.invalidate()
-                  })
-                  .catch((e: unknown) =>
-                    toast.error(
-                      e instanceof Error ? e.message : 'Не получилось',
-                    ),
-                  )
-              }}
-            >
-              {proposal?.mode === 'replace' ? 'Заменить' : 'Заполнить'}
-            </Button>
-            {proposal && proposal.variants.length > 1 && (
+                }}
+              >
+                {proposal.mode === 'replace' ? 'Заменить' : 'Заполнить'}
+              </Button>
+            )}
+            {proposal && (
               <Button
                 variant="outline"
                 className="h-12 w-full text-[15px]"
                 loading={finding !== null}
-                onClick={() => {
-                  const next =
-                    proposal.variants[
-                      (proposal.variantIndex + 1) % proposal.variants.length
-                    ]
-                  void dismissProposalFn({
-                    data: { suggestionId: proposal.suggestionId },
-                  })
-                  void findData(proposal.mode, next?.via)
-                }}
+                onClick={() => void searchFurther()}
               >
-                Искать дальше
+                {proposal.exhausted && proposal.variants.length < 2
+                  ? 'Искать заново'
+                  : 'Искать дальше'}
               </Button>
             )}
             <Button
               variant="ghost"
               className="h-12 w-full text-[15px]"
-              onClick={() => {
-                if (!proposal) return
-                void dismissProposalFn({
-                  data: { suggestionId: proposal.suggestionId },
-                })
-                setProposal(null)
-              }}
+              onClick={() => void closeProposal()}
             >
-              Отмена
+              {proposal?.suggestionId === null ? 'Закрыть' : 'Отмена'}
             </Button>
           </DrawerFooter>
         </DrawerContent>

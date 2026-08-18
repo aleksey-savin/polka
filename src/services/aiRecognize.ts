@@ -8,7 +8,7 @@ import { log } from '@/lib/logger'
 import { ask, getAiSettings } from './ai'
 import { syncBookAuthors } from './authors'
 import { AppError } from './errors'
-import { isbnOrigin } from './isbnPrefix'
+import { isCyrillicRegion, isbnOrigin } from './isbnPrefix'
 import { memberLibraryIds } from './members'
 import { requireModerator } from './moderation'
 import {
@@ -47,6 +47,8 @@ export interface Guess {
   publisher: string | null
   year: number | null
   seriesName: string | null
+  /** Описание книги со страницы: есть только у веб-ветки. */
+  annotation?: string | null
 }
 
 /** Что ответил каждый источник — чтобы «не нашлось» не выглядело загадкой. */
@@ -148,6 +150,7 @@ export function parseGuess(text: string): Guess {
     publisher: null,
     year: null,
     seriesName: null,
+    annotation: null,
   }
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
@@ -174,7 +177,20 @@ export function parseGuess(text: string): Guess {
     publisher: cleanPublisher(str(o.publisher)),
     year: Number.isFinite(year) && year > 1400 && year < 2100 ? year : null,
     seriesName: str(o.series) ?? str(o.seriesName),
+    annotation: cleanAnnotation(str(o.annotation)),
   }
+}
+
+/** Мусор магазинов: «Купить книгу … доставка … отзывы» — это не аннотация. */
+const SHOP_NOISE =
+  /(купить|заказать|интернет-магазин|доставка|цена|скидк|отзывы покупателей|наличии)/i
+
+export function cleanAnnotation(raw: string | null): string | null {
+  const text = raw?.replace(/\s+/g, ' ').trim() ?? ''
+  if (text.length < 60) return null
+  // страничные описания часто начинаются с карточки товара — такое не берём
+  if (SHOP_NOISE.test(text.slice(0, 120))) return null
+  return text.slice(0, 2000)
 }
 
 /** Разбирать и откатывать можно только свои книги и книги своих библиотек. */
@@ -333,7 +349,7 @@ async function enrichMissing(base: {
   if (base.proofUrl) {
     const page = await fetchOpenGraph(base.proofUrl)
     addCover(page.image)
-    annotation = annotation ?? page.description ?? null
+    annotation = annotation ?? cleanAnnotation(page.description ?? null)
   }
   addCover(base.coverUrl)
 
@@ -358,6 +374,25 @@ async function enrichMissing(base: {
     annotation,
     pages,
   }
+}
+
+const CYRILLIC = /[\u0400-\u04FF]/
+
+/**
+ * Транслит вместо названия — обычная беда каталогов: Google Books хранит
+ * русские издания латиницей («Deti-bilingvy»), без издательства и аннотации.
+ * Формально ответ есть, а карточка получается нечитаемой, поэтому цепочку на
+ * такой находке не останавливаем: она остаётся запасным вариантом, а поиск
+ * идёт дальше — за живой страницей на русском.
+ */
+export function looksTransliterated(
+  isbn13: string,
+  title: string | null | undefined,
+  authors: string | null | undefined,
+): boolean {
+  if (!title?.trim()) return false
+  if (CYRILLIC.test(title) || CYRILLIC.test(authors ?? '')) return false
+  return isCyrillicRegion(isbn13)
 }
 
 /**
@@ -401,6 +436,20 @@ export async function recognizeIsbn(
     }
   }
   if (hit && rejected.includes(hit.via ?? 'model')) hit = null
+  if (
+    hit &&
+    hit.via === 'sources' &&
+    looksTransliterated(isbn13, hit.title, hit.authors) &&
+    web.enabled &&
+    !rejected.includes('web-extract')
+  ) {
+    // карточка с латинским названием уже сохранена — но поиск не доделан
+    log.info('ai', 'каталог дал транслит, идём в поиск', {
+      isbn: isbn13,
+      title: hit.title,
+    })
+    hit = null
+  }
 
   if (hit) {
     const cachedTitle = hit.title ? cleanFoundTitle(hit.title) : hit.title
@@ -476,6 +525,11 @@ export async function recognizeIsbn(
       },
     )
     if (direct.draft.title?.trim()) {
+      // проверенный модератором эталон под это правило не попадает: там
+      // латиница — осознанное решение человека, а не транслит каталога
+      const weak =
+        !direct.sources.includes('manual') &&
+        looksTransliterated(isbn13, direct.draft.title, direct.draft.authors)
       const refBookId = await bestRefBookIdForIsbn(isbn13)
       const extra = await enrichMissing({
         title: direct.draft.title,
@@ -487,7 +541,7 @@ export async function recognizeIsbn(
       })
       variants = upsertVariant(variants, {
         via: 'sources',
-        verdict: 'confirmed',
+        verdict: weak ? 'unconfirmed' : 'confirmed',
         title: direct.draft.title,
         authors: direct.draft.authors ?? null,
         publisher: direct.draft.publisher ?? null,
@@ -504,7 +558,7 @@ export async function recognizeIsbn(
       })
       await writeGuess({
         isbn13,
-        verdict: 'confirmed',
+        verdict: weak ? 'unconfirmed' : 'confirmed',
         title: direct.draft.title,
         authors: direct.draft.authors ?? null,
         publisher: direct.draft.publisher ?? null,
@@ -520,44 +574,47 @@ export async function recognizeIsbn(
         rejectedVias: rejectedJson,
         variants: JSON.stringify(variants),
       })
-      log.info('ai', 'разбор: хватило источников', {
+      log.info('ai', 'разбор: ответили источники', {
         isbn: isbn13,
         sources: direct.sources.join(','),
+        weak,
       })
-      return {
-        isbn13,
-        verdict: 'confirmed',
-        guess: {
-          known: true,
-          title: direct.draft.title,
-          authors: direct.draft.authors ?? null,
-          publisher: direct.draft.publisher ?? null,
-          year: direct.draft.year ?? null,
-          seriesName: direct.draft.seriesName ?? null,
-        },
-        fromPrefix,
-        refBookId,
-        workId: null,
-        confirmed: {
-          title: direct.draft.title,
-          authors: direct.draft.authors ?? '',
-          publisher: direct.draft.publisher ?? null,
-          year: direct.draft.year ?? null,
-          pages: extra.pages,
-          seriesName: direct.draft.seriesName ?? null,
-          coverUrl: extra.coverUrl,
-          annotation: extra.annotation,
-        },
-        cached: false,
-        askedModel: false,
-        sources,
-        coverOptions: extra.coverOptions,
-        variants,
-        variantIndex: variants.length - 1,
-        exhausted: false,
-        via: 'sources',
-        proof: null,
-      }
+      // транслит держим про запас: вернём его, если дальше никто не ответит
+      if (!weak)
+        return {
+          isbn13,
+          verdict: 'confirmed',
+          guess: {
+            known: true,
+            title: direct.draft.title,
+            authors: direct.draft.authors ?? null,
+            publisher: direct.draft.publisher ?? null,
+            year: direct.draft.year ?? null,
+            seriesName: direct.draft.seriesName ?? null,
+          },
+          fromPrefix,
+          refBookId,
+          workId: null,
+          confirmed: {
+            title: direct.draft.title,
+            authors: direct.draft.authors ?? '',
+            publisher: direct.draft.publisher ?? null,
+            year: direct.draft.year ?? null,
+            pages: extra.pages,
+            seriesName: direct.draft.seriesName ?? null,
+            coverUrl: extra.coverUrl,
+            annotation: extra.annotation,
+          },
+          cached: false,
+          askedModel: false,
+          sources,
+          coverOptions: extra.coverOptions,
+          variants,
+          variantIndex: variants.length - 1,
+          exhausted: false,
+          via: 'sources',
+          proof: null,
+        }
     }
   }
 
@@ -612,6 +669,49 @@ export async function recognizeIsbn(
    * она не угадала ни одного, а запросы тратила. Модель осталась там, где
    * приносит пользу: читает найденные страницы в веб-поиске.
    */
+
+  // поиск промолчал — отдаём отложенную находку каталога, она всё же лучше
+  // пустой карточки: человек увидит её как «не подтверждено» и решит сам
+  const spare = rejected.includes('sources')
+    ? undefined
+    : variants.find((v) => v.via === 'sources')
+  if (spare) {
+    log.info('ai', 'вернулись к находке каталога', { isbn: isbn13 })
+    return {
+      isbn13,
+      verdict: 'unconfirmed',
+      guess: {
+        known: true,
+        title: spare.title,
+        authors: spare.authors,
+        publisher: spare.publisher,
+        year: spare.year,
+        seriesName: spare.seriesName,
+      },
+      fromPrefix,
+      refBookId: spare.refBookId,
+      workId: spare.workId,
+      confirmed: {
+        title: spare.title,
+        authors: spare.authors ?? '',
+        publisher: spare.publisher,
+        year: spare.year,
+        pages: spare.pages,
+        seriesName: spare.seriesName,
+        coverUrl: spare.coverUrl,
+        annotation: spare.annotation,
+      },
+      cached: false,
+      askedModel: false,
+      sources,
+      coverOptions: spare.coverOptions,
+      variants,
+      variantIndex: variants.findIndex((v) => v.via === 'sources'),
+      exhausted: true,
+      via: 'sources',
+      proof: null,
+    }
+  }
 
   // все пути отвергнуты или молчат
   await writeGuess({
@@ -722,7 +822,8 @@ export async function nextVariant(
 const WEB_SYSTEM = [
   'Ты читаешь фрагменты веб-страниц и выписываешь выходные данные книги.',
   'Отвечай строго одним JSON-объектом, без пояснений.',
-  'Поля: known (boolean), title, authors, publisher, year (число), pages (число), series, sourceUrl.',
+  'Поля: known (boolean), title, authors, publisher, year (число), pages (число), series, annotation, sourceUrl.',
+  'annotation — описание книги из фрагментов (о чём она), без слов про магазин, цену и доставку; если описания нет, верни null.',
   'Бери только то, что есть во фрагментах; sourceUrl — адрес страницы, откуда взял.',
   'Если во фрагментах нет книги с этим ISBN — верни {"known": false}.',
 ].join(' ')
@@ -813,7 +914,7 @@ async function webLookup(
     title: guess.title,
     authors: guess.authors,
     coverUrl: null,
-    annotation: null,
+    annotation: guess.annotation ?? null,
     pages: null,
     proofUrl: box.proof?.url ?? null,
   })
@@ -1316,11 +1417,17 @@ export async function dismissRecognition(
 }
 
 export interface Proposal {
-  suggestionId: string
+  /** Нет id — менять нечего: показываем находку и предлагаем искать дальше. */
+  suggestionId: string | null
   /** Какая ветка: заполнить пустое или заменить всё. */
   mode: UpdateMode
-  /** Какие поля изменятся: показываем человеку до применения. */
-  fills: Array<{ field: string; label: string; value: string }>
+  /** Какие поля изменятся и что в них было: сравнение до применения. */
+  fills: Array<{
+    field: string
+    label: string
+    value: string
+    was: string | null
+  }>
   title: string
   authors: string
   coverUrl: string | null
@@ -1337,6 +1444,8 @@ export interface Proposal {
   variantIndex: number
   proof: { url: string; title: string } | null
   via: string
+  /** Цепочка дошла до конца — «искать дальше» уже некуда. */
+  exhausted: boolean
 }
 
 const FIELD_LABEL: Record<string, string> = {
@@ -1370,13 +1479,17 @@ export async function proposeForBook(
   bookId: string,
   mode: UpdateMode = 'fill',
   variantVia?: string,
+  fresh = false,
 ): Promise<Proposal | null> {
   const [row] = await db.select().from(book).where(eq(book.id, bookId))
   if (!row) throw new AppError('Книга не найдена', 'not_found')
   await assertBookAccess(userId, row)
 
-  // штатная цепочка: эталон → каталоги → Яндекс Поиск → Нейропоиск
-  const found = row.isbn13 ? await recognizeIsbn(userId, row.isbn13, {}) : null
+  // штатная цепочка: эталон → каталоги → Яндекс Поиск → Нейропоиск;
+  // «искать заново» забывает и кэш, и отвергнутые пути — тупика быть не должно
+  const found = row.isbn13
+    ? await recognizeIsbn(userId, row.isbn13, { force: fresh })
+    : null
   const shown =
     found?.variants.find((v) => v.via === variantVia) ??
     found?.variants[found.variantIndex] ??
@@ -1413,7 +1526,8 @@ export async function proposeForBook(
     fills.push({
       field,
       label: FIELD_LABEL[field] ?? field,
-      value: String(value).slice(0, 120),
+      value: String(value).slice(0, 160),
+      was: empty ? null : String(current).slice(0, 160),
     })
   }
   if (mode === 'replace') put('title', draft.title)
@@ -1424,33 +1538,42 @@ export async function proposeForBook(
   put('annotation', draft.annotation)
   if (draft.coverUrl && (mode === 'replace' || !row.coverPath)) {
     patch.coverUrl = draft.coverUrl
-    fills.push({ field: 'coverUrl', label: 'обложка', value: 'нашлась' })
-  }
-  if (fills.length === 0) return null
-
-  const [created] = await db
-    .insert(aiSuggestion)
-    .values({
-      bookId,
-      isbn13: row.isbn13 ?? '',
-      verdict: shown?.verdict ?? 'unconfirmed',
-      status: 'proposed',
-      via: shown?.via ?? 'sources',
-      beforeJson: JSON.stringify(snapshot(row)),
-      afterJson: JSON.stringify(patch),
-      appliedBy: userId,
+    fills.push({
+      field: 'coverUrl',
+      label: 'обложка',
+      value: draft.coverUrl,
+      was: row.coverPath ? 'своя' : null,
     })
-    .returning({ id: aiSuggestion.id })
-  if (!created) throw new AppError('Не удалось сохранить предложение')
+  }
+  const nothingToChange = fills.length === 0
+
+  const [created] = nothingToChange
+    ? [null]
+    : await db
+        .insert(aiSuggestion)
+        .values({
+          bookId,
+          isbn13: row.isbn13 ?? '',
+          verdict: shown?.verdict ?? 'unconfirmed',
+          status: 'proposed',
+          via: shown?.via ?? 'sources',
+          beforeJson: JSON.stringify(snapshot(row)),
+          afterJson: JSON.stringify(patch),
+          appliedBy: userId,
+        })
+        .returning({ id: aiSuggestion.id })
+  if (!created && !nothingToChange) {
+    throw new AppError('Не удалось сохранить предложение')
+  }
 
   log.info('ai', 'обновление данных предложено', {
     bookId,
     mode,
-    fields: fills.map((f) => f.field).join(','),
+    fields: fills.map((f) => f.field).join(',') || 'нечего менять',
   })
 
   return {
-    suggestionId: created.id,
+    suggestionId: created?.id ?? null,
     mode,
     fills,
     title: draft.title,
@@ -1471,6 +1594,7 @@ export async function proposeForBook(
       ? { url: shown.proofUrl, title: shown.proofTitle ?? shown.proofUrl }
       : null,
     via: shown?.via ?? 'sources',
+    exhausted: found?.exhausted ?? true,
   }
 }
 
