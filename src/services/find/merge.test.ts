@@ -54,7 +54,10 @@ describe('слияние находок', () => {
 
   test('пустая строка не считается значением', () => {
     const { draft } = mergeFindings(
-      [make('fantlab', { publisher: '' }), make('google', { publisher: 'АСТ' })],
+      [
+        make('fantlab', { publisher: '' }),
+        make('google', { publisher: 'АСТ' }),
+      ],
       ['fantlab', 'google'],
     )
     expect(draft.publisher).toBe('АСТ')

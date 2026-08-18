@@ -31,7 +31,9 @@ function Row({ probe }: { probe: Probe }) {
         aria-hidden
         className={cn(
           'absolute top-0 bottom-0 left-[5px] w-0 border-l-2',
-          skipped ? 'border-dotted border-muted-foreground/40' : 'border-primary/35',
+          skipped
+            ? 'border-dotted border-muted-foreground/40'
+            : 'border-primary/35',
         )}
       />
       <span
@@ -44,7 +46,9 @@ function Row({ probe }: { probe: Probe }) {
           !stamp && !skipped && 'border-border',
         )}
       />
-      <span className={cn('text-sm', probe.outcome === 'нашёл' && 'font-semibold')}>
+      <span
+        className={cn('text-sm', probe.outcome === 'нашёл' && 'font-semibold')}
+      >
         {probe.name}
       </span>
       <span className="ml-auto text-right font-mono text-[11.5px] text-muted-foreground">

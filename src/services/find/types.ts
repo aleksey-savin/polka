@@ -11,12 +11,7 @@ import type { Trace } from './trace'
 
 /** Ключ ступени. Совпадает со значением `book_source.key`. */
 export type SourceKey =
-  | 'reference'
-  | 'fantlab'
-  | 'google'
-  | 'openlibrary'
-  | 'web'
-  | 'neuro'
+  'reference' | 'fantlab' | 'google' | 'openlibrary' | 'web' | 'neuro'
 
 /** Что ответила ступень: показывается человеку и ложится в журнал. */
 export interface SourceProbe {

@@ -28,38 +28,38 @@
 
 Новое — подсистема `src/services/find/`:
 
-| Файл | Ответственность |
-| ---- | --------------- |
-| `types.ts` | Типы подсистемы: `SourceKey`, `SourceAdapter`, `Finding`, `FindResult`, `FindOptions`, `FindContext`. Логики нет |
-| `trace.ts` | Журнал одного поиска: корреляционный id, уровни, замер времени |
-| `budget.ts` | Бюджет времени на цепочку: `deadline(ms)` |
-| `safely.ts` | Обёртка «поймать всё и записать»: одна ступень не роняет цепочку |
-| `adapters.ts` | Адаптеры над существующими клиентами — единственное место, где живёт сеть |
-| `chain.ts` | `resolveChain(userId)` — состав и порядок из настроек. Точка будущего пейвола |
-| `merge.ts` | Слияние находок: приоритет полей = порядок цепочки |
-| `cache.ts` | Кэш, привязанный к отпечатку настроек |
-| `enrich.ts` | Добор обложки, аннотации и объёма — по той же цепочке |
-| `core.ts` | `findEdition()` — сборка всего перечисленного |
-| `queue.ts` | Фоновая доигровка оборванной по бюджету цепочки |
+| Файл          | Ответственность                                                                                                  |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `types.ts`    | Типы подсистемы: `SourceKey`, `SourceAdapter`, `Finding`, `FindResult`, `FindOptions`, `FindContext`. Логики нет |
+| `trace.ts`    | Журнал одного поиска: корреляционный id, уровни, замер времени                                                   |
+| `budget.ts`   | Бюджет времени на цепочку: `deadline(ms)`                                                                        |
+| `safely.ts`   | Обёртка «поймать всё и записать»: одна ступень не роняет цепочку                                                 |
+| `adapters.ts` | Адаптеры над существующими клиентами — единственное место, где живёт сеть                                        |
+| `chain.ts`    | `resolveChain(userId)` — состав и порядок из настроек. Точка будущего пейвола                                    |
+| `merge.ts`    | Слияние находок: приоритет полей = порядок цепочки                                                               |
+| `cache.ts`    | Кэш, привязанный к отпечатку настроек                                                                            |
+| `enrich.ts`   | Добор обложки, аннотации и объёма — по той же цепочке                                                            |
+| `core.ts`     | `findEdition()` — сборка всего перечисленного                                                                    |
+| `queue.ts`    | Фоновая доигровка оборванной по бюджету цепочки                                                                  |
 
 Правится существующее:
 
-| Файл | Что меняется |
-| ---- | ------------ |
-| `src/services/bookSources.ts` | Из `SourceKey` уходит мёртвый `'model'` |
-| `src/services/metadata/lookup.ts` | `lookupIsbn` становится тонкой обёрткой над ядром |
-| `src/services/metadata/merge.ts` | Зашитые `BIB_ORDER` / `ANNOTATION_ORDER` удаляются |
-| `src/services/reference.ts` | Зашитый `SOURCE_PRIORITY` заменяется порядком цепочки |
-| `src/services/aiRecognize.ts` | `recognizeIsbn` и `proposeForBook` переезжают на ядро |
-| `src/services/unrecognized.ts` | `retryLookup` переезжает на ядро и на общего писателя карточки |
-| `src/services/bookWriter.ts` (новый) | Единственное место, которое пишет найденное в карточку |
-| `src/services/metadata/{googleBooks,fantlab,openLibrary}.ts` | Снимаются `NODE_ENV === 'test'` |
-| `src/services/titleSearch.ts` | FantLab спрашивается только если включён |
-| `src/services/covers.ts` | `searchCoversForBook` идёт через цепочку |
-| `src/db/schema/catalog.ts` | Новая таблица `find_task`, колонка `chain` у `lookup_cache` |
-| `src/db/schema/moderation.ts` | Колонка `chain` у `ai_isbn_guess` |
-| `src/routes/_app/add.tsx` | Выбор режима сканирования, отчёт по источникам |
-| `docs/architecture.md`, `docs/roadmap.md`, `docs/ux-ui-guideline.md`, `docs/search.md` (новый) | Документация |
+| Файл                                                                                           | Что меняется                                                   |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `src/services/bookSources.ts`                                                                  | Из `SourceKey` уходит мёртвый `'model'`                        |
+| `src/services/metadata/lookup.ts`                                                              | `lookupIsbn` становится тонкой обёрткой над ядром              |
+| `src/services/metadata/merge.ts`                                                               | Зашитые `BIB_ORDER` / `ANNOTATION_ORDER` удаляются             |
+| `src/services/reference.ts`                                                                    | Зашитый `SOURCE_PRIORITY` заменяется порядком цепочки          |
+| `src/services/aiRecognize.ts`                                                                  | `recognizeIsbn` и `proposeForBook` переезжают на ядро          |
+| `src/services/unrecognized.ts`                                                                 | `retryLookup` переезжает на ядро и на общего писателя карточки |
+| `src/services/bookWriter.ts` (новый)                                                           | Единственное место, которое пишет найденное в карточку         |
+| `src/services/metadata/{googleBooks,fantlab,openLibrary}.ts`                                   | Снимаются `NODE_ENV === 'test'`                                |
+| `src/services/titleSearch.ts`                                                                  | FantLab спрашивается только если включён                       |
+| `src/services/covers.ts`                                                                       | `searchCoversForBook` идёт через цепочку                       |
+| `src/db/schema/catalog.ts`                                                                     | Новая таблица `find_task`, колонка `chain` у `lookup_cache`    |
+| `src/db/schema/moderation.ts`                                                                  | Колонка `chain` у `ai_isbn_guess`                              |
+| `src/routes/_app/add.tsx`                                                                      | Выбор режима сканирования, отчёт по источникам                 |
+| `docs/architecture.md`, `docs/roadmap.md`, `docs/ux-ui-guideline.md`, `docs/search.md` (новый) | Документация                                                   |
 
 ---
 
@@ -68,12 +68,14 @@
 Фундамент: три файла без внешних зависимостей, на которые опирается всё остальное.
 
 **Файлы:**
+
 - Создать: `src/services/find/types.ts`
 - Создать: `src/services/find/trace.ts`
 - Создать: `src/services/find/budget.ts`
 - Создать: `src/services/find/budget.test.ts`
 
 **Интерфейсы:**
+
 - Отдаёт наружу: `SourceKey`, `SourceAdapter`, `Finding`, `SourceProbe`, `FindResult`, `FindOptions`, `FindContext`, `Trace`, `startTrace()`, `Deadline`, `deadline()`.
 - Потребляет: `MetadataDraft` из `@/services/metadata/types`, `log` из `@/lib/logger`.
 
@@ -95,12 +97,7 @@ import type { Trace } from './trace'
 
 /** Ключ ступени. Совпадает со значением `book_source.key`. */
 export type SourceKey =
-  | 'reference'
-  | 'fantlab'
-  | 'google'
-  | 'openlibrary'
-  | 'web'
-  | 'neuro'
+  'reference' | 'fantlab' | 'google' | 'openlibrary' | 'web' | 'neuro'
 
 /** Что ответила ступень: показывается человеку и ложится в журнал. */
 export interface SourceProbe {
@@ -255,8 +252,10 @@ export function startTrace(isbn13: string, userId: string): Trace {
   return {
     id,
     ms,
-    info: (message, fields) => log.info('find', message, { ...base, ...fields }),
-    warn: (message, fields) => log.warn('find', message, { ...base, ...fields }),
+    info: (message, fields) =>
+      log.info('find', message, { ...base, ...fields }),
+    warn: (message, fields) =>
+      log.warn('find', message, { ...base, ...fields }),
     error: (message, fields) =>
       log.error('find', message, { ...base, ...fields }),
   }
@@ -366,10 +365,12 @@ git commit -m "M32: каркас единого поиска — типы, жу�
 Требование 3 целиком: любая ошибка ловится, записывается и превращается в «эта ступень промолчала».
 
 **Файлы:**
+
 - Создать: `src/services/find/safely.ts`
 - Создать: `src/services/find/safely.test.ts`
 
 **Интерфейсы:**
+
 - Потребляет: `Trace` из `./trace`.
 - Отдаёт наружу: `safely<T>(what, trace, run, timeoutMs?)` → `Promise<{ value: T | null; failure: string | null; ms: number }>`.
 
@@ -469,7 +470,9 @@ export async function safely<T>(
   const ms = () => Math.round(performance.now() - started)
   try {
     const value =
-      timeoutMs === undefined ? await run() : await withTimeout(run(), timeoutMs)
+      timeoutMs === undefined
+        ? await run()
+        : await withTimeout(run(), timeoutMs)
     return { value, failure: null, ms: ms() }
   } catch (error) {
     const failure = error instanceof Error ? error.message : String(error)
@@ -517,11 +520,13 @@ git commit -m "M32: отказ ступени не роняет поиск"
 Требование 2, первая половина: кого спрашивать и в каком порядке — решает `resolveChain(userId)`, и больше никто. Здесь же снимается мёртвый ключ `'model'` и закладывается точка пейвола.
 
 **Файлы:**
+
 - Создать: `src/services/find/chain.ts`
 - Создать: `src/services/find/chain.test.ts`
 - Изменить: `src/services/bookSources.ts:15-16` (тип `SourceKey`)
 
 **Интерфейсы:**
+
 - Потребляет: `sourceStates()` из `@/services/bookSources`; типы из `./types`.
 - Отдаёт наружу: `resolveChain(userId, registry?)` → `Promise<ChainStep[]>`, где `ChainStep = { adapter: SourceAdapter; enabled: boolean; reason: string | null }`.
 
@@ -745,12 +750,14 @@ git commit -m "M32: состав и порядок цепочки — тольк
 Сеть переезжает за границу ядра. Адаптеры — тонкие обёртки над уже существующими и проверенными клиентами; логику разбора ответов не трогаем.
 
 **Файлы:**
+
 - Создать: `src/services/find/clean.ts`
 - Изменить: `src/services/find/adapters.ts` (заглушка из задачи 3 наполняется)
 - Создать: `src/services/find/adapters.test.ts`
 - Изменить: `src/services/aiRecognize.ts` (чистилки уезжают, остаётся реэкспорт)
 
 **Интерфейсы:**
+
 - Потребляет: `refLookup` из `@/services/reference`; `fetchFantlab`, `fetchGoogleBooks`, `fetchGoogleByTitle`, `fetchOpenLibrary` из `@/services/metadata/*`; `searchWeb`, `genSearch`, `spendSearch`, `mentionsIsbn`, `fetchOpenGraph`, `searchCoverImages` из `@/services/webSearch`; `ask` из `@/services/ai`; `bestRefBookIdForIsbn` из `@/services/reference`.
 - Отдаёт наружу: `ADAPTERS: Partial<Record<SourceKey, SourceAdapter>>`, `WEB_SYSTEM`, `parseGuessDrafts(text)`.
 
@@ -866,7 +873,7 @@ export {
 
 Заменить содержимое `src/services/find/adapters.ts`:
 
-```ts
+````ts
 import { ask } from '@/services/ai'
 import {
   cleanAnnotation,
@@ -875,7 +882,10 @@ import {
   looksTransliterated,
 } from './clean'
 import { fetchFantlab } from '@/services/metadata/fantlab'
-import { fetchGoogleBooks, fetchGoogleByTitle } from '@/services/metadata/googleBooks'
+import {
+  fetchGoogleBooks,
+  fetchGoogleByTitle,
+} from '@/services/metadata/googleBooks'
 import { fetchOpenLibrary } from '@/services/metadata/openLibrary'
 import { bestRefBookIdForIsbn, refLookup } from '@/services/reference'
 import {
@@ -919,8 +929,9 @@ const finding = (
 const one = (found: Finding | null): Array<Finding> => (found ? [found] : [])
 
 /** Первый непустой черновик из набора результатов источника. */
-const firstDraft = (results: Array<SourceResult> | null): MetadataDraft | null =>
-  results?.find((r) => r.draft.title)?.draft ?? null
+const firstDraft = (
+  results: Array<SourceResult> | null,
+): MetadataDraft | null => results?.find((r) => r.draft.title)?.draft ?? null
 
 const reference: SourceAdapter = {
   key: 'reference',
@@ -946,9 +957,7 @@ const fantlab: SourceAdapter = {
   probe: async (ctx) => {
     const result = await fetchFantlab(ctx.isbn13)
     return one(
-      result?.draft.title
-        ? finding('fantlab', result.draft, ctx.isbn13)
-        : null,
+      result?.draft.title ? finding('fantlab', result.draft, ctx.isbn13) : null,
     )
   },
 }
@@ -1027,7 +1036,10 @@ export function parseGuessDrafts(
   const items = Array.isArray(raw) ? raw : [raw]
   return items
     .map((item) => parseOneGuess(item))
-    .filter((v): v is { draft: MetadataDraft; sourceUrl: string | null } => v !== null)
+    .filter(
+      (v): v is { draft: MetadataDraft; sourceUrl: string | null } =>
+        v !== null,
+    )
 }
 
 function parseOneGuess(
@@ -1209,7 +1221,7 @@ export const ADAPTERS: Partial<Record<SourceKey, SourceAdapter>> = {
   web,
   neuro,
 }
-```
+````
 
 - [ ] **Шаг 5: Убедиться, что тесты проходят**
 
@@ -1231,12 +1243,14 @@ git commit -m "M32: источники стали адаптерами — се�
 Требование 2, вторая половина: порядок в списке решает не только очередь опроса, но и **чьи данные победят**. Сейчас приоритет зашит в трёх местах и настройкам не подчиняется.
 
 **Файлы:**
+
 - Создать: `src/services/find/merge.ts`
 - Создать: `src/services/find/merge.test.ts`
 - Изменить: `src/services/metadata/merge.ts` (удалить `BIB_ORDER`, `ANNOTATION_ORDER`)
 - Изменить: `src/services/reference.ts:29-34` (удалить `SOURCE_PRIORITY`)
 
 **Интерфейсы:**
+
 - Потребляет: `Finding`, `SourceKey` из `./types`; `MetadataDraft` из `@/services/metadata/types`.
 - Отдаёт наружу: `mergeFindings(findings, order)` → `{ draft: MetadataDraft; covers: Array<string> }`.
 
@@ -1301,7 +1315,10 @@ describe('слияние находок', () => {
 
   test('пустая строка не считается значением', () => {
     const { draft } = mergeFindings(
-      [make('fantlab', { publisher: '' }), make('google', { publisher: 'АСТ' })],
+      [
+        make('fantlab', { publisher: '' }),
+        make('google', { publisher: 'АСТ' }),
+      ],
       ['fantlab', 'google'],
     )
     expect(draft.publisher).toBe('АСТ')
@@ -1516,12 +1533,14 @@ git commit -m "M32: порядок источников решает, чьи д�
 Кэш перестаёт врать: результат, полученный при одном составе источников, не отдаётся при другом.
 
 **Файлы:**
+
 - Создать: `src/services/find/cache.ts`
 - Создать: `src/services/find/cache.test.ts`
 - Изменить: `src/db/schema/circulation.ts` (колонка `chain` у `lookup_cache`)
 - Создать: миграция через `bun run db:generate`
 
 **Интерфейсы:**
+
 - Потребляет: `db` из `@/db`; `lookupCache` из `@/db/schema/circulation`; типы из `./types`.
 - Отдаёт наружу: `chainFingerprint(order)`, `readCache(isbn13, fingerprint)`, `writeCache(isbn13, fingerprint, result)`.
 
@@ -1612,7 +1631,9 @@ describe('кэш поиска', () => {
   })
 
   test('незнакомый номер — промах', async () => {
-    expect(await readCache('9780000000002', chainFingerprint(['fantlab']))).toBeNull()
+    expect(
+      await readCache('9780000000002', chainFingerprint(['fantlab'])),
+    ).toBeNull()
   })
 })
 ```
@@ -1713,11 +1734,13 @@ git commit -m "M32: кэш поиска привязан к составу ис�
 Сборка всего: цепочка, бюджет, устойчивость, слияние, кэш, отчёт и журнал.
 
 **Файлы:**
+
 - Создать: `src/services/find/enrich.ts`
 - Создать: `src/services/find/core.ts`
 - Создать: `src/services/find/core.test.ts`
 
 **Интерфейсы:**
+
 - Потребляет: `resolveChain` из `./chain`; `deadline` из `./budget`; `safely` из `./safely`; `mergeFindings` из `./merge`; `chainFingerprint`, `readCache`, `writeCache` из `./cache`; `startTrace` из `./trace`; `parseIsbn` из `@/services/isbn`; `AppError` из `@/services/errors`.
 - Отдаёт наружу: `findEdition(userId, rawIsbn, options?)` → `Promise<FindResult>`; `enrichDraft(ctx, chain, draft, covers)`.
 
@@ -1870,9 +1893,9 @@ beforeEach(async () => {
 
 describe('ядро поиска', () => {
   test('кривой ISBN — понятная ошибка, а не падение', async () => {
-    await expect(findEdition(ME, '123', { adapters: registry() })).rejects.toThrow(
-      /ISBN/i,
-    )
+    await expect(
+      findEdition(ME, '123', { adapters: registry() }),
+    ).rejects.toThrow(/ISBN/i)
   })
 
   test('находки сливаются по порядку цепочки', async () => {
@@ -1897,7 +1920,9 @@ describe('ядро поиска', () => {
 
   test('упавший источник не роняет поиск', async () => {
     const result = await findEdition(ME, ISBN, {
-      adapters: registry({ fantlab: answering('fantlab', null, { throws: true }) }),
+      adapters: registry({
+        fantlab: answering('fantlab', null, { throws: true }),
+      }),
     })
     expect(result.draft.title).toBe('Zona')
     const probe = result.probes.find((p) => p.key === 'fantlab')
@@ -1906,7 +1931,9 @@ describe('ядро поиска', () => {
   })
 
   test('нашлось бесплатно — за платное не платим', async () => {
-    const paidRegistry = registry({ web: answering('web', { title: 'Из веба' }, { paid: true }) })
+    const paidRegistry = registry({
+      web: answering('web', { title: 'Из веба' }, { paid: true }),
+    })
     await findEdition(ME, ISBN, { adapters: paidRegistry })
     expect(asked).not.toContain('web')
   })
@@ -1928,7 +1955,10 @@ describe('ядро поиска', () => {
       fantlab: answering('fantlab', null),
       google: answering('google', null),
     })
-    const result = await findEdition(ME, ISBN, { budgetMs: 1, adapters: silent })
+    const result = await findEdition(ME, ISBN, {
+      budgetMs: 1,
+      adapters: silent,
+    })
     expect(result.truncated).toBe(true)
     expect(asked).not.toContain('web')
   })
@@ -1938,7 +1968,10 @@ describe('ядро поиска', () => {
       fantlab: answering('fantlab', null),
       google: answering('google', null),
     })
-    const result = await findEdition(ME, ISBN, { budgetMs: 1, adapters: silent })
+    const result = await findEdition(ME, ISBN, {
+      budgetMs: 1,
+      adapters: silent,
+    })
     expect(result.probes.some((p) => p.outcome === 'не успели')).toBe(true)
   })
 
@@ -2124,7 +2157,12 @@ export async function findEdition(
   for (const step of chain) {
     const key = step.adapter.key
     if (rejected.has(key)) {
-      probes.push({ key, outcome: 'выключен', detail: 'отвергнут человеком', ms: 0 })
+      probes.push({
+        key,
+        outcome: 'выключен',
+        detail: 'отвергнут человеком',
+        ms: 0,
+      })
       continue
     }
     if (!step.enabled) {
@@ -2271,6 +2309,7 @@ git commit -m "M32: ядро findEdition — одна цепочка на все
 Четыре ветки становятся вызовами ядра. Здесь же снимаются `NODE_ENV === 'test'` из боевых клиентов — они больше не нужны, потому что тесты подставляют адаптеры.
 
 **Файлы:**
+
 - Создать: `src/services/bookWriter.ts`
 - Создать: `src/services/bookWriter.test.ts`
 - Изменить: `src/services/metadata/lookup.ts` (целиком)
@@ -2281,6 +2320,7 @@ git commit -m "M32: ядро findEdition — одна цепочка на все
 - Изменить: `src/services/metadata/{googleBooks,fantlab,openLibrary}.ts` (снять `NODE_ENV`)
 
 **Интерфейсы:**
+
 - Потребляет: `findEdition` из `@/services/find/core`; `FindResult` из `@/services/find/types`.
 - Отдаёт наружу: `applyDraftToBook(bookId, draft, options)` → `Promise<void>`.
 
@@ -2593,37 +2633,37 @@ export async function lookupIsbn(
 В `src/services/unrecognized.ts` заменить тело цикла в `retryLookup` (строки 101–149) на:
 
 ```ts
-  const { findEdition } = await import('./find/core')
-  const { applyDraftToBook } = await import('./bookWriter')
-  const { saveCoverFromUrl } = await import('./covers')
+const { findEdition } = await import('./find/core')
+const { applyDraftToBook } = await import('./bookWriter')
+const { saveCoverFromUrl } = await import('./covers')
 
-  let resolved = 0
-  let missed = 0
-  for (const row of rows) {
-    const found = await findEdition(userId, row.isbn13!)
-    if (!found.draft.title?.trim()) {
-      missed++
-      continue
-    }
-    await applyDraftToBook(row.id, found.draft, { userId })
-    if (!row.coverPath && found.draft.coverUrl) {
-      try {
-        const saved = await saveCoverFromUrl(row.id, found.draft.coverUrl)
-        await db
-          .update(book)
-          .set({ coverPath: saved.path, coverColor: saved.color })
-          .where(eq(book.id, row.id))
-      } catch (error) {
-        // обложка — best-effort, но молчать об отказе нельзя
-        log.warn('find', 'обложка не сохранилась', {
-          bookId: row.id,
-          message: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-    resolved++
+let resolved = 0
+let missed = 0
+for (const row of rows) {
+  const found = await findEdition(userId, row.isbn13!)
+  if (!found.draft.title?.trim()) {
+    missed++
+    continue
   }
-  return { resolved, missed }
+  await applyDraftToBook(row.id, found.draft, { userId })
+  if (!row.coverPath && found.draft.coverUrl) {
+    try {
+      const saved = await saveCoverFromUrl(row.id, found.draft.coverUrl)
+      await db
+        .update(book)
+        .set({ coverPath: saved.path, coverColor: saved.color })
+        .where(eq(book.id, row.id))
+    } catch (error) {
+      // обложка — best-effort, но молчать об отказе нельзя
+      log.warn('find', 'обложка не сохранилась', {
+        bookId: row.id,
+        message: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+  resolved++
+}
+return { resolved, missed }
 ```
 
 Добавить в шапку файла импорт: `import { log } from '@/lib/logger'`. Удалить ставшие ненужными импорты `normalizeForSearch` и `syncBookAuthors`, если они больше нигде в файле не используются (проверить `bun run typecheck`).
@@ -2721,7 +2761,9 @@ export async function recognizeIsbn(
         }
       : null,
     cached: found.cached,
-    askedModel: found.findings.some((f) => f.key === 'web' || f.key === 'neuro'),
+    askedModel: found.findings.some(
+      (f) => f.key === 'web' || f.key === 'neuro',
+    ),
     sources: found.probes.map((p) => ({
       name: SOURCE_NAME[p.key] ?? p.key,
       outcome:
@@ -2766,28 +2808,28 @@ const SOURCE_NAME: Record<string, string> = {
 В `src/services/aiRecognize.ts:1490-1513` заменить прямой вызов Google на цепочку:
 
 ```ts
-  // штатная цепочка: та же, что в разборе нераспознанных. Книга без ISBN
-  // ищется по названию — но той же цепочкой, а не в обход настроек
-  const found = row.isbn13
-    ? await recognizeIsbn(userId, row.isbn13, { force: fresh })
-    : null
-  const shown =
-    found?.variants.find((v) => v.via === variantVia) ??
-    found?.variants[found.variantIndex] ??
-    found?.variants[found.variants.length - 1] ??
-    null
+// штатная цепочка: та же, что в разборе нераспознанных. Книга без ISBN
+// ищется по названию — но той же цепочкой, а не в обход настроек
+const found = row.isbn13
+  ? await recognizeIsbn(userId, row.isbn13, { force: fresh })
+  : null
+const shown =
+  found?.variants.find((v) => v.via === variantVia) ??
+  found?.variants[found.variantIndex] ??
+  found?.variants[found.variants.length - 1] ??
+  null
 
-  const draft = {
-    title: shown?.title ?? null,
-    authors: shown?.authors ?? null,
-    publisher: shown?.publisher ?? null,
-    year: shown?.year ?? null,
-    pages: shown?.pages ?? null,
-    annotation: shown?.annotation ?? null,
-    coverUrl: shown?.coverUrl ?? null,
-    seriesName: shown?.seriesName ?? null,
-  }
-  if (!draft.title) return null
+const draft = {
+  title: shown?.title ?? null,
+  authors: shown?.authors ?? null,
+  publisher: shown?.publisher ?? null,
+  year: shown?.year ?? null,
+  pages: shown?.pages ?? null,
+  annotation: shown?.annotation ?? null,
+  coverUrl: shown?.coverUrl ?? null,
+  seriesName: shown?.seriesName ?? null,
+}
+if (!draft.title) return null
 ```
 
 Ветка `fetchGoogleByTitle` удаляется: добор по названию теперь живёт в `enrichDraft` и подчиняется настройкам.
@@ -2838,18 +2880,19 @@ export async function searchByTitle(
 В `src/services/covers.ts:283-303` в `searchCoversForBook` добавить проверку перед расходом:
 
 ```ts
-  const { isEnabled } = await import('@/services/bookSources')
-  if (!(await isEnabled('neuro'))) {
-    throw new AppError(
-      'Поиск обложек выключен в настройках источников',
-      'invalid',
-    )
-  }
+const { isEnabled } = await import('@/services/bookSources')
+if (!(await isEnabled('neuro'))) {
+  throw new AppError(
+    'Поиск обложек выключен в настройках источников',
+    'invalid',
+  )
+}
 ```
 
 - [ ] **Шаг 12: Снять `NODE_ENV === 'test'` из боевых клиентов**
 
 Удалить строки-заглушки:
+
 - `src/services/metadata/googleBooks.ts:59` и `:113`
 - `src/services/metadata/fantlab.ts:139`
 - `src/services/metadata/openLibrary.ts:44`
@@ -2878,6 +2921,7 @@ git commit -m "M32: все точки входа зовут одно ядро"
 Оборванная по бюджету цепочка доигрывается воркером — сканер не ждёт платных ступеней.
 
 **Файлы:**
+
 - Изменить: `src/db/schema/catalog.ts` (таблица `find_task`)
 - Создать: миграция через `bun run db:generate`
 - Создать: `src/services/find/queue.ts`
@@ -2885,6 +2929,7 @@ git commit -m "M32: все точки входа зовут одно ядро"
 - Изменить: `src/db/index.ts:119` (запуск воркера)
 
 **Интерфейсы:**
+
 - Потребляет: `findEdition` из `./core`; `applyDraftToBook` из `@/services/bookWriter`.
 - Отдаёт наружу: `enqueueFind(bookId, userId, isbn13)`, `runNextFind()`, `startFindWorker()`.
 
@@ -3005,7 +3050,10 @@ const makeBook = async () => {
     libraryId: lib.id,
     shelfId: shelfRow.id,
   })
-  await db.update(book).set({ unrecognized: true }).where(eq(book.id, created.id))
+  await db
+    .update(book)
+    .set({ unrecognized: true })
+    .where(eq(book.id, created.id))
   return created
 }
 
@@ -3226,11 +3274,13 @@ git commit -m "M32: платные ступени доигрываются фо�
 Человек выбирает, ждать ли полного поиска. Плюс на «Добавить» появляется тот же отчёт по источникам, что есть в разборе.
 
 **Файлы:**
+
 - Изменить: `src/server/lookup.ts`
 - Изменить: `src/routes/_app/add.tsx`
 - Изменить: `docs/ux-ui-guideline.md` (раздел «Мобильные паттерны»)
 
 **Интерфейсы:**
+
 - Потребляет: `lookupIsbn(userId, rawIsbn, options)`; `enqueueFind` из `@/services/find/queue`; `QUICK_BUDGET_MS`, `FULL_BUDGET_MS` из `@/services/find/types`.
 
 - [ ] **Шаг 1: Принять режим в серверной функции**
@@ -3309,17 +3359,17 @@ type Depth = 'quick' | 'full'
 Рядом с прочими `useState` добавить состояние с липким значением:
 
 ```ts
-  const [depth, setDepth] = useState<Depth>('quick')
-  useEffect(() => {
-    const stored = localStorage.getItem(DEPTH_KEY)
-    if (stored === 'quick' || stored === 'full') setDepth(stored)
-  }, [])
+const [depth, setDepth] = useState<Depth>('quick')
+useEffect(() => {
+  const stored = localStorage.getItem(DEPTH_KEY)
+  if (stored === 'quick' || stored === 'full') setDepth(stored)
+}, [])
 ```
 
 В `runLookup` (строка 83) передать режим и запомнить `truncated`:
 
 ```ts
-        const result = await lookupIsbnFn({ data: { isbn, depth } })
+const result = await lookupIsbnFn({ data: { isbn, depth } })
 ```
 
 и добавить `depth` в массив зависимостей `useCallback`.
@@ -3367,9 +3417,9 @@ type Depth = 'quick' | 'full'
 В `src/routes/_app/add.tsx:131` в функции `save` дополнить вход книги:
 
 ```ts
-      const { id } = await createBookFn({
-        data: { ...toBookInput(draft), truncated: lookup?.truncated ?? false },
-      })
+const { id } = await createBookFn({
+  data: { ...toBookInput(draft), truncated: lookup?.truncated ?? false },
+})
 ```
 
 - [ ] **Шаг 5: Показать ленту цепочки**
@@ -3424,6 +3474,7 @@ git commit -m "M32: режим поиска выбирает человек, о�
 Требование 6. Отдельный документ на подсистему + правки в сквозных документах.
 
 **Файлы:**
+
 - Создать: `docs/search.md`
 - Изменить: `docs/architecture.md` (разделы «Метаданные по ISBN», «Источники книг», «Журнал», «Тестирование», «Подводные камни»)
 - Изменить: `docs/roadmap.md` (строка этапа M32 и его проверка)
@@ -3435,7 +3486,7 @@ git commit -m "M32: режим поиска выбирает человек, о�
 1. **Зачем один поиск** — что было до M32: четыре ветки (`lookupIsbn`, `recognizeIsbn`, `retryLookup`, `proposeForBook`), разный результат по одному номеру, веб-поиск не работал при сканировании.
 2. **Цепочка** — таблица ступеней: ключ, что умеет, платная ли, таймаут, чем подтверждается находка. Отдельно — правило лесенки: платная ступень не спрашивается, если бесплатная уже дала годный ответ.
 3. **Кто что решает** — `resolveChain(userId)` решает состав и порядок; `merge` решает, чьи данные победят; бюджет решает, докуда дойти. Зашитых порядков в коде нет.
-3а. **Слабые находки** — что такое `weak`, почему транслит (`Deti-bilingvy` вместо «Дети-билингвы») не останавливает цепочку, но возвращается, если больше нечего вернуть.
+   3а. **Слабые находки** — что такое `weak`, почему транслит (`Deti-bilingvy` вместо «Дети-билингвы») не останавливает цепочку, но возвращается, если больше нечего вернуть.
 4. **Бюджет времени и режимы** — `QUICK_BUDGET_MS` / `FULL_BUDGET_MS`, почему глубина — это число, а не список источников; что такое `truncated` и кто доигрывает.
 5. **Устойчивость** — правило «ни одна ступень не роняет поиск», `safely`, запрет глухих `catch {}`.
 6. **Журнал** — scope `find`, корреляционный id, что пишется на каждом уровне, как прочитать один поиск целиком: `grep 'find=abc123' /data/logs/polka.log`.
@@ -3457,7 +3508,7 @@ git commit -m "M32: режим поиска выбирает человек, о�
 В таблицу этапов после строки M27 добавить:
 
 ```markdown
-| M32  | Единый поиск изданий: одно ядро, порядок из настроек, устойчивость, журнал | ✅ 2026-08-XX (дата коммита)                                                  |
+| M32 | Единый поиск изданий: одно ядро, порядок из настроек, устойчивость, журнал | ✅ 2026-08-XX (дата коммита) |
 ```
 
 В раздел «Проверки этапов» добавить:
@@ -3483,13 +3534,13 @@ git commit -m "docs: единый поиск изданий (M32)"
 
 **Покрытие требований владельца:**
 
-| Требование | Где закрыто |
-| ---------- | ----------- |
-| 1. Уникальность — одна функция из разных частей | Задача 7 (ядро), задача 8 (переезд всех четырёх точек входа + единый писатель карточки) |
-| 2. Соответствие настройкам — состав и порядок | Задача 3 (`resolveChain`), задача 5 (порядок решает приоритет полей), задача 8 шаги 9–10 (`titleSearch`, `covers`) |
-| 3. Поиск не роняет приложение | Задача 2 (`safely`), задача 7 (каждая ступень обёрнута), задача 9 (воркер не роняет процесс) |
-| 4. Winston: info / warn / error | Задача 1 (`trace`), задача 2 (warn на отказе ступени), задача 7 (info на ход дела, error на незаписанный кэш), задача 9 (error на упавшую задачу) |
-| 5. Мои варианты | Кэш с отпечатком настроек (задача 6), общий бюджет времени (задача 1), отчёт источников в «Добавить» (задача 10), тестируемость через подстановку адаптеров (задачи 3–9), мёртвый ключ `model` (задача 3), три зашитых приоритета (задача 5) |
+| Требование                                      | Где закрыто                                                                                                                                                                                                                                  |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Уникальность — одна функция из разных частей | Задача 7 (ядро), задача 8 (переезд всех четырёх точек входа + единый писатель карточки)                                                                                                                                                      |
+| 2. Соответствие настройкам — состав и порядок   | Задача 3 (`resolveChain`), задача 5 (порядок решает приоритет полей), задача 8 шаги 9–10 (`titleSearch`, `covers`)                                                                                                                           |
+| 3. Поиск не роняет приложение                   | Задача 2 (`safely`), задача 7 (каждая ступень обёрнута), задача 9 (воркер не роняет процесс)                                                                                                                                                 |
+| 4. Winston: info / warn / error                 | Задача 1 (`trace`), задача 2 (warn на отказе ступени), задача 7 (info на ход дела, error на незаписанный кэш), задача 9 (error на упавшую задачу)                                                                                            |
+| 5. Мои варианты                                 | Кэш с отпечатком настроек (задача 6), общий бюджет времени (задача 1), отчёт источников в «Добавить» (задача 10), тестируемость через подстановку адаптеров (задачи 3–9), мёртвый ключ `model` (задача 3), три зашитых приоритета (задача 5) |
 
 **Сохранённое поведение, которое легко потерять при рефакторинге:**
 
@@ -3498,7 +3549,7 @@ git commit -m "docs: единый поиск изданий (M32)"
 - Приёмка веб-находки только по номеру в тексте страницы — M26 (задача 4, `readFromWeb`).
 - Находка каталогов не помечается «заполнил ИИ» и не идёт в очередь модератора — M30 (`applyRecognition` продолжает смотреть на `hit.via`; после переезда `via` — это ключ ступени, поэтому условие `hit.via !== 'sources'` заменить на проверку «ступень платная»: `!['reference','fantlab','google','openlibrary'].includes(hit.via ?? '')`).
 - Ступени «спросить модель по памяти» нет — M30.1 (в `SourceKey` ключа `model` больше нет вовсе).
-| 6. Документация в `docs/` | Задача 11 |
+  | 6. Документация в `docs/` | Задача 11 |
 
 **Согласованность имён:** `findEdition`, `resolveChain`, `mergeFindings`, `chainFingerprint`, `readCache`/`writeCache`, `enrichDraft`, `safely`, `startTrace`, `deadline`, `applyDraftToBook`, `enqueueFind`/`runNextFind`/`startFindWorker` — каждое объявляется ровно в одной задаче и используется в последующих под тем же именем. `SourceKey` определён в `find/types.ts` и реэкспортируется из `bookSources.ts`.
 

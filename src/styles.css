@@ -79,37 +79,38 @@
 /* «Как в системе» — пока пользователь не выбрал вручную */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-  --background: oklch(0.178 0.011 70); /* уголь с теплом #17150F */
-  --foreground: oklch(0.918 0.019 82); /* тёплый белый #EDE7DA */
-  --card: oklch(0.213 0.014 74); /* #1F1B14 */
-  --card-foreground: oklch(0.918 0.019 82);
-  --popover: oklch(0.213 0.014 74);
-  --popover-foreground: oklch(0.918 0.019 82);
-  --primary: oklch(0.706 0.079 158); /* лампа светлее #6FAE86 */
-  --primary-foreground: oklch(0.178 0.011 70);
-  --secondary: oklch(0.262 0.014 74);
-  --secondary-foreground: oklch(0.918 0.019 82);
-  --muted: oklch(0.262 0.014 74);
-  --muted-foreground: oklch(0.671 0.023 82); /* #A49C8B */
-  --accent: oklch(0.276 0.033 143); /* подсветка лампы #22301F */
-  --accent-foreground: oklch(0.789 0.093 158); /* #8CC7A1 */
-  --destructive: oklch(0.62 0.13 30); /* сургуч светлее */
-  --destructive-foreground: oklch(0.985 0.005 60);
-  --border: oklch(0.283 0.014 74); /* линия #302A20 */
-  --input: oklch(0.283 0.014 74);
-  --ring: oklch(0.706 0.079 158);
+    --background: oklch(0.178 0.011 70); /* уголь с теплом #17150F */
+    --foreground: oklch(0.918 0.019 82); /* тёплый белый #EDE7DA */
+    --card: oklch(0.213 0.014 74); /* #1F1B14 */
+    --card-foreground: oklch(0.918 0.019 82);
+    --popover: oklch(0.213 0.014 74);
+    --popover-foreground: oklch(0.918 0.019 82);
+    --primary: oklch(0.706 0.079 158); /* лампа светлее #6FAE86 */
+    --primary-foreground: oklch(0.178 0.011 70);
+    --secondary: oklch(0.262 0.014 74);
+    --secondary-foreground: oklch(0.918 0.019 82);
+    --muted: oklch(0.262 0.014 74);
+    --muted-foreground: oklch(0.671 0.023 82); /* #A49C8B */
+    --accent: oklch(0.276 0.033 143); /* подсветка лампы #22301F */
+    --accent-foreground: oklch(0.789 0.093 158); /* #8CC7A1 */
+    --destructive: oklch(0.62 0.13 30); /* сургуч светлее */
+    --destructive-foreground: oklch(0.985 0.005 60);
+    --border: oklch(0.283 0.014 74); /* линия #302A20 */
+    --input: oklch(0.283 0.014 74);
+    --ring: oklch(0.706 0.079 158);
 
-  --stamp: oklch(0.688 0.104 279); /* чернила светлее #8C9BE0 */
-  --patina-old: oklch(0.735 0.083 76); /* старое дерево #C9A46B */
-  --patina-fresh: oklch(0.335 0.021 82); /* свежая доска #4A4335 */
-  --shelf-neutral: oklch(0.3 0.014 74);
-  --board: oklch(0.45 0.045 62); /* доска #6B563C */
-  --board-edge: oklch(0.35 0.038 60); /* кромка #4B3B28 */
-  /* цвета корешков берутся из обложек и на тёмном кричат — гасим */
-  --spine-veil: oklch(0.178 0.011 70 / 0.22);
-  /* тени в темноте не читаются: кромка + мягкое свечение */
-  --shadow-book:
-    0 6px 16px -8px oklch(0 0 0 / 0.75), 0 0 0 1px oklch(0.918 0.019 82 / 0.06);
+    --stamp: oklch(0.688 0.104 279); /* чернила светлее #8C9BE0 */
+    --patina-old: oklch(0.735 0.083 76); /* старое дерево #C9A46B */
+    --patina-fresh: oklch(0.335 0.021 82); /* свежая доска #4A4335 */
+    --shelf-neutral: oklch(0.3 0.014 74);
+    --board: oklch(0.45 0.045 62); /* доска #6B563C */
+    --board-edge: oklch(0.35 0.038 60); /* кромка #4B3B28 */
+    /* цвета корешков берутся из обложек и на тёмном кричат — гасим */
+    --spine-veil: oklch(0.178 0.011 70 / 0.22);
+    /* тени в темноте не читаются: кромка + мягкое свечение */
+    --shadow-book:
+      0 6px 16px -8px oklch(0 0 0 / 0.75),
+      0 0 0 1px oklch(0.918 0.019 82 / 0.06);
   }
 }
 

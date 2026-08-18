@@ -142,7 +142,10 @@ describe('ядро поиска', () => {
       fantlab: answering('fantlab', null),
       google: answering('google', null),
     })
-    const result = await findEdition(ME, ISBN, { budgetMs: 1, adapters: silent })
+    const result = await findEdition(ME, ISBN, {
+      budgetMs: 1,
+      adapters: silent,
+    })
     expect(result.truncated).toBe(true)
     expect(asked).not.toContain('web')
   })
@@ -152,7 +155,10 @@ describe('ядро поиска', () => {
       fantlab: answering('fantlab', null),
       google: answering('google', null),
     })
-    const result = await findEdition(ME, ISBN, { budgetMs: 1, adapters: silent })
+    const result = await findEdition(ME, ISBN, {
+      budgetMs: 1,
+      adapters: silent,
+    })
     expect(result.probes.some((p) => p.outcome === 'не успели')).toBe(true)
   })
 

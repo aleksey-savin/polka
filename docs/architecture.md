@@ -96,34 +96,34 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 
 **Эталонный каталог (M14–M16)** — общий для всех пользователей, правки живут в копиях-книгах:
 
-| Таблица           | Колонки                                                                                                              | Смысл                                                                        |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `author`          | id, name, nameNorm unique, fantlabId?, openlibraryId?, bio?, birthYear?, deathYear?, country?, photoPath?             | дедуп по nameNorm; био заполняет фоновый воркер                             |
-| `book_author`     | bookId (cascade), authorId (cascade), position                                                                        | PK (bookId, authorId)                                                        |
-| `ref_work`        | id, source, sourceId, title, titleNorm, year?, workType?, annotation?, editionsFetchedAt?                            | произведение; unique (source, sourceId). `workType='cycle'` — это цикл       |
-| `ref_book`        | id, source, sourceRef, isbn13?, isbn10?, title, publisher?, year?, pages?, heightMm?, coverType?, coverPath?, rawJson | издание; unique (source, sourceRef)                                          |
-| `ref_book_work`   | refBookId (cascade), workId (cascade)                                                                                 | сборник покрывает несколько произведений                                     |
-| `ref_work_link`   | parentId→ref_work, childId→ref_work, position                                                                         | состав цикла по порядку чтения (M16)                                         |
-| `ref_work_author` | workId, authorId, position                                                                                            | PK (workId, authorId)                                                        |
-| `crawl_task`      | id, kind, source, authorId, status, attempts, scheduledAt, doneAt?, error?                                            | очередь фонового наполнения; unique (kind, source, authorId)                |
+| Таблица           | Колонки                                                                                                               | Смысл                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `author`          | id, name, nameNorm unique, fantlabId?, openlibraryId?, bio?, birthYear?, deathYear?, country?, photoPath?             | дедуп по nameNorm; био заполняет фоновый воркер                        |
+| `book_author`     | bookId (cascade), authorId (cascade), position                                                                        | PK (bookId, authorId)                                                  |
+| `ref_work`        | id, source, sourceId, title, titleNorm, year?, workType?, annotation?, editionsFetchedAt?                             | произведение; unique (source, sourceId). `workType='cycle'` — это цикл |
+| `ref_book`        | id, source, sourceRef, isbn13?, isbn10?, title, publisher?, year?, pages?, heightMm?, coverType?, coverPath?, rawJson | издание; unique (source, sourceRef)                                    |
+| `ref_book_work`   | refBookId (cascade), workId (cascade)                                                                                 | сборник покрывает несколько произведений                               |
+| `ref_work_link`   | parentId→ref_work, childId→ref_work, position                                                                         | состав цикла по порядку чтения (M16)                                   |
+| `ref_work_author` | workId, authorId, position                                                                                            | PK (workId, authorId)                                                  |
+| `crawl_task`      | id, kind, source, authorId, status, attempts, scheduledAt, doneAt?, error?                                            | очередь фонового наполнения; unique (kind, source, authorId)           |
 
 **Списки — вишлисты и подборки (M17)**:
 
-| Таблица          | Колонки                                                                                                      | Ограничения                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| `book_list`      | id, ownerId→user (cascade), kind ('wishlist'\|'collection'), title, description?, position, createdAt, updatedAt | idx (ownerId, kind, position)                                                          |
-| `book_list_item` | id, listId (cascade), bookId?/refWorkId?/refBookId?, note?, position, addedBy, createdAt                     | CHECK: ровно одна ссылка; частичные unique по каждой форме — дублей в списке нет      |
-| `gift_hold`      | id, itemId (cascade), shareId (cascade), guestName, holderKey, createdAt, canceledAt?                        | частичный unique (itemId) WHERE canceledAt IS NULL — одна активная бронь на книгу      |
+| Таблица          | Колонки                                                                                                          | Ограничения                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `book_list`      | id, ownerId→user (cascade), kind ('wishlist'\|'collection'), title, description?, position, createdAt, updatedAt | idx (ownerId, kind, position)                                                     |
+| `book_list_item` | id, listId (cascade), bookId?/refWorkId?/refBookId?, note?, position, addedBy, createdAt                         | CHECK: ровно одна ссылка; частичные unique по каждой форме — дублей в списке нет  |
+| `gift_hold`      | id, itemId (cascade), shareId (cascade), guestName, holderKey, createdAt, canceledAt?                            | частичный unique (itemId) WHERE canceledAt IS NULL — одна активная бронь на книгу |
 
 **Роли, модерация и почта (M21–M22)** — `schema/moderation.ts`:
 
-| Таблица             | Колонки                                                                                                             | Смысл                                                                   |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `user_account`      | userId PK→user (cascade), role ('user'\|'moderator'\|'admin'), publishBannedAt?, publishBanReason?, blockedAt?, blockedReason? | глобальная роль; роль в библиотеке — отдельная история                  |
-| `moderation_item`   | id, kind ('book_cover'\|'share'\|'ref_work'\|'ref_book'), targetId, status, ownerId?, reportCount, reason?, reviewedBy?, reviewedAt? | очередь; idx (status, reportCount)                                      |
-| `moderation_report` | id, itemId (cascade), reason, note?, reporterId?                                                                    | жалоба, в том числе от гостя без аккаунта                              |
-| `moderation_log`    | id, actorId?, action, kind?, targetId?, subjectId?, reason?, createdAt                                              | журнал решений — без него спор не разобрать                            |
-| `mail_setting`      | id='default', host?, port?, secure, username?, passwordEnc?, fromName?, fromEmail?, флаги видов писем, lastResult?  | пароль SMTP шифруется AES-GCM ключом из `BETTER_AUTH_SECRET`           |
+| Таблица             | Колонки                                                                                                                              | Смысл                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| `user_account`      | userId PK→user (cascade), role ('user'\|'moderator'\|'admin'), publishBannedAt?, publishBanReason?, blockedAt?, blockedReason?       | глобальная роль; роль в библиотеке — отдельная история       |
+| `moderation_item`   | id, kind ('book_cover'\|'share'\|'ref_work'\|'ref_book'), targetId, status, ownerId?, reportCount, reason?, reviewedBy?, reviewedAt? | очередь; idx (status, reportCount)                           |
+| `moderation_report` | id, itemId (cascade), reason, note?, reporterId?                                                                                     | жалоба, в том числе от гостя без аккаунта                    |
+| `moderation_log`    | id, actorId?, action, kind?, targetId?, subjectId?, reason?, createdAt                                                               | журнал решений — без него спор не разобрать                  |
+| `mail_setting`      | id='default', host?, port?, secure, username?, passwordEnc?, fromName?, fromEmail?, флаги видов писем, lastResult?                   | пароль SMTP шифруется AES-GCM ключом из `BETTER_AUTH_SECRET` |
 
 Инварианты, которые следит сервисный слой:
 
@@ -156,7 +156,9 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 | OpenLibrary  | `openlibrary.org/isbn/{isbn}.json`, обложки `covers.openlibrary.org/b/isbn/{isbn}-L.jpg` | 1 rps аноним; слать `User-Agent: Polka (контакт)` — тогда 3 rps         | Старые/переводные издания                      |
 | FantLab      | `api.fantlab.ru/search-editions?q={isbn}`                                                | API v0.9 «test mode», без SLA — best-effort                             | Русская фантастика: серии, обложки             |
 
-Алгоритм: нормализовать ISBN (дефисы, 10↔13, чек-цифра) → `Promise.allSettled` по трём источникам с таймаутом 4с → нормализация каждого в `Partial<BookDraft>` → пофилдовый merge: **FantLab > Google > OpenLibrary** для библио-полей (название, авторы, издательство, год, серия), **Google > FantLab** для аннотации; кандидаты обложек в том же порядке. Сырые ответы — в `lookup_cache` (при разборе завала один ISBN сканируют по нескольку раз). Обложка **скачивается на диск при сохранении книги** — не хотлинкуем (ссылки Google протухают, FantLab хотлинкать невежливо).
+С M32 весь поиск издания живёт в одной подсистеме `services/find/` и одной функции `findEdition`. Состав и порядок ступеней приходят из «Сервис → Источники», глубина задаётся бюджетом времени, отказ любой ступени превращается в строку отчёта, а не в падение. **Подробности — `docs/search.md`.**
+
+Обложка **скачивается на диск при сохранении книги** — не хотлинкуем (ссылки Google протухают, FantLab хотлинкать невежливо).
 
 ## Поиск и кириллица
 
@@ -196,22 +198,24 @@ PK — текстовые id (совместимо с better-auth). Все `?` �
 
 ## Переменные окружения
 
-| Переменная             | Обязательна          | Смысл                                    |
-| ---------------------- | -------------------- | ---------------------------------------- |
-| `DATA_DIR`             | да (в проде `/data`) | Каталог БД и обложек                     |
-| `BETTER_AUTH_SECRET`   | да                   | Секрет сессий                            |
-| `APP_URL`              | да                   | Внешний URL (для better-auth)            |
-| `REGISTRATION_OPEN`    | нет (default `true`) | `false` — скрыть и запретить регистрацию |
-| `GOOGLE_BOOKS_API_KEY` | нет                  | Поднимает лимиты Google Books            |
-| `CRAWL_ENABLED`        | нет (default `1`)    | `0` — выключить фоновый краулер эталона  |
+| Переменная             | Обязательна          | Смысл                                         |
+| ---------------------- | -------------------- | --------------------------------------------- |
+| `DATA_DIR`             | да (в проде `/data`) | Каталог БД и обложек                          |
+| `BETTER_AUTH_SECRET`   | да                   | Секрет сессий                                 |
+| `APP_URL`              | да                   | Внешний URL (для better-auth)                 |
+| `REGISTRATION_OPEN`    | нет (default `true`) | `false` — скрыть и запретить регистрацию      |
+| `GOOGLE_BOOKS_API_KEY` | нет                  | Поднимает лимиты Google Books                 |
+| `CRAWL_ENABLED`        | нет (default `1`)    | `0` — выключить фоновый краулер эталона       |
 | `LOG_LEVEL`            | нет (default `info`) | `debug` добавляет статику и серверные функции |
-| `GIT_SHA`              | ставится сборкой     | Версия образа, видна в журнале при старте |
+| `GIT_SHA`              | ставится сборкой     | Версия образа, видна в журнале при старте     |
 
 Почта (SMTP) в окружении не живёт — настраивается в приложении, «Сервис» → «Почта»; пароль хранится в базе зашифрованным.
 
 ## Журнал приложения
 
-Winston пишет в stdout (`docker compose logs`) и в файлы `/data/logs` — контейнер пересоздаётся каждой выкаткой и уносит свои логи, том остаётся. Посуточная ротация, 14 дней, симлинк `polka.log` на текущий. Ловим всё: любой вывод через `console` (в том числе библиотечный), неперехваченные исключения и отказы промисов, сигналы остановки, каждый HTTP-запрос со статусом и длительностью, старт с версией и временем миграций, работу краулера, heartbeat с памятью раз в пять минут. Подробности и команды — в README.
+Winston пишет в stdout (`docker compose logs`) и в файлы `/data/logs` — контейнер пересоздаётся каждой выкаткой и уносит свои логи, том остаётся. Посуточная ротация, 14 дней, симлинк `polka.log` на текущий. Ловим всё: любой вывод через `console` (в том числе библиотечный), неперехваченные исключения и отказы промисов, сигналы остановки, каждый HTTP-запрос со статусом и длительностью, старт с версией и временем миграций, работу краулера, heartbeat с памятью раз в пять минут. Подробности и команды — в README. У подсистемы поиска свой scope `find` и
+корреляционный id: один поиск читается целиком через
+`grep 'find=<id>' /data/logs/polka.log`.
 
 ## ИИ (M24)
 
@@ -277,9 +281,10 @@ ai_suggestion               book_id · isbn13 · verdict · status
 - Список моделей ИИ спрашивается у провайдера: для Яндекса пробуются
   `llm.api.cloud.yandex.net/v1/models` и `foundationModels/v1/models`, ответы
   разных форм (`data[].id`, `models[].uri`) разбирает `parseModelList`.
-- В тестах внешние клиенты (`fetchGoogleBooks`, `fetchFantlab`,
-  `fetchOpenLibrary`, `searchFantlab`, `fetchWorkEditions`) наружу не ходят —
-  иначе прогон зависит от чужих серверов.
+- В тестах источники подставляются параметром `adapters` (M32). Прежние
+  проверки `NODE_ENV === 'test'` внутри клиентов убраны: из-за них нельзя было
+  проверить ни «источник упал — поиск выжил», ни «выключенный источник не
+  спрашивается», а два теста при этом молча ходили в интернет.
 
 ## Поиск в интернете по ISBN (M26)
 
@@ -342,8 +347,11 @@ book_source  key (reference · fantlab · google · openlibrary · web · neuro 
 ```
 
 - `services/bookSources.ts` — единственное место, где записан порядок опроса.
-  `lookupIsbn` берёт из него состав и очередь каталогов, `recognizeIsbn` —
-  можно ли спрашивать веб-поиск, Нейропоиск и модель. Зашитого порядка нет.
+  С M32 его читает `resolveChain`, а через неё — все входы поиска сразу.
+  Порядок влияет не только на очередь опроса, но и на **приоритет полей**:
+  поднял Google над FantLab — название придёт из Google.
+- Ключа `model` в списке нет: ступень «спросить модель по памяти» убрана в
+  M30.1, а мёртвый ключ дожил в типе до M32.
 - Эталон закреплён первым и не выключается: бесплатный, мгновенный и свой.
 - Ступени «спросить модель по памяти» нет (M30.1): ISBN — случайное число, и
   модель под него сочиняет названия. На 29 реальных номерах — ноль попаданий.
@@ -365,10 +373,11 @@ book_source  key (reference · fantlab · google · openlibrary · web · neuro 
 5. **FantLab: `lang_id` у произведения — язык оригинала**, а не издания. Фильтр по нему выкидывал библиографию переводных авторов (Несбё: 2 книги вместо 36). Русскоязычность отбирается на уровне изданий.
 6. **У классики сотни изданий.** «Братья Карамазовы» — 230 русских; тянуть их обложки пачкой это полторы минуты ожидания и 230 файлов. Обложек качаем 12, остальные — при открытии карточки издания.
 7. **Пайп маскирует код возврата.** `bun run typecheck | tail` возвращает статус `tail`, и красный тайпчек уезжает в прод. Проверки — строго через `&&`.
-8. **Radix Dialog — не шторка.** Мобильные шторки на нём приходилось дописывать руками (свайп, грип ломал сетку). Взяли стоковый shadcn Drawer (vaul) и не трогаем его поведение.
+8. **Кэш без отпечатка настроек лжёт.** `lookup_cache` хранил результат, не помня, при каком составе источников он получен: выключаешь Google — а кэш продолжает отдавать его данные, и настройка не работает задним числом. Ключ кэша обязан включать состав и порядок цепочки (M32).
+9. **Radix Dialog — не шторка.** Мобильные шторки на нём приходилось дописывать руками (свайп, грип ломал сетку). Взяли стоковый shadcn Drawer (vaul) и не трогаем его поведение.
 
 ## Тестирование
 
-`bun test` — 105 тестов в 17 файлах. Чистые модули: `isbn` (чек-цифры, 10↔13, EAN→ISBN), `metadata/merge` (на записанных фикстурах), `shelfTint`, `search`, `spine`, `userAgent`. Сервисы гоняются на временной SQLite (`DATA_DIR` в `mkdtemp` до импорта `@/db`): каталог, обращение, шэринг, циклы, списки, нераспознанные, поиск по названию, модерация, почта (через фиктивный SMTP на localhost), миграции (апгрейд боевой базы с потерей данных).
+`bun test` — 227 тестов в 29 файлах. Чистые модули: `isbn` (чек-цифры, 10↔13, EAN→ISBN), `metadata/merge` (на записанных фикстурах), `shelfTint`, `search`, `spine`, `userAgent`. Сервисы гоняются на временной SQLite (`DATA_DIR` в `mkdtemp` до импорта `@/db`): каталог, обращение, шэринг, циклы, списки, нераспознанные, поиск по названию, модерация, почта (через фиктивный SMTP на localhost), миграции (апгрейд боевой базы с потерей данных).
 
 Что проверяется руками: экраны на телефоне и сквозные сценарии по чек-листам этапов (см. roadmap.md). Перед выкаткой рискованных изменений — прогон продового образа в Docker на **копии** боевой базы: так нашлись и потеря данных при миграции, и 230 обложек.

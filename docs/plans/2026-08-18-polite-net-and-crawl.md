@@ -50,16 +50,16 @@
 
 ### Дублирование
 
-| Что | Где | Чем плохо |
-| --- | --- | --- |
-| `NON_WORK_TYPES` | `crawl.ts:22` и `metadata/fantlab.ts:66` | Одно имя, **разный состав**: восемь терминов расходятся. Одна и та же строка типа классифицируется по-разному в зависимости от пути |
-| Год из строки | `crawl.ts:145` (`yearOf`) и `metadata/types.ts:38` (`yearFrom`) | Одинаковый регэксп, разные имена и null-ность. `crawl.ts:10` уже импортирует из этого файла |
-| Скачать картинку → webp | `covers.ts:176-209` и `covers.ts:236-268` | Два почти идентичных блока по 33 строки; разница — папка, размер, качество. Плюс третий частичный `saveCover` и три близнеца-валидатора пути |
-| Ретрай на 5xx | `googleBooks.ts:64` и `googleBooks.ts:140` (в одном файле!) и `sources.ts:105` | Три копии, `RETRY_STATUS` объявлен дважды, обобщённый `fetchRetry` никем не используется |
-| `fetch` + таймаут + UA + `.json()` | 8 рукописных копий | Таймауты 4/6/7/8/10/12 с без объяснения разницы |
-| Маппер ответа FantLab | `crawl.ts:157`, `metadata/fantlab.ts:69`, `reference.ts:444` | Три обхода одной формы `Record<string, { list?: [] }>`, ни одного общего типа |
-| Вставка `refBook` из черновика | `reference.ts:78` и `reference.ts:501` (+ третий в `aiRecognize.ts`) | 14 одинаковых полей |
-| Предикат `accessible` | 6+ копий; в `authors.ts:129` и `:203` — **другая** вторая ветка | Молчаливое расхождение в контроле доступа |
+| Что                                | Где                                                                            | Чем плохо                                                                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NON_WORK_TYPES`                   | `crawl.ts:22` и `metadata/fantlab.ts:66`                                       | Одно имя, **разный состав**: восемь терминов расходятся. Одна и та же строка типа классифицируется по-разному в зависимости от пути          |
+| Год из строки                      | `crawl.ts:145` (`yearOf`) и `metadata/types.ts:38` (`yearFrom`)                | Одинаковый регэксп, разные имена и null-ность. `crawl.ts:10` уже импортирует из этого файла                                                  |
+| Скачать картинку → webp            | `covers.ts:176-209` и `covers.ts:236-268`                                      | Два почти идентичных блока по 33 строки; разница — папка, размер, качество. Плюс третий частичный `saveCover` и три близнеца-валидатора пути |
+| Ретрай на 5xx                      | `googleBooks.ts:64` и `googleBooks.ts:140` (в одном файле!) и `sources.ts:105` | Три копии, `RETRY_STATUS` объявлен дважды, обобщённый `fetchRetry` никем не используется                                                     |
+| `fetch` + таймаут + UA + `.json()` | 8 рукописных копий                                                             | Таймауты 4/6/7/8/10/12 с без объяснения разницы                                                                                              |
+| Маппер ответа FantLab              | `crawl.ts:157`, `metadata/fantlab.ts:69`, `reference.ts:444`                   | Три обхода одной формы `Record<string, { list?: [] }>`, ни одного общего типа                                                                |
+| Вставка `refBook` из черновика     | `reference.ts:78` и `reference.ts:501` (+ третий в `aiRecognize.ts`)           | 14 одинаковых полей                                                                                                                          |
+| Предикат `accessible`              | 6+ копий; в `authors.ts:129` и `:203` — **другая** вторая ветка                | Молчаливое расхождение в контроле доступа                                                                                                    |
 
 ### Баги
 
@@ -108,46 +108,46 @@
 
 Новое — `src/services/net/`:
 
-| Файл | Ответственность |
-| ---- | --------------- |
-| `types.ts` | `HostPolicy`, `NetOptions`, `NetError`, `Priority`. Логики нет |
-| `policy.ts` | Таблица политик по хостам — единственное место, где записано «как часто можно» |
+| Файл         | Ответственность                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `types.ts`   | `HostPolicy`, `NetOptions`, `NetError`, `Priority`. Логики нет                                                                                               |
+| `policy.ts`  | Таблица политик по хостам — единственное место, где записано «как часто можно»                                                                               |
 | `limiter.ts` | Очередь на хост: два приоритета, минимальный интервал, потолок параллельности, карантин. Часы и сон инжектируются — модуль тестируется без реального времени |
-| `cache.ts` | Условные запросы: `ETag`/`Last-Modified` в таблице `http_cache`, разбор 304 |
-| `client.ts` | `getJson(url, schema, opts)` и `getBytes(url, opts)` — единственная дверь наружу: UA, таймаут, ретраи, `Retry-After`, журнал |
-| `*.test.ts` | Лимитер на фальшивых часах, разбор `Retry-After`, карантин, 304 |
+| `cache.ts`   | Условные запросы: `ETag`/`Last-Modified` в таблице `http_cache`, разбор 304                                                                                  |
+| `client.ts`  | `getJson(url, schema, opts)` и `getBytes(url, opts)` — единственная дверь наружу: UA, таймаут, ретраи, `Retry-After`, журнал                                 |
+| `*.test.ts`  | Лимитер на фальшивых часах, разбор `Retry-After`, карантин, 304                                                                                              |
 
 Новое — `src/services/crawl/` (вместо файла `src/services/crawl.ts`):
 
-| Файл | Ответственность |
-| ---- | --------------- |
-| `types.ts` | `AuthorFacts`, `WorkRef`, `CycleRef`, `AuthorSource` |
-| `queue.ts` | Постановщик, выбор задачи с лизингом, бэкоф, TTL обновления |
-| `worker.ts` | Тик, запуск/останов, `CRAWL_ENABLED` |
-| `fantlab.ts` | Чистые парсеры `/autor/{id}/extended` + адаптер |
-| `wiki.ts` | Wikidata (поиск, сущность) + Википедия (вводный абзац) |
-| `apply.ts` | Единственное место, которое пишет факты автора в базу: приоритет источников, не затирать непустое |
-| `*.test.ts` | Парсеры на записанных фикстурах, матчер Wikidata, приоритет полей |
+| Файл            | Ответственность                                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `types.ts`      | `AuthorFacts`, `WorkRef`, `CycleRef`, `AuthorSource`                                                                  |
+| `queue.ts`      | Постановщик, выбор задачи с лизингом, бэкоф, TTL обновления                                                           |
+| `worker.ts`     | Тик, запуск/останов, `CRAWL_ENABLED`                                                                                  |
+| `fantlab.ts`    | Чистые парсеры `/autor/{id}/extended` + адаптер                                                                       |
+| `wiki.ts`       | Wikidata (поиск, сущность) + Википедия (вводный абзац)                                                                |
+| `apply.ts`      | Единственное место, которое пишет факты автора в базу: приоритет источников, не затирать непустое                     |
+| `*.test.ts`     | Парсеры на записанных фикстурах, матчер Wikidata, приоритет полей                                                     |
 | `__fixtures__/` | Записанные ответы: `wikidata-search-dovlatov.json`, `wikidata-entity-Q311516.json`, `wikipedia-summary-dovlatov.json` |
 
 Правится существующее:
 
-| Файл | Что меняется |
-| ---- | ------------ |
-| `src/db/schema/catalog.ts` | `author`: `wikidataId`, `wikipediaUrl`, `bioSource`. `crawl_task`: статус `running`, `startedAt`, новые `kind`/`source`. Новая `http_cache` |
-| `src/db/schema/moderation.ts` | `ai_setting`: `systemEnabled`, `systemDailyLimit`. Новая `ai_system_usage` |
-| `src/services/metadata/{fantlab,googleBooks,openLibrary}.ts` | Сеть — через `net/client`; три копии ретрая уходят; UA появляется везде |
-| `src/services/{titleSearch,covers,sources,reference}.ts` | То же; `fetchRetry` удаляется |
-| `src/services/find/adapters.ts` (из M32) | Обёртки зовут клиентов, которые уже ходят через `net` — правка на несколько строк |
-| `src/services/reference.ts` | Баги 1, 4, 8, 9; `fantlabId`/`wikidataId` проставляются и здесь |
-| `src/services/metadata/lookup.ts` | Кэшировать отрицательный ответ |
-| `src/services/unrecognized.ts` | `retryLookup` — потолок пачки и фоновый приоритет |
-| `src/services/authors.ts` | Отдать `accessible` в общий хелпер, чинить расхождение |
-| `src/services/ai.ts` | Транспорт отделяется от лимита; появляется `askSystem` |
-| `src/services/covers.ts` | Один `saveImageFromUrl`, один валидатор пути |
-| `src/db/index.ts` | Запуск воркера выносится из-под `existsSync(migrationsFolder)` |
-| `src/routes/_app/service.tsx` + новый `service_.crawl.tsx` + `src/server/crawl.ts` | Страница «Наполнение» |
-| `docs/{architecture,product,roadmap}.md`, `docs/design/crawl.html`, `.env.example` | Документация |
+| Файл                                                                               | Что меняется                                                                                                                                |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/db/schema/catalog.ts`                                                         | `author`: `wikidataId`, `wikipediaUrl`, `bioSource`. `crawl_task`: статус `running`, `startedAt`, новые `kind`/`source`. Новая `http_cache` |
+| `src/db/schema/moderation.ts`                                                      | `ai_setting`: `systemEnabled`, `systemDailyLimit`. Новая `ai_system_usage`                                                                  |
+| `src/services/metadata/{fantlab,googleBooks,openLibrary}.ts`                       | Сеть — через `net/client`; три копии ретрая уходят; UA появляется везде                                                                     |
+| `src/services/{titleSearch,covers,sources,reference}.ts`                           | То же; `fetchRetry` удаляется                                                                                                               |
+| `src/services/find/adapters.ts` (из M32)                                           | Обёртки зовут клиентов, которые уже ходят через `net` — правка на несколько строк                                                           |
+| `src/services/reference.ts`                                                        | Баги 1, 4, 8, 9; `fantlabId`/`wikidataId` проставляются и здесь                                                                             |
+| `src/services/metadata/lookup.ts`                                                  | Кэшировать отрицательный ответ                                                                                                              |
+| `src/services/unrecognized.ts`                                                     | `retryLookup` — потолок пачки и фоновый приоритет                                                                                           |
+| `src/services/authors.ts`                                                          | Отдать `accessible` в общий хелпер, чинить расхождение                                                                                      |
+| `src/services/ai.ts`                                                               | Транспорт отделяется от лимита; появляется `askSystem`                                                                                      |
+| `src/services/covers.ts`                                                           | Один `saveImageFromUrl`, один валидатор пути                                                                                                |
+| `src/db/index.ts`                                                                  | Запуск воркера выносится из-под `existsSync(migrationsFolder)`                                                                              |
+| `src/routes/_app/service.tsx` + новый `service_.crawl.tsx` + `src/server/crawl.ts` | Страница «Наполнение»                                                                                                                       |
+| `docs/{architecture,product,roadmap}.md`, `docs/design/crawl.html`, `.env.example` | Документация                                                                                                                                |
 
 ---
 
@@ -156,9 +156,11 @@
 Ядро этапа. Ни от чего не зависит; всё остальное на неё опирается.
 
 **Файлы:**
+
 - Создать: `src/services/net/types.ts`, `src/services/net/policy.ts`, `src/services/net/limiter.ts`, `src/services/net/limiter.test.ts`
 
 **Интерфейсы:**
+
 - Отдаёт наружу: `HostPolicy`, `policyFor(url): HostPolicy`, `createLimiter(deps): Limiter`, `limiter` (общий экземпляр), `Limiter.run<T>(url, priority, task): Promise<T>`, `Limiter.quarantine(host, untilMs, reason)`, `Limiter.stats()`.
 
 - [ ] **Шаг 1: Написать падающий тест лимитера**
@@ -275,11 +277,7 @@ export class NetError extends Error {
   constructor(
     message: string,
     public readonly kind:
-      | 'quarantined'
-      | 'timeout'
-      | 'status'
-      | 'transport'
-      | 'shape',
+      'quarantined' | 'timeout' | 'status' | 'transport' | 'shape',
     public readonly status?: number,
   ) {
     super(message)
@@ -470,10 +468,7 @@ export function createLimiter(deps: Deps): Limiter {
       const s = stateOf(host)
       if (deps.now() < s.quarantineUntil) {
         const left = Math.round((s.quarantineUntil - deps.now()) / 1000)
-        throw new NetError(
-          `${host}: карантин ещё ${left} с`,
-          'quarantined',
-        )
+        throw new NetError(`${host}: карантин ещё ${left} с`, 'quarantined')
       }
       await acquire(host, priority)
       try {
@@ -535,10 +530,12 @@ git commit -m "M33: лимитер запросов к внешним источ
 ## Задача 2: Клиент — единый User-Agent, Retry-After, условные запросы
 
 **Файлы:**
+
 - Создать: `src/services/net/cache.ts`, `src/services/net/client.ts`, `src/services/net/client.test.ts`
 - Изменить: `src/db/schema/catalog.ts` (таблица `http_cache`)
 
 **Интерфейсы:**
+
 - Потребляет: `limiter`, `policyFor` (задача 1); `POLKA_USER_AGENT` из `@/services/userAgent`.
 - Отдаёт наружу: `getJson<T>(url, schema: z.ZodType<T>, opts?): Promise<T>`, `getBytes(url, opts?): Promise<ArrayBuffer>`, `parseRetryAfter(header, now): number | null`. `opts`: `{ priority?, timeoutMs?, headers?, transport? }` — `transport` подменяет `fetch` в тестах.
 
@@ -681,17 +678,36 @@ async function fetchText(url: string, opts: NetOptions): Promise<string> {
         return cached.body
       }
       if (res.status === 429 || res.status === 503) {
-        log.warn('net', 'источник просит подождать', { host, url, status: res.status, ms })
+        log.warn('net', 'источник просит подождать', {
+          host,
+          url,
+          status: res.status,
+          ms,
+        })
         punish(host, res)
       }
       if (RETRY_STATUS.has(res.status) && attempt < RETRIES) {
-        log.warn('net', 'источник моргнул, повторяем', { host, url, status: res.status, ms })
+        log.warn('net', 'источник моргнул, повторяем', {
+          host,
+          url,
+          status: res.status,
+          ms,
+        })
         await sleepBackoff(attempt)
         continue
       }
       if (!res.ok) {
-        log.warn('net', 'источник ответил ошибкой', { host, url, status: res.status, ms })
-        throw new NetError(`${host} ответил ${res.status}`, 'status', res.status)
+        log.warn('net', 'источник ответил ошибкой', {
+          host,
+          url,
+          status: res.status,
+          ms,
+        })
+        throw new NetError(
+          `${host} ответил ${res.status}`,
+          'status',
+          res.status,
+        )
       }
 
       quarantineHits.delete(host)
@@ -846,10 +862,12 @@ git commit -m "M33: один фильтр типов, один загрузчи�
 ## Задача 5: Очередь — лизинг, обновляемость, честные ошибки
 
 **Файлы:**
+
 - Создать: `src/services/crawl/types.ts`, `src/services/crawl/queue.ts`, `src/services/crawl/queue.test.ts`
 - Изменить: `src/db/schema/catalog.ts`
 
 **Интерфейсы:**
+
 - Отдаёт наружу: `ensureTasks(): Promise<number>`, `claimNext(): Promise<CrawlTask | null>`, `finishOk(taskId, refreshMs)`, `finishMissing(taskId)`, `finishFailed(taskId, error)`, `releaseStale(): Promise<number>`. Админские `queueStats()` и `retryFailed()` добавляются в задаче 10 — здесь их ещё нет.
 
 - [ ] **Шаг 1: Схема**
@@ -899,10 +917,12 @@ git commit -m "M33: очередь наполнения — аренда зад�
 ## Задача 6: FantLab-источник — чистые парсеры и запись фактов
 
 **Файлы:**
+
 - Создать: `src/services/crawl/fantlab.ts`, `src/services/crawl/apply.ts`, `src/services/crawl/fantlab.test.ts`
 - Использовать фикстуру: `src/services/metadata/__fixtures__/openlibrary-author-OL182660A.json` как образец формата; записать новую `crawl/__fixtures__/fantlab-autor-extended.json`
 
 **Интерфейсы:**
+
 - Отдаёт наружу: `parseFantlabAuthor(json): AuthorFacts`, `fantlabAuthorSource: AuthorSource`, `applyAuthorFacts(authorId, facts, source)`.
 - `AuthorFacts`: `{ bio?, birthYear?, deathYear?, country?, photoUrl?, works: Array<WorkRef>, cycles: Array<CycleRef> }`.
 
@@ -942,9 +962,11 @@ git commit -m "M33: FantLab-источник — разбор отдельно �
 ## Задача 7: Wikidata и Википедия — авторы, которых FantLab не знает
 
 **Файлы:**
+
 - Создать: `src/services/crawl/wiki.ts`, `src/services/crawl/wiki.test.ts`, фикстуры `crawl/__fixtures__/wikidata-search-*.json`, `wikidata-entity-*.json`, `wikipedia-summary-*.json`
 
 **Интерфейсы:**
+
 - Отдаёт наружу: `pickWikidataCandidate(candidates, hints): { id, score } | null`, `parseWikidataEntity(json): WikiFacts`, `wikiAuthorSource: AuthorSource`.
 - `hints`: `{ name, birthYear?, deathYear?, workTitles: Array<string> }` — то, что мы уже знаем об авторе из своего каталога.
 
@@ -995,6 +1017,7 @@ git commit -m "M33: Wikidata и Википедия — биография и д�
 ## Задача 8: Воркер и связывание концов
 
 **Файлы:**
+
 - Создать: `src/services/crawl/worker.ts`, `src/services/crawl/index.ts`
 - Удалить: `src/services/crawl.ts`
 - Изменить: `src/db/index.ts`, `src/services/reference.ts`, `src/services/authors.ts`, `src/services/metadata/lookup.ts`, `src/services/unrecognized.ts`, `src/services/metadata/openLibrary.ts`
@@ -1072,6 +1095,7 @@ git commit -m "M33: у фоновых задач свой лимит модел�
 ## Задача 10: Страница «Настройки → Наполнение»
 
 **Файлы:**
+
 - Создать: `docs/design/crawl.html`, `src/routes/_app/service_.crawl.tsx`, `src/server/crawl.ts`
 - Изменить: `src/routes/_app/service.tsx`, `src/services/crawl/queue.ts`
 
@@ -1120,15 +1144,15 @@ git commit -m "M33: очередь наполнения видна в настр
 
 Раздел давно называется **«Настройки»**, но «Сервис» остался в двенадцати местах. Заменить везде (`«Сервис» → «Почта»` становится `«Настройки» → «Почта»` и так далее):
 
-| Файл | Строки |
-| ---- | ------ |
-| `docs/architecture.md` | 210, 267 |
-| `docs/product.md` | 322, 349, 386 |
-| `docs/roadmap.md` | 31, 64, 68 |
-| `README.md` | 39, 41 |
-| `src/routes/_app/settings.tsx` | 34 (комментарий «в „Сервисе“») |
-| `src/routes/_app/service.tsx` | 18 (комментарий «бывший „Сервис“» — убрать целиком, переименование давно позади) |
-| `src/services/metadata/googleBooks.ts` | 3 (комментарий про то, где задаётся ключ) |
+| Файл                                   | Строки                                                                           |
+| -------------------------------------- | -------------------------------------------------------------------------------- |
+| `docs/architecture.md`                 | 210, 267                                                                         |
+| `docs/product.md`                      | 322, 349, 386                                                                    |
+| `docs/roadmap.md`                      | 31, 64, 68                                                                       |
+| `README.md`                            | 39, 41                                                                           |
+| `src/routes/_app/settings.tsx`         | 34 (комментарий «в „Сервисе“»)                                                   |
+| `src/routes/_app/service.tsx`          | 18 (комментарий «бывший „Сервис“» — убрать целиком, переименование давно позади) |
+| `src/services/metadata/googleBooks.ts` | 3 (комментарий про то, где задаётся ключ)                                        |
 
 Имена файлов и роуты (`service.tsx`, `/service/sources`) не трогаем — это отдельная правка с редиректами, к этому этапу отношения не имеет.
 

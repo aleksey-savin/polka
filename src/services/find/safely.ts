@@ -27,7 +27,9 @@ export async function safely<T>(
   const ms = () => Math.round(performance.now() - started)
   try {
     const value =
-      timeoutMs === undefined ? await run() : await withTimeout(run(), timeoutMs)
+      timeoutMs === undefined
+        ? await run()
+        : await withTimeout(run(), timeoutMs)
     return { value, failure: null, ms: ms() }
   } catch (error) {
     const failure = error instanceof Error ? error.message : String(error)

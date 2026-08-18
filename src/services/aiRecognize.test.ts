@@ -337,15 +337,29 @@ describe('решение человека', () => {
     })
 
     // ветка «заполнить» название не трогает
-    const fill = await proposeForBook(ME, created.id, 'fill', undefined, false, {
-      adapters: ADAPTERS(),
-    })
+    const fill = await proposeForBook(
+      ME,
+      created.id,
+      'fill',
+      undefined,
+      false,
+      {
+        adapters: ADAPTERS(),
+      },
+    )
     expect(fill?.fills.some((f) => f.field === 'title')).toBe(false)
 
     // ветка «заменить» предлагает заменить название целиком
-    const replace = await proposeForBook(ME, created.id, 'replace', undefined, false, {
-      adapters: ADAPTERS(),
-    })
+    const replace = await proposeForBook(
+      ME,
+      created.id,
+      'replace',
+      undefined,
+      false,
+      {
+        adapters: ADAPTERS(),
+      },
+    )
     expect(replace?.mode).toBe('replace')
     expect(replace?.fills.some((f) => f.field === 'title')).toBe(true)
     expect(replace?.current.title).toBe('Iskusstvo voyny')
@@ -366,9 +380,11 @@ describe('решение человека', () => {
       shelfId: shelf.id,
     })
     // источники в тестах молчат, поэтому предложения быть не должно
-    expect(await proposeForBook(ME, created.id, 'fill', undefined, false, {
+    expect(
+      await proposeForBook(ME, created.id, 'fill', undefined, false, {
         adapters: ADAPTERS(),
-      })).toBeNull()
+      }),
+    ).toBeNull()
 
     const [row] = await db.select().from(book).where(eq(book.id, created.id))
     // и ничего не затёрлось
@@ -437,7 +453,10 @@ describe('история вариантов', () => {
       await db.select({ id: book.id }).from(book).where(eq(book.isbn13, isbn))
     )[0]!.id
     answer = '{"known":false}'
-    const fresh = await recognizeBook(ME, id, { force: true, adapters: ADAPTERS() })
+    const fresh = await recognizeBook(ME, id, {
+      force: true,
+      adapters: ADAPTERS(),
+    })
     // эталонная запись снова находится первой ступенью, история новая
     expect(fresh.variants.length).toBe(1)
     expect(fresh.via).toBe('reference')
@@ -679,9 +698,16 @@ describe('обновление данных карточки', () => {
       shelfId: shelf.id,
     })
 
-    const proposal = await proposeForBook(ME, created.id, 'replace', undefined, false, {
-      adapters: ADAPTERS(),
-    })
+    const proposal = await proposeForBook(
+      ME,
+      created.id,
+      'replace',
+      undefined,
+      false,
+      {
+        adapters: ADAPTERS(),
+      },
+    )
     expect(proposal?.fills).toEqual([])
     // нечего применять — но и тупика нет: шторка покажет «искать дальше»
     expect(proposal?.suggestionId).toBeNull()

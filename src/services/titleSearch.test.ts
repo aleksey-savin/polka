@@ -18,7 +18,9 @@ const { bookSource } = await import('@/db/schema/moderation')
 
 // Внешний источник выключаем настройкой, а не заглушкой в боевом коде:
 // заодно это проверяет, что «Источники» действительно управляют поиском.
-await db.insert(bookSource).values({ key: 'fantlab', enabled: false, position: 1 })
+await db
+  .insert(bookSource)
+  .values({ key: 'fantlab', enabled: false, position: 1 })
 
 const ALEX = 'u-tsearch'
 

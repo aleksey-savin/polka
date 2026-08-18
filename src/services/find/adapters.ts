@@ -73,7 +73,11 @@ const reference: SourceAdapter = {
         weak:
           hit.source === 'manual'
             ? false
-            : looksTransliterated(ctx.isbn13, hit.draft.title, hit.draft.authors),
+            : looksTransliterated(
+                ctx.isbn13,
+                hit.draft.title,
+                hit.draft.authors,
+              ),
       }),
     )
   },
@@ -163,7 +167,8 @@ export function parseGuessDrafts(
   return items
     .map((item) => parseOneGuess(item))
     .filter(
-      (v): v is { draft: MetadataDraft; sourceUrl: string | null } => v !== null,
+      (v): v is { draft: MetadataDraft; sourceUrl: string | null } =>
+        v !== null,
     )
 }
 
@@ -314,7 +319,9 @@ const neuro: SourceAdapter = {
       // текст ответа кладём к цитируемой странице: номер обычно именно там
       const cited = answer.sources.find((src) => src.used) ?? answer.sources[0]
       if (!cited) return []
-      return [{ url: cited.url, title: cited.title || cited.url, text: answer.text }]
+      return [
+        { url: cited.url, title: cited.title || cited.url, text: answer.text },
+      ]
     }),
   // Яндекс Картинки — тоже платная услуга, поэтому живут за платной ступенью
   // и расходуются через общий счётчик, а не мимо него

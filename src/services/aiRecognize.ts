@@ -360,7 +360,9 @@ export async function recognizeIsbn(
         }
       : null,
     cached: found.cached,
-    askedModel: found.findings.some((f) => f.key === 'web' || f.key === 'neuro'),
+    askedModel: found.findings.some(
+      (f) => f.key === 'web' || f.key === 'neuro',
+    ),
     sources: found.probes.map((p) => ({
       name: SOURCE_NAME[p.key] ?? p.key,
       outcome:

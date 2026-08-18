@@ -25,8 +25,10 @@ export function startTrace(isbn13: string, userId: string): Trace {
   return {
     id,
     ms,
-    info: (message, fields) => log.info('find', message, { ...base, ...fields }),
-    warn: (message, fields) => log.warn('find', message, { ...base, ...fields }),
+    info: (message, fields) =>
+      log.info('find', message, { ...base, ...fields }),
+    warn: (message, fields) =>
+      log.warn('find', message, { ...base, ...fields }),
     error: (message, fields) =>
       log.error('find', message, { ...base, ...fields }),
   }
