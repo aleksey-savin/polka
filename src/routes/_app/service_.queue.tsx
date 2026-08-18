@@ -8,10 +8,23 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { dateHuman } from '@/lib/dates'
 import {
+  approveItemFn,
+  getDraftFn,
   moderationQueueFn,
   queueCountsFn,
   resolveModerationFn,
+  saveDraftFn,
+  undoDecisionFn,
 } from '@/server/moderation'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { QueueRow } from '@/services/moderation'
 
 /** Очередь модератора (M21): публикация не ждёт, разбираем потом. */
@@ -91,6 +104,87 @@ function ModerationPage() {
       toast.error(e instanceof Error ? e.message : 'Не получилось')
     } finally {
       setLoadingMore(false)
+    }
+  }
+
+  // подтверждения: одобрить, отменить решение, править копию
+  const [approving, setApproving] = useState<QueueRow | null>(null)
+  const [toReference, setToReference] = useState(true)
+  const [undoing, setUndoing] = useState<QueueRow | null>(null)
+  const [editing, setEditing] = useState<QueueRow | null>(null)
+  const [draft, setDraft] = useState({
+    title: '',
+    authors: '',
+    publisher: '',
+    year: '',
+  })
+
+  async function approve() {
+    if (!approving) return
+    setBusy(approving.id)
+    try {
+      await approveItemFn({
+        data: { itemId: approving.id, toReference },
+      })
+      toast.success(toReference ? 'Одобрено и в эталоне' : 'Одобрено')
+      setApproving(null)
+      void router.invalidate()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function undo() {
+    if (!undoing) return
+    setBusy(undoing.id)
+    try {
+      await undoDecisionFn({ data: { itemId: undoing.id } })
+      toast.success('Решение отменено — запись снова в очереди')
+      setUndoing(null)
+      void router.invalidate()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function openDraft(item: QueueRow) {
+    try {
+      const found = await getDraftFn({ data: { itemId: item.id } })
+      setDraft({
+        title: found?.title ?? '',
+        authors: found?.authors ?? '',
+        publisher: found?.publisher ?? '',
+        year: found?.year?.toString() ?? '',
+      })
+      setEditing(item)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    }
+  }
+
+  async function saveDraftAndClose() {
+    if (!editing) return
+    setBusy(editing.id)
+    try {
+      await saveDraftFn({
+        data: {
+          itemId: editing.id,
+          title: draft.title,
+          authors: draft.authors,
+          publisher: draft.publisher.trim() || null,
+          year: Number(draft.year) || null,
+        },
+      })
+      toast.success('Копия сохранена — карточка владельца не менялась')
+      setEditing(null)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setBusy(null)
     }
   }
 
@@ -210,6 +304,16 @@ function ModerationPage() {
                     ? `жалоба · ${item.reportCount}`
                     : KIND_LABEL[item.kind]}
                 </span>
+                {item.fromAi && (
+                  <span className="ml-1.5 inline-block rounded-[3px] border-[1.5px] border-stamp/40 px-1.5 font-mono text-[9.5px] tracking-[0.07em] text-stamp uppercase">
+                    нашёл ии
+                  </span>
+                )}
+                {item.inReference && (
+                  <span className="ml-1.5 inline-block rounded-[3px] border-[1.5px] border-primary/40 px-1.5 font-mono text-[9.5px] tracking-[0.07em] text-accent-foreground uppercase">
+                    в эталоне
+                  </span>
+                )}
                 <h2 className="mt-1.5 text-[15.5px] leading-[1.25] font-semibold [overflow-wrap:anywhere]">
                   {item.title}
                 </h2>
@@ -238,10 +342,14 @@ function ModerationPage() {
                   {item.status === 'pending' && (
                     <Button
                       size="sm"
-                      loading={busy === item.id && openId === null}
-                      onClick={() => void decide(item, 'ok')}
+                      onClick={() => {
+                        setToReference(
+                          item.kind === 'ref_book' || item.kind === 'ref_work',
+                        )
+                        setApproving(item)
+                      }}
                     >
-                      В порядке
+                      Одобрить…
                     </Button>
                   )}
                   {item.status === 'pending' && (
@@ -254,6 +362,25 @@ function ModerationPage() {
                       }
                     >
                       Снять…
+                    </Button>
+                  )}
+                  {item.status === 'pending' &&
+                    (item.kind === 'ref_book' || item.kind === 'ref_work') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void openDraft(item)}
+                      >
+                        Поправить
+                      </Button>
+                    )}
+                  {item.status !== 'pending' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setUndoing(item)}
+                    >
+                      Отменить решение…
                     </Button>
                   )}
                   {(() => {
@@ -343,6 +470,177 @@ function ModerationPage() {
           )}
         </div>
       )}
+      <Drawer
+        open={approving !== null}
+        onOpenChange={(open) => !open && setApproving(null)}
+      >
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Одобрить запись?</DrawerTitle>
+          </DrawerHeader>
+          <p className="text-sm text-muted-foreground">
+            «{approving?.title}» останется видимой для всех. Решение можно
+            отменить в «Разобрано».
+          </p>
+          {approving &&
+            (approving.kind === 'ref_book' ||
+              approving.kind === 'ref_work') && (
+              <div className="mt-3 flex items-center gap-3 border-t pt-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14.5px] font-semibold">Внести в эталон</p>
+                  <p className="text-[12.5px] text-muted-foreground">
+                    Копия станет общей — по этому номеру книга найдётся у всех.
+                    Карточка владельца не меняется.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={toReference}
+                  aria-label="Внести в эталон"
+                  className={`relative h-7 w-[46px] flex-none rounded-full transition-colors ${
+                    toReference ? 'bg-primary' : 'bg-border'
+                  }`}
+                  onClick={() => setToReference((v) => !v)}
+                >
+                  <span
+                    aria-hidden
+                    className={`absolute top-[3px] left-[3px] size-[22px] rounded-full bg-white shadow transition-transform ${
+                      toReference ? 'translate-x-[18px]' : ''
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+          <DrawerFooter>
+            <Button
+              className="h-12 w-full text-[15px]"
+              loading={busy === approving?.id}
+              onClick={() => void approve()}
+            >
+              Одобрить
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 w-full text-[15px]"
+              onClick={() => setApproving(null)}
+            >
+              Отмена
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer
+        open={undoing !== null}
+        onOpenChange={(open) => !open && setUndoing(null)}
+      >
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Отменить решение?</DrawerTitle>
+          </DrawerHeader>
+          <p className="text-sm text-muted-foreground">
+            «{undoing?.title}» вернётся в очередь. Снятая ссылка снова
+            заработает, копия из эталона уберётся. Отмена попадёт в журнал.
+          </p>
+          <DrawerFooter>
+            <Button
+              className="h-12 w-full text-[15px]"
+              loading={busy === undoing?.id}
+              onClick={() => void undo()}
+            >
+              Отменить решение
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 w-full text-[15px]"
+              onClick={() => setUndoing(null)}
+            >
+              Оставить как есть
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer
+        open={editing !== null}
+        onOpenChange={(open) => !open && setEditing(null)}
+      >
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Копия для эталона</DrawerTitle>
+          </DrawerHeader>
+          <p className="mb-3 text-[12.5px] text-muted-foreground">
+            Правки идут в копию: карточка владельца остаётся его.
+          </p>
+          <div className="grid gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="d-title">Название</Label>
+              <Input
+                id="d-title"
+                className="h-12 rounded-xl text-[16px]"
+                value={draft.title}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, title: e.target.value }))
+                }
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="d-authors">Авторы</Label>
+              <Input
+                id="d-authors"
+                className="h-12 rounded-xl text-[16px]"
+                value={draft.authors}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, authors: e.target.value }))
+                }
+              />
+            </div>
+            <div className="grid grid-cols-[1fr_100px] gap-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="d-pub">Издательство</Label>
+                <Input
+                  id="d-pub"
+                  className="h-12 rounded-xl text-[16px]"
+                  value={draft.publisher}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, publisher: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="d-year">Год</Label>
+                <Input
+                  id="d-year"
+                  inputMode="numeric"
+                  className="h-12 rounded-xl font-mono text-[16px]"
+                  value={draft.year}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, year: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          <DrawerFooter>
+            <Button
+              className="h-12 w-full text-[15px]"
+              loading={busy === editing?.id}
+              disabled={!draft.title.trim()}
+              onClick={() => void saveDraftAndClose()}
+            >
+              Сохранить копию
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 w-full text-[15px]"
+              onClick={() => setEditing(null)}
+            >
+              Отмена
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }

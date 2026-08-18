@@ -5,7 +5,6 @@ import {
   Mail,
   ScrollText,
   Search,
-  Sparkles,
   UserRound,
   Wand2,
 } from 'lucide-react'
@@ -47,19 +46,6 @@ function AppSettingsPage() {
             data.pending > 0 ? undefined : { tone: 'ok', text: 'жалоб нет' }
           }
         />
-        {data.isAdmin && (
-          <Row
-            icon={<Sparkles />}
-            label="Проверка находок"
-            to="/service/ai-review"
-            badge={data.aiPending || undefined}
-            state={
-              data.aiPending > 0
-                ? undefined
-                : { tone: 'ok', text: 'всё разобрано' }
-            }
-          />
-        )}
         <Row
           icon={<ScrollText />}
           label="Журнал решений"

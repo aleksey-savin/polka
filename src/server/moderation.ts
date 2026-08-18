@@ -4,8 +4,12 @@ import { z } from 'zod'
 import {
   accountOf,
   listLog,
+  approveItem,
+  getDraft,
   listQueue,
   queueCounts,
+  saveDraft,
+  undoDecision,
   listUsers,
   pendingCount,
   report,
@@ -173,3 +177,44 @@ export const serviceOverviewFn = createServerFn({ method: 'GET' })
       users: { count: users.length, role: account.role },
     }
   })
+
+/** Одобрение с необязательной публикацией копии в эталон (M29). */
+export const approveItemFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(
+    z.object({ itemId: z.string(), toReference: z.boolean().optional() }),
+  )
+  .handler(({ context, data }) =>
+    approveItem(context.user.id, data.itemId, data.toReference ?? false),
+  )
+
+/** Отмена решения: запись возвращается в очередь, последствия снимаются. */
+export const undoDecisionFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ itemId: z.string() }))
+  .handler(({ context, data }) => undoDecision(context.user.id, data.itemId))
+
+export const getDraftFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ itemId: z.string() }))
+  .handler(({ context, data }) => getDraft(context.user.id, data.itemId))
+
+export const saveDraftFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(
+    z.object({
+      itemId: z.string(),
+      title: z.string(),
+      authors: z.string(),
+      publisher: z.string().nullable(),
+      year: z.number().int().nullable(),
+    }),
+  )
+  .handler(({ context, data }) =>
+    saveDraft(context.user.id, data.itemId, {
+      title: data.title,
+      authors: data.authors,
+      publisher: data.publisher,
+      year: data.year,
+    }),
+  )

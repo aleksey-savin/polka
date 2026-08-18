@@ -1131,6 +1131,12 @@ export async function applyRecognition(
       afterJson: JSON.stringify(after),
       appliedBy: userId,
     })
+    // в общую очередь модерации — с меткой «нашёл ИИ» (M29): отдельного
+    // раздела «Проверка находок» больше нет
+    if (hit.refBookId) {
+      const { enqueue } = await import('./moderation')
+      await enqueue('ref_book', hit.refBookId, userId, true)
+    }
   }
   return { verdict: hit.verdict }
 }

@@ -69,6 +69,15 @@ export const moderationItem = sqliteTable(
       onDelete: 'set null',
     }),
     reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
+    /** Запись пришла от ИИ — метка на карточке вместо отдельного раздела. */
+    fromAi: integer('from_ai', { mode: 'boolean' }).notNull().default(false),
+    /**
+     * Черновик для эталона (M29): модератор правит копию, карточка владельца
+     * не меняется никогда. JSON с полями title/authors/publisher/year.
+     */
+    draftJson: text('draft_json'),
+    /** Копия ушла в эталон — при отмене решения её оттуда убираем. */
+    publishedRefId: text('published_ref_id'),
     createdAt: createdAt(),
   },
   (t) => [

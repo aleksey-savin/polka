@@ -8,6 +8,7 @@ process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'polka-moder-'))
 
 const { db } = await import('@/db')
 const { user } = await import('@/db/schema/auth')
+const { moderationItem } = await import('@/db/schema/moderation')
 const { userAccount } = await import('@/db/schema/moderation')
 const { share } = await import('@/db/schema/circulation')
 const { eq } = await import('drizzle-orm')
@@ -21,7 +22,10 @@ const {
   ensureFirstAdmin,
   listLog,
   listQueue,
+  approveItem,
   queueCounts,
+  saveDraft,
+  undoDecision,
   listUsers,
   report,
   resolve,
@@ -196,5 +200,89 @@ describe('пагинация очереди', () => {
     const page = await listLog('u-first')
     expect(Array.isArray(page.rows)).toBe(true)
     expect(page.rows.length).toBeLessThanOrEqual(20)
+  })
+})
+
+describe('решения обратимы, правки — в копию', () => {
+  test('одобрение с публикацией и отмена: копия уходит из эталона', async () => {
+    const { refBook } = await import('@/db/schema/catalog')
+    const [ref] = await db
+      .insert(refBook)
+      .values({
+        source: 'fantlab',
+        sourceRef: 'mod-ref-1',
+        isbn13: '9785040000019',
+        title: 'Оригинал владельца',
+        titleNorm: 'оригинал владельца',
+        authors: 'Автор',
+      })
+      .returning({ id: refBook.id })
+
+    await enqueue('ref_book', ref!.id, 'u-third', true)
+    const [item] = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.targetId, ref!.id))
+    expect(item!.fromAi).toBe(true)
+
+    // правка идёт в копию: оригинал не меняется
+    await saveDraft('u-first', item!.id, {
+      title: 'Копия для эталона',
+      authors: 'Автор',
+      publisher: 'Издательство',
+      year: 2020,
+    })
+    const [untouched] = await db
+      .select()
+      .from(refBook)
+      .where(eq(refBook.id, ref!.id))
+    expect(untouched?.title).toBe('Оригинал владельца')
+
+    await approveItem('u-first', item!.id, true)
+    const published = await db
+      .select()
+      .from(refBook)
+      .where(eq(refBook.title, 'Копия для эталона'))
+    expect(published.length).toBe(1)
+
+    await undoDecision('u-first', item!.id)
+    const gone = await db
+      .select()
+      .from(refBook)
+      .where(eq(refBook.title, 'Копия для эталона'))
+    expect(gone.length).toBe(0)
+    // запись снова в очереди
+    const [back] = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.id, item!.id))
+    expect(back?.status).toBe('pending')
+  })
+
+  test('снятая ссылка после отмены снова работает', async () => {
+    const lib = await createLibrary('u-third', { name: 'Для ссылки' })
+    const { token } = await createShare('u-third', {
+      scope: 'library',
+      libraryId: lib.id,
+    })
+    const [row] = await db
+      .select({ id: share.id })
+      .from(share)
+      .where(eq(share.token, token))
+
+    const [item] = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.targetId, row!.id))
+    await resolve('u-first', item!.id, 'removed', 'спам')
+    const [revoked] = await db.select().from(share).where(eq(share.id, row!.id))
+    expect(revoked?.revokedAt).not.toBeNull()
+
+    await undoDecision('u-first', item!.id)
+    const [restored] = await db
+      .select()
+      .from(share)
+      .where(eq(share.id, row!.id))
+    expect(restored?.revokedAt).toBeNull()
   })
 })

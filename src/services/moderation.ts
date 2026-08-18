@@ -123,6 +123,7 @@ export async function enqueue(
   kind: ModerationKind,
   targetId: string,
   ownerId: string | null,
+  fromAi = false,
 ): Promise<void> {
   const [existing] = await db
     .select({ id: moderationItem.id, status: moderationItem.status })
@@ -134,7 +135,7 @@ export async function enqueue(
     // разобранное снова на проверку не поднимаем: решение уже принято
     return
   }
-  await db.insert(moderationItem).values({ kind, targetId, ownerId })
+  await db.insert(moderationItem).values({ kind, targetId, ownerId, fromAi })
 }
 
 export interface QueueRow {
@@ -146,6 +147,10 @@ export interface QueueRow {
   reason: string | null
   createdAt: Date
   ownerName: string | null
+  /** Находка ИИ — метка на карточке вместо отдельного раздела. */
+  fromAi: boolean
+  /** Копия уже в эталоне. */
+  inReference: boolean
   /** Что показать модератору: заголовок, подпись, картинка. */
   title: string
   subtitle: string
@@ -247,6 +252,8 @@ export async function listQueue(
       reason: moderationItem.reason,
       createdAt: moderationItem.createdAt,
       ownerName: user.name,
+      fromAi: moderationItem.fromAi,
+      publishedRefId: moderationItem.publishedRefId,
     })
     .from(moderationItem)
     .leftJoin(user, eq(user.id, moderationItem.ownerId))
@@ -283,6 +290,7 @@ export async function listQueue(
     const view = await describeTarget(row.kind, row.targetId)
     out.push({
       ...row,
+      inReference: row.publishedRefId !== null,
       ...view,
       reports: reports
         .filter((rep) => rep.itemId === row.id)
@@ -695,4 +703,185 @@ export async function pendingCount(userId: string): Promise<number> {
       ),
     )
   return row?.n ?? 0
+}
+
+export interface Draft {
+  title: string
+  authors: string
+  publisher: string | null
+  year: number | null
+}
+
+/**
+ * Черновик записи для эталона (M29).
+ *
+ * Модератор правит копию, а не карточку владельца: спор «это моя книга»
+ * невозможен в принципе, а в эталон уходит именно проверенная копия.
+ */
+export async function getDraft(
+  userId: string,
+  itemId: string,
+): Promise<Draft | null> {
+  await requireModerator(userId)
+  const [item] = await db
+    .select()
+    .from(moderationItem)
+    .where(eq(moderationItem.id, itemId))
+  if (!item) throw new AppError('Объект не найден', 'not_found')
+  if (item.draftJson) return JSON.parse(item.draftJson) as Draft
+
+  // копию делаем из того, что видно модератору
+  const view = await describeTarget(item.kind, item.targetId)
+  if (item.kind === 'ref_book') {
+    const [row] = await db
+      .select()
+      .from(refBook)
+      .where(eq(refBook.id, item.targetId))
+    if (row) {
+      return {
+        title: row.title,
+        authors: row.authors,
+        publisher: row.publisher,
+        year: row.year,
+      }
+    }
+  }
+  if (item.kind === 'ref_work') {
+    const [row] = await db
+      .select()
+      .from(refWork)
+      .where(eq(refWork.id, item.targetId))
+    if (row) {
+      return { title: row.title, authors: '', publisher: null, year: row.year }
+    }
+  }
+  return {
+    title: view.title,
+    authors: view.subtitle,
+    publisher: null,
+    year: null,
+  }
+}
+
+export async function saveDraft(
+  userId: string,
+  itemId: string,
+  draft: Draft,
+): Promise<void> {
+  await requireModerator(userId)
+  if (!draft.title.trim()) throw new AppError('Без названия нельзя', 'invalid')
+  await db
+    .update(moderationItem)
+    .set({ draftJson: JSON.stringify(draft) })
+    .where(eq(moderationItem.id, itemId))
+  await writeLog(userId, 'draft-edit', { targetId: itemId })
+}
+
+/**
+ * Одобрение. Публикация в эталон — отдельный шаг: одобрить можно и без неё.
+ * В эталон уходит копия (черновик), оригинал владельца не трогаем.
+ */
+export async function approveItem(
+  userId: string,
+  itemId: string,
+  toReference = false,
+): Promise<void> {
+  await requireModerator(userId)
+  const [item] = await db
+    .select()
+    .from(moderationItem)
+    .where(eq(moderationItem.id, itemId))
+  if (!item) throw new AppError('Объект не найден', 'not_found')
+
+  let publishedRefId: string | null = null
+  if (toReference && (item.kind === 'ref_book' || item.kind === 'ref_work')) {
+    const draft = await getDraft(userId, itemId)
+    if (draft) {
+      const { normalizeForSearch } = await import('./search')
+      const isbn13 =
+        item.kind === 'ref_book'
+          ? ((
+              await db
+                .select({ isbn13: refBook.isbn13 })
+                .from(refBook)
+                .where(eq(refBook.id, item.targetId))
+            )[0]?.isbn13 ?? null)
+          : null
+      const [created] = await db
+        .insert(refBook)
+        .values({
+          source: 'manual',
+          sourceRef: `moderated:${item.id}`,
+          isbn13,
+          title: draft.title.trim(),
+          titleNorm: normalizeForSearch(draft.title),
+          authors: draft.authors.trim(),
+          publisher: draft.publisher,
+          year: draft.year,
+        })
+        .onConflictDoNothing()
+        .returning({ id: refBook.id })
+      publishedRefId = created?.id ?? null
+    }
+  }
+
+  await db
+    .update(moderationItem)
+    .set({
+      status: 'ok',
+      reason: null,
+      reviewedBy: userId,
+      reviewedAt: new Date(),
+      publishedRefId,
+    })
+    .where(eq(moderationItem.id, itemId))
+  await writeLog(userId, publishedRefId ? 'approve-ref' : 'approve', {
+    kind: item.kind,
+    targetId: item.targetId,
+    subjectId: item.ownerId,
+  })
+}
+
+/**
+ * Отмена решения: запись возвращается в очередь, последствия снимаются —
+ * ссылка снова работает, копия убирается из эталона.
+ */
+export async function undoDecision(
+  userId: string,
+  itemId: string,
+): Promise<void> {
+  await requireModerator(userId)
+  const [item] = await db
+    .select()
+    .from(moderationItem)
+    .where(eq(moderationItem.id, itemId))
+  if (!item) throw new AppError('Объект не найден', 'not_found')
+  if (item.status === 'pending') return
+
+  if (item.status === 'removed' && item.kind === 'share') {
+    await db
+      .update(share)
+      .set({ revokedAt: null })
+      .where(eq(share.id, item.targetId))
+  }
+  if (item.publishedRefId) {
+    await db.delete(refBook).where(eq(refBook.id, item.publishedRefId))
+  }
+
+  await db
+    .update(moderationItem)
+    .set({
+      status: 'pending',
+      reason: null,
+      reviewedBy: null,
+      reviewedAt: null,
+      publishedRefId: null,
+    })
+    .where(eq(moderationItem.id, itemId))
+  await writeLog(userId, 'undo', {
+    kind: item.kind,
+    targetId: item.targetId,
+    subjectId: item.ownerId,
+    reason: item.reason,
+  })
 }
