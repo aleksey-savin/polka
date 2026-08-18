@@ -201,9 +201,15 @@ async function searchFantlab(query: string): Promise<Array<TitleHitWork>> {
   }
 }
 
+export interface TitleSearchOptions {
+  /** Подмена внешнего источника в тестах. В бою не передаётся. */
+  external?: (query: string) => Promise<Array<TitleHitWork>>
+}
+
 export async function searchByTitle(
   userId: string,
   query: string,
+  options: TitleSearchOptions = {},
 ): Promise<TitleSearchResult> {
   const trimmed = query.trim()
   if (trimmed.length < 3) return { mine: [], reference: [], external: [] }
@@ -214,10 +220,9 @@ export async function searchByTitle(
   ])
   // внешний источник спрашиваем, только если он включён в настройках:
   // выключенный FantLab не должен отвечать в обход списка источников
+  const ask = options.external ?? searchFantlab
   const { isEnabled } = await import('./bookSources')
-  const external = (await isEnabled('fantlab'))
-    ? await searchFantlab(trimmed)
-    : []
+  const external = (await isEnabled('fantlab')) ? await ask(trimmed) : []
 
   // то, что уже лежит в эталоне, второй раз из источника не показываем
   const known = new Set(reference.map((r) => normalizeForSearch(r.title)))

@@ -14,14 +14,14 @@ const { createBook } = await import('./books')
 const { ensureRefWork, linkWorkAuthor } = await import('./reference')
 const { ensureAuthor } = await import('./authors')
 const { adoptExternalWork, searchByTitle } = await import('./titleSearch')
-const { bookSource } = await import('@/db/schema/moderation')
 
-// Внешний источник выключаем настройкой, а не заглушкой в боевом коде:
-// заодно это проверяет, что «Источники» действительно управляют поиском.
-await db
-  .insert(bookSource)
-  .values({ key: 'fantlab', enabled: false, position: 1 })
-
+/**
+ * Внешний источник подставляем параметром, а не выключаем в настройках:
+ * `bun test` держит модуль `@/db` одним на процесс, поэтому файлы делят базу —
+ * правка глобальных настроек ломала бы соседние тесты в зависимости от
+ * порядка запуска.
+ */
+const noExternal = { external: async () => [] }
 const ALEX = 'u-tsearch'
 
 await db.insert(user).values({
@@ -54,24 +54,24 @@ await linkWorkAuthor(workId, await ensureAuthor('Фёдор Достоевски
 
 describe('поиск по названию', () => {
   test('ищет по словам: название плюс автор', async () => {
-    const res = await searchByTitle(ALEX, 'карамазовы достоевский')
+    const res = await searchByTitle(ALEX, 'карамазовы достоевский', noExternal)
     expect(res.mine.map((m) => m.title)).toEqual(['Братья Карамазовы'])
     expect(res.mine[0]?.place).toBe('Классика')
 
     // «идиот достоевский» — слово из названия и слово из имени автора,
     // целиком такой строки нет нигде
-    const byAuthor = await searchByTitle(ALEX, 'идиот достоевский')
+    const byAuthor = await searchByTitle(ALEX, 'идиот достоевский', noExternal)
     expect(byAuthor.reference.map((r) => r.title)).toEqual(['Идиот'])
     expect(byAuthor.reference[0]?.authors).toBe('Фёдор Достоевский')
   })
 
   test('лишнее слово отсекает совпадение', async () => {
-    const res = await searchByTitle(ALEX, 'идиот толстой')
+    const res = await searchByTitle(ALEX, 'идиот толстой', noExternal)
     expect(res.reference).toHaveLength(0)
   })
 
   test('короткий запрос не ходит никуда', async () => {
-    const res = await searchByTitle(ALEX, 'ид')
+    const res = await searchByTitle(ALEX, 'ид', noExternal)
     expect(res).toMatchObject({ mine: [], reference: [], external: [] })
   })
 
@@ -83,7 +83,7 @@ describe('поиск по названию', () => {
       1872,
       'novel',
     )
-    const res = await searchByTitle(ALEX, 'бесы достоевский')
+    const res = await searchByTitle(ALEX, 'бесы достоевский', noExternal)
     expect(res.reference.map((r) => r.workId)).toContain(id)
     // повторный выбор не плодит дублей
     expect(
