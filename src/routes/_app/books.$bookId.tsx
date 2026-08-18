@@ -603,6 +603,7 @@ function BookCardPage() {
             </p>
           </div>
           <Button
+            className="h-11"
             loading={busyAction === 'return'}
             onClick={() =>
               void run(
@@ -709,16 +710,20 @@ function BookCardPage() {
               книги ещё нет дома
             </p>
           </div>
-          <Button onClick={() => setMoveOpen(true)}>Купил — на полку</Button>
+          <Button className="h-11" onClick={() => setMoveOpen(true)}>
+            Купил — на полку
+          </Button>
         </div>
       )}
 
-      {/* ── Действия ── */}
-      <div className="mt-3 flex flex-wrap gap-2">
+      {/* ── Действия ── все одной высоты: 44px по тап-таргету гайдлайна ── */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         {book.status === 'in_library' && !activeLoan && (
-          <Button onClick={() => setLendOpen(true)}>Дал почитать</Button>
+          <Button className="h-11" onClick={() => setLendOpen(true)}>
+            Дал почитать
+          </Button>
         )}
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="h-11">
           <Link to="/books/$bookId/edit" params={{ bookId: book.id }}>
             Редактировать
           </Link>
@@ -735,7 +740,7 @@ function BookCardPage() {
         <ActionMenu
           caption={book.title}
           trigger={
-            <Button variant="ghost">
+            <Button variant="ghost" className="h-11">
               Ещё <Ellipsis aria-hidden />
             </Button>
           }
