@@ -49,12 +49,23 @@ const bookInput = z.object({
   listId: z.string().nullable().optional(),
   /** Болванка из сканера: только ISBN (M18). */
   unrecognized: z.boolean().optional(),
+  /** Цепочку оборвал бюджет — остаток доиграет воркер (M32). */
+  truncated: z.boolean().optional(),
 })
 
 export const createBookFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .validator(bookInput)
-  .handler(({ context, data }) => createBook(context.user.id, data))
+  .handler(async ({ context, data }) => {
+    // `truncated` — признак хода поиска, а не поле книги: сервису он не нужен
+    const { truncated, ...input } = data
+    const created = await createBook(context.user.id, input)
+    if (truncated && input.isbn13?.trim()) {
+      const { enqueueFind } = await import('@/services/find/queue')
+      await enqueueFind(created.id, context.user.id, input.isbn13.trim())
+    }
+    return created
+  })
 
 export const updateBookFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])

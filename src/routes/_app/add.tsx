@@ -8,15 +8,16 @@ import {
 } from '@/components/book/BookForm'
 import type { BookFormValue } from '@/components/book/BookForm'
 import { BarcodeScanner } from '@/components/scanner/BarcodeScanner'
+import { SearchChain } from '@/components/book/SearchChain'
 import { TitleSearch } from '@/components/book/TitleSearch'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { createBookFn } from '@/server/books'
 import { getLibraryOverviewFn, listMyLibrariesFn } from '@/server/libraries'
 import { lookupIsbnFn } from '@/server/lookup'
 import { countUnrecognizedFn } from '@/server/unrecognized'
-import { SOURCE_NAME } from '@/services/metadata/lookup'
 import type { LookupResult } from '@/services/metadata/lookup'
 
 export const Route = createFileRoute('/_app/add')({
@@ -26,6 +27,13 @@ export const Route = createFileRoute('/_app/add')({
 
 type Mode = 'scan' | 'isbn' | 'title' | 'manual'
 const DEST_KEY = 'polka.add.dest'
+const DEPTH_KEY = 'polka.add.depth'
+/** Режим назван задачей, а не техникой: человек знает, что он делает. */
+type Depth = 'quick' | 'full'
+const DEPTH_HINT: Record<Depth, string> = {
+  quick: 'Не жду: показываю, что нашлось в каталогах. Остальное дособеру сам.',
+  full: 'Ищу до конца, вплоть до интернета. Дольше, зато карточка сразу целиком.',
+}
 
 function AddPage() {
   const libraries = Route.useLoaderData()
@@ -45,6 +53,11 @@ function AddPage() {
   // сколько болванок уже накопилось всего — не только за этот заход
   useEffect(() => {
     void countUnrecognizedFn().then(setUnrecognized)
+  }, [])
+  const [depth, setDepth] = useState<Depth>('quick')
+  useEffect(() => {
+    const stored = localStorage.getItem(DEPTH_KEY)
+    if (stored === 'quick' || stored === 'full') setDepth(stored)
   }, [])
   const [error, setError] = useState<string | null>(null)
   const [savedCount, setSavedCount] = useState(0)
@@ -80,7 +93,7 @@ function AddPage() {
       setBusy(true)
       setError(null)
       try {
-        const result = await lookupIsbnFn({ data: { isbn } })
+        const result = await lookupIsbnFn({ data: { isbn, depth } })
         setLookup(result)
         setDraft({
           ...EMPTY_BOOK_FORM,
@@ -112,7 +125,7 @@ function AddPage() {
         setBusy(false)
       }
     },
-    [dest],
+    [dest, depth],
   )
 
   /** «Пропустить»: просто закрываем черновик и возвращаемся к сканеру. */
@@ -128,7 +141,9 @@ function AddPage() {
     setBusy(true)
     setError(null)
     try {
-      const { id } = await createBookFn({ data: toBookInput(draft) })
+      const { id } = await createBookFn({
+        data: { ...toBookInput(draft), truncated: lookup?.truncated ?? false },
+      })
       if (openCard) {
         window.location.href = `/books/${id}`
         return
@@ -150,30 +165,29 @@ function AddPage() {
     return (
       <div className="mx-auto max-w-xl">
         <h1 className="mb-2 text-3xl font-semibold">Новая книга</h1>
-        {lookup && (
+        {lookup && lookup.sources.length === 0 && (
           <p className="mb-4 rounded-lg bg-accent px-3.5 py-2 text-[13.5px] text-accent-foreground">
-            {lookup.sources.length > 0 ? (
-              <>
-                Найдено:{' '}
-                <b>{lookup.sources.map((s) => SOURCE_NAME[s] ?? s).join(' + ')}</b>{' '}
-                — проверьте и поправьте.
-              </>
-            ) : (
-              <>
-                По этому ISBN ничего не нашлось — заполните карточку руками,
-                номер уже подставлен.{' '}
-                <a
-                  className="underline"
-                  href={`https://www.google.com/search?q=%22${lookup.isbn13}%22+книга`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Поискать в интернете
-                </a>{' '}
-                — оттуда удобно скопировать название.
-              </>
-            )}
+            По этому ISBN ничего не нашлось — заполните карточку руками, номер
+            уже подставлен.{' '}
+            <a
+              className="underline"
+              href={`https://www.google.com/search?q=%22${lookup.isbn13}%22+книга`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Поискать в интернете
+            </a>{' '}
+            — оттуда удобно скопировать название.
           </p>
+        )}
+        {lookup && (
+          <div className="mb-4">
+            <SearchChain
+              probes={lookup.probes}
+              truncated={lookup.truncated}
+              found={lookup.sources}
+            />
+          </div>
         )}
         {lookup && lookup.duplicates.length > 0 && (
           <p className="mb-4 rounded-lg border border-stamp/40 px-3.5 py-2 text-[13.5px] text-stamp">
@@ -314,6 +328,38 @@ function AddPage() {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Как ищем: режим — это бюджет времени, цепочка в обоих одна */}
+      <div className="mb-4">
+        <div className="flex gap-0.5 rounded-full border bg-background p-1">
+          {(
+            [
+              ['quick', 'Стопкой'],
+              ['full', 'По одной'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => {
+                setDepth(value)
+                localStorage.setItem(DEPTH_KEY, value)
+              }}
+              className={cn(
+                'min-h-11 flex-1 rounded-full text-sm font-semibold',
+                depth === value
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 px-0.5 text-[13px] text-muted-foreground">
+          {DEPTH_HINT[depth]}
+        </p>
       </div>
 
       {libraries.length === 0 ? (
