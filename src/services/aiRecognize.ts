@@ -569,8 +569,12 @@ export async function recognizeIsbn(
     }
   }
 
-  // ── 2. Яндекс Поиск и Нейропоиск ──
-  if (!web.enabled) {
+  // ── 2. Яндекс Поиск и Нейропоиск ── порядок и состав из настроек (M30)
+  const { isEnabled } = await import('./bookSources')
+  const webAllowed = await isEnabled('web')
+  const neuroAllowed = await isEnabled('neuro')
+  const modelAllowed = await isEnabled('model')
+  if (!webAllowed) {
     sources.push({
       name: 'Яндекс Поиск',
       outcome: 'молчит',
@@ -579,7 +583,7 @@ export async function recognizeIsbn(
   } else {
     const modes: Array<'extract' | 'generative'> = options.mode
       ? [options.mode]
-      : web.paidFallback
+      : neuroAllowed && web.paidFallback
         ? ['extract', 'generative']
         : ['extract']
     for (const mode of modes) {
@@ -610,7 +614,7 @@ export async function recognizeIsbn(
   }
 
   // ── 3. Модель по памяти ──
-  if (!rejected.includes('model')) {
+  if (!rejected.includes('model') && modelAllowed) {
     const settings = await getAiSettings()
     const prompt = [
       `ISBN: ${isbn13}.`,

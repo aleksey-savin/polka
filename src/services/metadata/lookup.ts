@@ -110,11 +110,20 @@ export async function lookupIsbn(
     }
   }
 
-  const settled = await Promise.allSettled([
-    fetchFantlab(parsed.isbn13),
-    fetchGoogleBooks(parsed.isbn13),
-    fetchOpenLibrary(parsed.isbn13),
-  ])
+  // порядок и состав — из настроек источников (M30), а не зашиты здесь
+  const { activeOrder } = await import('@/services/bookSources')
+  const order = await activeOrder()
+  const fetchers = {
+    fantlab: () => fetchFantlab(parsed.isbn13),
+    google: () => fetchGoogleBooks(parsed.isbn13),
+    openlibrary: () => fetchOpenLibrary(parsed.isbn13),
+  } as const
+  const catalogs = order.filter(
+    (key): key is keyof typeof fetchers => key in fetchers,
+  )
+  const settled = await Promise.allSettled(
+    catalogs.map((key) => fetchers[key]()),
+  )
   const sourceResults = settled.map((s) =>
     s.status === 'fulfilled' ? s.value : null,
   )

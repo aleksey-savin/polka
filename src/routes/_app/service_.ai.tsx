@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -31,17 +31,17 @@ const PROVIDERS = [
 ]
 
 function AiPage() {
-  const { settings, usage } = Route.useLoaderData()
+  const { settings } = Route.useLoaderData()
   const router = useRouter()
 
   const [form, setForm] = useState({
+    // тумблер уехал в «Источники»; здесь только учётные данные
     enabled: settings.enabled,
     provider: settings.provider,
     apiKey: '',
     folderId: settings.folderId,
     model: settings.model,
     endpoint: settings.endpoint,
-    dailyLimit: settings.dailyLimit.toString(),
   })
   const [busy, setBusy] = useState<'save' | 'check' | null>(null)
   const [check, setCheck] = useState<{ ok: boolean; message: string } | null>(
@@ -64,10 +64,7 @@ function AiPage() {
     setBusy('save')
     try {
       await saveAiSettingsFn({
-        data: {
-          ...form,
-          dailyLimit: Number(form.dailyLimit) || 0,
-        },
+        data: { ...form, dailyLimit: settings.dailyLimit },
       })
       setForm((f) => ({ ...f, apiKey: '' }))
       toast.success('Настройки сохранены')
@@ -173,33 +170,6 @@ function AiPage() {
               : 'Нужны ключ, каталог и модель'}
           </p>
         </div>
-      </div>
-
-      <div className="mt-4 flex items-center gap-3 border-t py-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[14.5px] font-semibold">Использовать ИИ</p>
-          <p className="text-[12.5px] text-muted-foreground">
-            Открывает доступ к модели. Сейчас работает разбор нераспознанных;
-            остальное появится дальше.
-          </p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={form.enabled}
-          aria-label="Использовать ИИ"
-          className={`relative h-7 w-[46px] flex-none rounded-full transition-colors ${
-            form.enabled ? 'bg-primary' : 'bg-border'
-          }`}
-          onClick={() => set('enabled', !form.enabled)}
-        >
-          <span
-            aria-hidden
-            className={`absolute top-[3px] left-[3px] size-[22px] rounded-full bg-white shadow transition-transform ${
-              form.enabled ? 'translate-x-[18px]' : ''
-            }`}
-          />
-        </button>
       </div>
 
       <div className="mt-2 grid gap-1.5">
@@ -354,21 +324,6 @@ function AiPage() {
         )}
       </div>
 
-      <div className="mt-3 grid gap-1.5">
-        <Label htmlFor="ai-limit">Запросов на человека в сутки</Label>
-        <Input
-          id="ai-limit"
-          inputMode="numeric"
-          className={`${FIELD} max-w-[140px] font-mono`}
-          value={form.dailyLimit}
-          onChange={(e) => set('dailyLimit', e.target.value)}
-        />
-        <p className="text-[12.5px] text-muted-foreground">
-          Ключ и счёт ваши, тратят все. Сегодня израсходовано {usage.used} из{' '}
-          {usage.limit}. Ноль — запретить всем.
-        </p>
-      </div>
-
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
           className="h-11"
@@ -404,23 +359,17 @@ function AiPage() {
         </div>
       )}
 
-      <h2 className="mt-7 text-[17px] font-semibold">Функции</h2>
-      <div className="mt-2 rounded-2xl border p-3.5">
-        <p className="text-sm font-semibold">Разбор нераспознанных</p>
-        <p className="mt-1.5 text-[13px] text-muted-foreground">
-          На странице «Не распознано» появляется «Разобрать с ИИ». Модель только
-          предлагает: данные берутся из каталога, если он подтвердил номер, а
-          проверенное модератором уходит в общий эталон — и следующий такой ISBN
-          находится уже без модели.
-        </p>
-      </div>
-      <div className="mt-2 rounded-2xl border border-dashed p-3.5">
-        <p className="text-sm font-semibold">Дальше по одной</p>
-        <p className="mt-1.5 text-[13px] text-muted-foreground">
-          Аннотация · тэги и жанры · дозаполнение карточек · раскладка по полкам
-          · описания подборок · подсказки модератору.
-        </p>
-      </div>
+      <p className="mt-6 rounded-2xl border bg-card px-3.5 py-3 text-[13px] text-muted-foreground">
+        Здесь только подключение. Что и в каком порядке спрашивать, включая
+        Яндекс Поиск, Нейропоиск и модель, — в{' '}
+        <Link
+          to="/service/sources"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          источниках книг
+        </Link>
+        ; там же лимиты.
+      </p>
     </div>
   )
 }

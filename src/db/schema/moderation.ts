@@ -317,3 +317,19 @@ export const sourceSetting = sqliteTable('source_setting', {
     .notNull()
     .$defaultFn(() => new Date()),
 })
+
+/**
+ * Источники книг и порядок их опроса (M30).
+ *
+ * Раньше порядок был зашит в код, а FantLab и OpenLibrary нельзя было даже
+ * выключить. Теперь строка на источник: включён ли и на каком месте стоит.
+ */
+export const bookSource = sqliteTable('book_source', {
+  /** reference · fantlab · google · openlibrary · web · neuro · model */
+  key: text('key').primaryKey(),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  position: integer('position').notNull().default(0),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+})

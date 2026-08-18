@@ -211,6 +211,13 @@
       "when": 1787037597638,
       "tag": "0029_classy_prism",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1787040981638,
+      "tag": "0030_slippery_mandrill",
+      "breakpoints": true
     }
   ]
 }

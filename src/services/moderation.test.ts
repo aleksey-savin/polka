@@ -313,10 +313,41 @@ describe('журнал', () => {
       year: null,
     })
     const page = await listLog('u-first')
-    const edit = page.rows.find((r) => r.action === 'draft-edit')
+    // журнал общий: ищем именно своё событие, а не первое попавшееся
+    const edit = page.rows.find(
+      (r) => r.action === 'draft-edit' && r.targetId === ref!.id,
+    )
     expect(edit?.targetTitle).toBe('Книга для журнала')
     // видно, что именно изменилось — иначе строка бесполезна
     expect(edit?.details).toContain('Поправленное название')
     expect(edit?.targetId).toBe(ref!.id)
+  })
+})
+
+describe('источники книг', () => {
+  test('порядок меняется, эталон остаётся первым', async () => {
+    const { moveSource, sourceStates } = await import('./bookSources')
+    const before = (await sourceStates()).map((s) => s.key)
+    expect(before[0]).toBe('reference')
+
+    // FantLab вниз — Google поднимается на его место
+    await moveSource('u-first', 'fantlab', 'down')
+    const after = (await sourceStates()).map((s) => s.key)
+    expect(after[0]).toBe('reference')
+    expect(after[1]).toBe('google')
+    expect(after[2]).toBe('fantlab')
+
+    // эталон подвинуть нельзя
+    await moveSource('u-first', 'reference', 'down')
+    expect((await sourceStates())[0]?.key).toBe('reference')
+  })
+
+  test('выключенный источник выпадает из цепочки', async () => {
+    const { activeOrder, setEnabled } = await import('./bookSources')
+    await setEnabled('u-first', 'openlibrary', false)
+    expect(await activeOrder()).not.toContain('openlibrary')
+
+    await setEnabled('u-first', 'openlibrary', true)
+    expect(await activeOrder()).toContain('openlibrary')
   })
 })
