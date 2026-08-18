@@ -361,7 +361,7 @@ function AiPage() {
 
       <p className="mt-6 rounded-2xl border bg-card px-3.5 py-3 text-[13px] text-muted-foreground">
         Здесь только подключение. Что и в каком порядке спрашивать, включая
-        Яндекс Поиск, Нейропоиск и модель, — в{' '}
+        Яндекс Поиск и Нейропоиск, — в{' '}
         <Link
           to="/service/sources"
           className="underline underline-offset-2 hover:text-foreground"

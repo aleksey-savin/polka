@@ -68,13 +68,6 @@ export const SOURCES: Array<SourceInfo> = [
     paid: true,
     settings: 'ai',
   },
-  {
-    key: 'model',
-    name: 'Модель по памяти',
-    hint: 'последняя попытка, номеров не знает',
-    paid: true,
-    settings: 'ai',
-  },
 ]
 
 const DEFAULT_ORDER: Array<SourceKey> = SOURCES.map((s) => s.key)

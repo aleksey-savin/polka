@@ -114,15 +114,6 @@ export interface RecognizeResult {
   proof: { url: string; title: string } | null
 }
 
-const SYSTEM = [
-  'Ты помогаешь опознать книгу по номеру ISBN.',
-  'Отвечай строго одним JSON-объектом, без пояснений и разметки.',
-  'Поля: known (boolean), title, authors, publisher, year (число), series.',
-  'authors — «Имя Фамилия», несколько через запятую.',
-  'Если ты не знаешь книгу с этим номером — верни {"known": false}.',
-  'Выдумывать название запрещено: неуверенность означает known: false.',
-].join(' ')
-
 /** Магазинный мусор в названиях: точка в конце, «(тв. переплёт)», ISBN. */
 export function cleanFoundTitle(raw: string): string {
   return raw
@@ -393,7 +384,8 @@ export async function recognizeIsbn(
     variants = []
   }
   if (hit) {
-    // «не знаю», полученное до включения поиска, — не приговор
+    // «не знаю», полученное до включения поиска, — не приговор.
+    // via='model' встречается в старых записях: ступени уже нет (M30.1)
     const staleWithoutWeb =
       hit.verdict === 'unknown' &&
       web.enabled &&
@@ -573,7 +565,6 @@ export async function recognizeIsbn(
   const { isEnabled } = await import('./bookSources')
   const webAllowed = await isEnabled('web')
   const neuroAllowed = await isEnabled('neuro')
-  const modelAllowed = await isEnabled('model')
   if (!webAllowed) {
     sources.push({
       name: 'Яндекс Поиск',
@@ -613,117 +604,20 @@ export async function recognizeIsbn(
     }
   }
 
-  // ── 3. Модель по памяти ──
-  if (!rejected.includes('model') && modelAllowed) {
-    const settings = await getAiSettings()
-    const prompt = [
-      `ISBN: ${isbn13}.`,
-      fromPrefix ? `Издательство по префиксу номера: ${fromPrefix}.` : '',
-      'Какая это книга?',
-    ]
-      .filter(Boolean)
-      .join(' ')
-    const answer = await ask(userId, prompt, { system: SYSTEM, maxTokens: 300 })
-    const guess = parseGuess(answer.text)
-    const checked = await verify(userId, isbn13, guess)
-    const extra = guess.title
-      ? await enrichMissing({
-          title: guess.title,
-          authors: guess.authors,
-          coverUrl: null,
-          annotation: null,
-          pages: null,
-          proofUrl: null,
-        })
-      : {
-          coverUrl: null,
-          coverOptions: [] as Array<string>,
-          annotation: null,
-          pages: null,
-        }
-
-    if (guess.title) {
-      variants = upsertVariant(variants, {
-        via: 'model',
-        verdict: checked.verdict,
-        title: guess.title,
-        authors: guess.authors,
-        publisher: guess.publisher ?? fromPrefix,
-        year: guess.year,
-        pages: extra.pages,
-        seriesName: guess.seriesName,
-        annotation: extra.annotation,
-        coverUrl: extra.coverUrl,
-        coverOptions: extra.coverOptions,
-        refBookId: checked.refBookId,
-        workId: checked.workId,
-        proofUrl: null,
-        proofTitle: null,
-      })
-    }
-    await writeGuess({
-      isbn13,
-      verdict: checked.verdict,
-      title: guess.title,
-      authors: guess.authors,
-      publisher: guess.publisher ?? fromPrefix,
-      year: guess.year,
-      seriesName: guess.seriesName,
-      pages: extra.pages,
-      annotation: extra.annotation,
-      coverUrl: extra.coverUrl,
-      coverOptions: JSON.stringify(extra.coverOptions),
-      refBookId: checked.refBookId,
-      workId: checked.workId,
-      model: settings.model,
-      via: 'model',
-      rawJson: answer.text.slice(0, 2000),
-      rejectedVias: rejectedJson,
-      variants: JSON.stringify(variants),
-    })
-    log.info('ai', 'разбор нераспознанного', {
-      isbn: isbn13,
-      verdict: checked.verdict,
-      tokens: answer.tokens,
-    })
-    return {
-      isbn13,
-      verdict: checked.verdict,
-      guess,
-      fromPrefix,
-      refBookId: checked.refBookId,
-      workId: checked.workId,
-      confirmed: checked.refBookId
-        ? await confirmedFields(checked.refBookId)
-        : guess.title
-          ? {
-              title: guess.title,
-              authors: guess.authors ?? '',
-              publisher: guess.publisher ?? fromPrefix,
-              year: guess.year,
-              pages: extra.pages,
-              seriesName: guess.seriesName,
-              coverUrl: extra.coverUrl,
-              annotation: extra.annotation,
-            }
-          : null,
-      cached: false,
-      askedModel: true,
-      sources,
-      coverOptions: extra.coverOptions,
-      variants,
-      variantIndex: guess.title ? variants.length - 1 : 0,
-      exhausted: !guess.title && rejected.length > 0,
-      via: 'model',
-      proof: null,
-    }
-  }
+  /*
+   * Ступени «спросить модель по памяти» больше нет (M30.1).
+   *
+   * ISBN — случайное число, а не факт о книге: модель номеров не помнит, зато
+   * охотно сочиняет под них правдоподобные названия. На 29 номерах владельца
+   * она не угадала ни одного, а запросы тратила. Модель осталась там, где
+   * приносит пользу: читает найденные страницы в веб-поиске.
+   */
 
   // все пути отвергнуты или молчат
   await writeGuess({
     isbn13,
     verdict: 'unknown',
-    via: 'model',
+    via: 'none',
     rejectedVias: rejectedJson,
   })
   return {
@@ -748,7 +642,7 @@ export async function recognizeIsbn(
     variants,
     variantIndex: 0,
     exhausted: true,
-    via: 'model',
+    via: 'none',
     proof: null,
   }
 }
@@ -1057,10 +951,7 @@ export async function applyRecognition(
     }
   }
   if (hit.verdict === 'unknown') {
-    throw new AppError(
-      'Модель не знает этого номера — заполните вручную',
-      'invalid',
-    )
+    throw new AppError('Номер не опознан — заполните вручную', 'invalid')
   }
 
   const fields = hit.refBookId

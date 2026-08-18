@@ -75,6 +75,53 @@ await saveAiSettings({
   dailyLimit: 50,
 })
 
+/**
+ * Веб-находка в кэше. Ступени «спросить модель по памяти» больше нет, а веб-
+ * поиск в тестах наружу не ходит — поэтому находку кладём напрямую.
+ */
+async function webFound(
+  isbn13: string,
+  fields: {
+    title: string
+    authors?: string
+    publisher?: string | null
+    year?: number | null
+    verdict?: 'confirmed' | 'unconfirmed'
+  },
+) {
+  await db.delete(aiIsbnGuess).where(eq(aiIsbnGuess.isbn13, isbn13))
+  await db.insert(aiIsbnGuess).values({
+    isbn13,
+    verdict: fields.verdict ?? 'unconfirmed',
+    title: fields.title,
+    authors: fields.authors ?? 'Автор',
+    publisher: fields.publisher ?? null,
+    year: fields.year ?? null,
+    via: 'web-extract',
+    proofUrl: 'https://www.labirint.ru/books/1/',
+    proofTitle: 'labirint.ru',
+    variants: JSON.stringify([
+      {
+        via: 'web-extract',
+        verdict: fields.verdict ?? 'unconfirmed',
+        title: fields.title,
+        authors: fields.authors ?? 'Автор',
+        publisher: fields.publisher ?? null,
+        year: fields.year ?? null,
+        pages: null,
+        seriesName: null,
+        annotation: null,
+        coverUrl: null,
+        coverOptions: [],
+        refBookId: null,
+        workId: null,
+        proofUrl: 'https://www.labirint.ru/books/1/',
+        proofTitle: 'labirint.ru',
+      },
+    ]),
+  })
+}
+
 async function unrecognizedBook(isbn13: string) {
   const created = await createBook(ME, {
     title: isbn13,
@@ -137,8 +184,11 @@ describe('разбор нераспознанного', () => {
 
   test('неподтверждённое применяется с пометкой и откатывается', async () => {
     const id = await unrecognizedBook('9785171111113')
-    answer =
-      '{"known":true,"title":"Небывалая книга","authors":"Иван Иванов","year":2020}'
+    await webFound('9785171111113', {
+      title: 'Небывалая книга',
+      authors: 'Иван Иванов',
+      year: 2020,
+    })
     const result = await recognizeBook(ME, id)
     expect(result.verdict).toBe('unconfirmed')
     expect(result.fromPrefix).toBe('АСТ')
@@ -215,11 +265,9 @@ describe('разбор нераспознанного', () => {
     })
     await db.insert(sourceSetting).values({ id: 'default', webEnabled: true })
 
-    const before = calls
-    answer = '{"known":false}'
-    await recognizeBook(ME, id)
-    // модель спросили снова, а не отдали прошлогодний отказ
-    expect(calls).toBeGreaterThan(before)
+    const result = await recognizeBook(ME, id)
+    // прошлогодний отказ не отдали из кэша, а прошли цепочку заново
+    expect(result.cached).toBe(false)
 
     await db.delete(sourceSetting)
   })
@@ -288,22 +336,12 @@ describe('искать дальше', () => {
     expect(first.via).toBe('sources')
     expect(first.guess.title).toBe('Vzglyad nazad')
 
-    // латиница не устроила — идём дальше; веб в тестах выключен, модель отвечает
-    answer =
-      '{"known":true,"title":"Взгляд назад","authors":"Хизер Радке","year":2025}'
+    // латиница не устроила — идём дальше; других путей в тестах нет
     const second = await nextVariant(ME, id)
-    expect(second.via).toBe('model')
-    expect(second.guess.title).toBe('Взгляд назад')
-
-    // и по кругу не ходим: повторный разбор отдаёт из кэша модельный вариант
-    const third = await recognizeBook(ME, id)
-    expect(third.cached).toBe(true)
-    expect(third.via).toBe('model')
-
-    // отвергли и модель — вариантов больше нет
-    const done = await nextVariant(ME, id)
-    expect(done.guess.title).toBeNull()
-    expect(done.exhausted).toBe(true)
+    expect(second.guess.title).toBeNull()
+    expect(second.exhausted).toBe(true)
+    // найденное раньше не потеряно: оно осталось в истории вариантов
+    expect(second.variants.map((v) => v.title)).toContain('Vzglyad nazad')
   })
 })
 
@@ -325,12 +363,9 @@ describe('история вариантов', () => {
     expect(first.variants.length).toBe(1)
     expect(first.variants[0]?.via).toBe('sources')
 
-    // «промазал»: отверг хороший вариант, модель дала второй
-    answer =
-      '{"known":true,"title":"Взгляд назад","authors":"Хизер Радке","year":2025}'
+    // «промазал»: отверг хороший вариант — история его сохранила
     const second = await nextVariant(ME, id)
-    expect(second.variants.length).toBe(2)
-    expect(second.variants.map((v) => v.via)).toEqual(['sources', 'model'])
+    expect(second.variants.map((v) => v.via)).toContain('sources')
 
     // тупика нет: сохранить можно и отвергнутый первый вариант
     await applyRecognition(ME, id, undefined, 'sources')
@@ -393,8 +428,11 @@ describe('модерация и эталон', () => {
   test('утверждение заводит запись эталона, отклонение — откатывает', async () => {
     const isbn = '9785042222221'
     const id = await unrecognizedBook(isbn)
-    answer =
-      '{"known":true,"title":"Проверяемая книга","authors":"Пётр Петров","year":2019}'
+    await webFound(isbn, {
+      title: 'Проверяемая книга',
+      authors: 'Пётр Петров',
+      year: 2019,
+    })
     await recognizeBook(ME, id)
     await applyRecognition(ME, id)
 
@@ -417,7 +455,7 @@ describe('модерация и эталон', () => {
   test('отклонение требует причины и возвращает книгу в нераспознанные', async () => {
     const isbn = '9785043333339'
     const id = await unrecognizedBook(isbn)
-    answer = '{"known":true,"title":"Выдумка","authors":"Никто","year":2021}'
+    await webFound(isbn, { title: 'Выдумка', authors: 'Никто', year: 2021 })
     await recognizeBook(ME, id)
     await applyRecognition(ME, id)
     const row = (await listAiReview(ME)).find((r) => r.isbn13 === isbn)!
