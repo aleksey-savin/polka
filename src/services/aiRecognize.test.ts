@@ -500,6 +500,47 @@ describe('права', () => {
   })
 })
 
+describe('транслит в эталоне не перебивает находку поиска', () => {
+  test('показывается русское название, а не латиница из каталога', async () => {
+    // ровно случай «Deti-bilingvy»: в эталоне лежит латинская запись,
+    // попавшая туда из Google, а Яндекс находит нормальное издание
+    const isbn = '9789859051593'
+    await db.insert(refBook).values({
+      source: 'google',
+      sourceRef: 'g-deti',
+      isbn13: isbn,
+      title: 'Deti-bilingvy',
+      titleNorm: 'deti-bilingvy',
+      authors: 'Barbara Abdelilah-Bauer',
+    })
+    const id = await unrecognizedBook(isbn)
+    webFound({
+      title: 'Дети-билингвы: практический путеводитель для родителей',
+      authors: 'Барбара Абделила-Боэр',
+      year: 2020,
+    })
+
+    const found = await recognizeBook(ME, id, { adapters: ADAPTERS() })
+    const shown = found.variants[found.variantIndex]
+    expect(shown?.title).toBe(
+      'Дети-билингвы: практический путеводитель для родителей',
+    )
+    // латиница не потеряна — её можно долистать стрелками
+    expect(found.variants.map((v) => v.title)).toContain('Deti-bilingvy')
+  })
+
+  test('добор цепочки попадает в показываемый вариант', async () => {
+    const isbn = '9785042777776'
+    const id = await unrecognizedBook(isbn)
+    webFound({ title: 'Книга с описанием', authors: 'Автор' })
+
+    const found = await recognizeBook(ME, id, { adapters: ADAPTERS() })
+    const shown = found.variants[found.variantIndex]
+    // черновик цепочки и показанный вариант не должны расходиться
+    expect(shown?.title).toBe(found.confirmed?.title)
+  })
+})
+
 describe('модерация и эталон', () => {
   test('утверждение заводит запись эталона, отклонение — откатывает', async () => {
     const isbn = '9785042222221'

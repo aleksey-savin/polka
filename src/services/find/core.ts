@@ -219,6 +219,36 @@ export async function findEdition(
   }
   const enriched = await enrichDraft(ctx, chain, merged.draft, merged.covers)
 
+  // ── Пополнение общего эталона ──
+  //
+  // Ради него и заведён M14: второй раз ту же книгу находим мгновенно и без
+  // сети. Пишем только находки каталогов и только неслабые: транслит
+  // («Deti-bilingvy») осел бы в общем эталоне и портил бы выдачу всем, потому
+  // что эталон стоит в цепочке первым.
+  const CATALOGS = new Set(['fantlab', 'google', 'openlibrary'])
+  const worthKeeping = findings.filter(
+    (f) => CATALOGS.has(f.key) && !f.weak && f.draft.title,
+  )
+  if (worthKeeping.length > 0) {
+    const kept = await safely('пополнение эталона', trace, async () => {
+      const { persistLookup } = await import('@/services/reference')
+      await persistLookup(
+        isbn13,
+        isbn10,
+        worthKeeping.map((f) => ({
+          source: f.key as 'fantlab' | 'google' | 'openlibrary',
+          draft: f.draft,
+        })),
+      )
+      return worthKeeping.length
+    })
+    if (kept.value) {
+      trace.info('эталон пополнен', {
+        sources: worthKeeping.map((f) => f.key).join(','),
+      })
+    }
+  }
+
   const confirmed = findings.find((f) => f.refBookId)
   const proven = findings.find((f) => f.proof)
   const result: FindResult = {

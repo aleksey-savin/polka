@@ -17,6 +17,7 @@ const { findEdition } = await import('./core')
 const { QUICK_BUDGET_MS } = await import('./types')
 const { setEnabled, moveSource } = await import('@/services/bookSources')
 const { looksTransliterated } = await import('./clean')
+const { eq } = await import('drizzle-orm')
 
 const ME = 'core-user'
 await db.insert(user).values({
@@ -255,6 +256,34 @@ describe('ядро поиска', () => {
     const result = await findEdition(ME, ISBN, { adapters: uneven })
     const keys = result.probes.map((p) => p.key)
     expect(keys.indexOf('fantlab')).toBeLessThan(keys.indexOf('google'))
+  })
+
+  test('находка каталога пополняет общий эталон', async () => {
+    // ради этого заведён M14: второй раз книга находится мгновенно и без сети
+    const { refBook } = await import('@/db/schema/catalog')
+    const isbn = '9785171636968'
+    await findEdition(ME, isbn, {
+      adapters: registry({
+        fantlab: answering('fantlab', { title: 'Зона', authors: 'Довлатов' }),
+      }),
+    })
+    const rows = await db.select().from(refBook).where(eq(refBook.isbn13, isbn))
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows[0]?.title).toBe('Зона')
+  })
+
+  test('транслит в общий эталон не попадает', async () => {
+    // осев в эталоне, латиница портила бы выдачу всем: эталон стоит первым
+    const { refBook } = await import('@/db/schema/catalog')
+    const isbn = '9785171636975'
+    await findEdition(ME, isbn, {
+      adapters: registry({
+        fantlab: answering('fantlab', null),
+        google: answering('google', { title: 'Deti-bilingvy' }),
+      }),
+    })
+    const rows = await db.select().from(refBook).where(eq(refBook.isbn13, isbn))
+    expect(rows).toHaveLength(0)
   })
 
   test('ступень отдаёт несколько вариантов — все попадают в находки', async () => {

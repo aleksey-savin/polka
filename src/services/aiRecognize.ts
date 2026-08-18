@@ -274,18 +274,38 @@ export async function recognizeIsbn(
     adapters: options.adapters,
   })
 
+  /**
+   * Добор (обложка, аннотация, объём) цепочка складывает в слитый черновик, а
+   * не в отдельные находки. Показываемому варианту это нужно не меньше:
+   * иначе человек видит книгу без обложки и описания, хотя цепочка их достала.
+   */
+  const enrichOf = (f: (typeof found.findings)[number]) =>
+    f.weak
+      ? f.draft
+      : {
+          ...f.draft,
+          annotation: f.draft.annotation ?? found.draft.annotation,
+          coverUrl: f.draft.coverUrl ?? found.draft.coverUrl,
+          pages: f.draft.pages ?? found.draft.pages,
+        }
+
   const fresh: Array<FoundVariant> = found.findings.map((f) => ({
     via: f.variantKey,
     verdict: f.refBookId ? 'confirmed' : 'unconfirmed',
-    title: f.draft.title ?? '',
-    authors: f.draft.authors ?? null,
-    publisher: f.draft.publisher ?? null,
-    year: f.draft.year ?? null,
-    pages: f.draft.pages ?? null,
-    seriesName: f.draft.seriesName ?? null,
-    annotation: f.draft.annotation ?? null,
-    coverUrl: f.draft.coverUrl ?? null,
-    coverOptions: f.covers,
+    ...(() => {
+      const d = enrichOf(f)
+      return {
+        title: d.title ?? '',
+        authors: d.authors ?? null,
+        publisher: d.publisher ?? null,
+        year: d.year ?? null,
+        pages: d.pages ?? null,
+        seriesName: d.seriesName ?? null,
+        annotation: d.annotation ?? null,
+        coverUrl: d.coverUrl ?? null,
+      }
+    })(),
+    coverOptions: f.covers.length > 0 ? f.covers : found.covers,
     refBookId: f.refBookId,
     workId: f.workId,
     proofUrl: f.proof?.url ?? null,
@@ -376,10 +396,32 @@ export async function recognizeIsbn(
     exhausted: found.exhausted,
     coverOptions: found.covers,
     variants,
-    variantIndex: fresh.length > 0 ? variants.length - fresh.length : 0,
+    // показываем лучшую находку, а не первую по цепочке: эталон стоит первым,
+    // и латинская запись в нём перебивала бы русское название из поиска
+    variantIndex: bestVariantIndex(variants, found.findings),
     via: top?.variantKey ?? 'none',
     proof: found.proof,
   }
+}
+
+/**
+ * Какой вариант показать человеку.
+ *
+ * Не первый по цепочке: первым стоит свой эталон, и попавшая туда латиница
+ * («Deti-bilingvy» вместо «Дети-билингвы») перебивала бы нормальное название,
+ * найденное поиском. Берём первый неслабый с названием, иначе — первый.
+ */
+function bestVariantIndex(
+  variants: Array<FoundVariant>,
+  findings: Array<{ variantKey: string; weak: boolean }>,
+): number {
+  const weakKeys = new Set(
+    findings.filter((f) => f.weak).map((f) => f.variantKey),
+  )
+  const best = variants.findIndex(
+    (v) => v.title.trim() !== '' && !weakKeys.has(v.via),
+  )
+  return best >= 0 ? best : 0
 }
 
 export async function recognizeBook(
