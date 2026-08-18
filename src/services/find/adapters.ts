@@ -161,6 +161,7 @@ export function parseGuessDrafts(
   try {
     raw = JSON.parse(text.slice(start, end + 1))
   } catch {
+    // не-JSON от модели — обычное «ничего не нашла», а не поломка
     return []
   }
   const items = Array.isArray(raw) ? raw : [raw]

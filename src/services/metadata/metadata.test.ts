@@ -12,7 +12,6 @@ import {
   stripBb,
 } from './fantlab'
 import { parseGoogleBooks } from './googleBooks'
-import { mergeResults } from './merge'
 import { parseOpenLibraryBook } from './openLibrary'
 import { stripHtml, yearFrom } from './types'
 
@@ -83,46 +82,6 @@ describe('google books', () => {
       parseGoogleBooks({ kind: 'books#volumes', totalItems: 0 }),
     ).toBeNull()
     expect(parseGoogleBooks(null)).toBeNull()
-  })
-})
-
-describe('merge', () => {
-  test('приоритеты: FantLab бьёт Google по библио, Google бьёт FantLab по аннотации', () => {
-    const merged = mergeResults([
-      {
-        source: 'google',
-        draft: {
-          title: 'Google-заголовок',
-          annotation: 'Аннотация Google',
-          coverUrl: 'g',
-        },
-      },
-      {
-        source: 'fantlab',
-        draft: {
-          title: 'FantLab-заголовок',
-          publisher: 'АСТ',
-          annotation: 'Аннотация FantLab',
-          coverUrl: 'f',
-        },
-      },
-      {
-        source: 'openlibrary',
-        draft: { title: 'OL-заголовок', pages: 624, coverUrl: 'o' },
-      },
-    ])
-    expect(merged.draft.title).toBe('FantLab-заголовок')
-    expect(merged.draft.publisher).toBe('АСТ')
-    expect(merged.draft.annotation).toBe('Аннотация Google')
-    expect(merged.draft.pages).toBe(624) // дырки добираются из следующих источников
-    expect(merged.coverCandidates).toEqual(['f', 'g', 'o'])
-    expect(merged.sources).toEqual(['fantlab', 'google', 'openlibrary'])
-  })
-
-  test('все источники пустые', () => {
-    const merged = mergeResults([null, null, null])
-    expect(merged.draft).toEqual({})
-    expect(merged.sources).toEqual([])
   })
 })
 

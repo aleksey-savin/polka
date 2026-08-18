@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { lookupCache } from '@/db/schema/circulation'
+import { log } from '@/lib/logger'
 import type { FindResult, SourceKey } from './types'
 
 /**
@@ -35,8 +36,12 @@ export async function readCache(
   try {
     const parsed = JSON.parse(row.rawJson) as FindResult
     return { ...parsed, cached: true }
-  } catch {
-    // битую запись молча не глотаем — но и падать из-за неё незачем
+  } catch (error) {
+    // битая запись — аномалия: поиск переживёт, но знать о ней надо
+    log.warn('find', 'битая запись кэша', {
+      isbn: isbn13,
+      message: error instanceof Error ? error.message : String(error),
+    })
     return null
   }
 }
