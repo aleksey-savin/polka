@@ -541,6 +541,86 @@ describe('транслит в эталоне не перебивает нахо�
   })
 })
 
+describe('эталон не запирает поиск', () => {
+  test('нашёлся эталон — показываем его, но дальше идти можно', async () => {
+    const isbn = '9785042777783'
+    await db.insert(refBook).values({
+      source: 'fantlab',
+      sourceRef: 'ref-skudno',
+      isbn13: isbn,
+      title: 'Скудная запись',
+      titleNorm: 'скудная запись',
+      authors: 'Автор',
+    })
+    const id = await unrecognizedBook(isbn)
+    webFound({ title: 'Полная запись из поиска', authors: 'Автор', year: 2021 })
+
+    // эталон стоит первым и останавливает цепочку — платить незачем
+    const first = await recognizeBook(ME, id, { adapters: ADAPTERS() })
+    expect(first.variants[first.variantIndex]?.title).toBe('Скудная запись')
+    expect(first.exhausted).toBe(false)
+
+    // человека не устроило — ищем дальше и доходим до поиска
+    const second = await nextVariant(ME, id, { adapters: ADAPTERS() })
+    expect(second.variants[second.variantIndex]?.title).toBe(
+      'Полная запись из поиска',
+    )
+  })
+
+  test('отвергнутый эталон уходит модератору на проверку', async () => {
+    const { moderationItem } = await import('@/db/schema/moderation')
+    const isbn = '9785042777790'
+    const [ref] = await db
+      .insert(refBook)
+      .values({
+        source: 'fantlab',
+        sourceRef: 'ref-otvergnut',
+        isbn13: isbn,
+        title: 'Негодная запись',
+        titleNorm: 'негодная запись',
+        authors: 'Автор',
+      })
+      .returning({ id: refBook.id })
+    const id = await unrecognizedBook(isbn)
+
+    await recognizeBook(ME, id, { adapters: ADAPTERS() })
+    await nextVariant(ME, id, { adapters: ADAPTERS() })
+
+    const queued = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.targetId, ref!.id))
+    expect(queued).toHaveLength(1)
+    expect(queued[0]?.reason).toMatch(/актуальност/i)
+  })
+
+  test('транслит в эталоне помечается сам, без участия человека', async () => {
+    const { moderationItem } = await import('@/db/schema/moderation')
+    const isbn = '9789859051609'
+    const [ref] = await db
+      .insert(refBook)
+      .values({
+        source: 'google',
+        sourceRef: 'g-translit-flag',
+        isbn13: isbn,
+        title: 'Deti-bilingvy',
+        titleNorm: 'deti-bilingvy',
+        authors: 'Barbara',
+      })
+      .returning({ id: refBook.id })
+    const id = await unrecognizedBook(isbn)
+
+    await recognizeBook(ME, id, { adapters: ADAPTERS() })
+
+    const queued = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.targetId, ref!.id))
+    expect(queued).toHaveLength(1)
+    expect(queued[0]?.reason).toMatch(/латиниц/i)
+  })
+})
+
 describe('модерация и эталон', () => {
   test('утверждение заводит запись эталона, отклонение — откатывает', async () => {
     const isbn = '9785042222221'

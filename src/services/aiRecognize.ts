@@ -398,7 +398,7 @@ export async function recognizeIsbn(
     variants,
     // показываем лучшую находку, а не первую по цепочке: эталон стоит первым,
     // и латинская запись в нём перебивала бы русское название из поиска
-    variantIndex: bestVariantIndex(variants, found.findings),
+    variantIndex: bestVariantIndex(variants, found.findings, rejected),
     via: top?.variantKey ?? 'none',
     proof: found.proof,
   }
@@ -414,14 +414,21 @@ export async function recognizeIsbn(
 function bestVariantIndex(
   variants: Array<FoundVariant>,
   findings: Array<{ variantKey: string; weak: boolean }>,
+  rejected: Array<string>,
 ): number {
   const weakKeys = new Set(
     findings.filter((f) => f.weak).map((f) => f.variantKey),
   )
-  const best = variants.findIndex(
-    (v) => v.title.trim() !== '' && !weakKeys.has(v.via),
-  )
-  return best >= 0 ? best : 0
+  // отвергнутое человеком не предлагаем снова: он нажал «Искать дальше»
+  // именно потому, что показанное его не устроило
+  const usable = (v: FoundVariant) =>
+    v.title.trim() !== '' && !rejected.includes(v.via)
+
+  const best = variants.findIndex((v) => usable(v) && !weakKeys.has(v.via))
+  if (best >= 0) return best
+  // ничего свежего не нашлось — показываем хоть что-то неотвергнутое
+  const spare = variants.findIndex(usable)
+  return spare >= 0 ? spare : 0
 }
 
 export async function recognizeBook(
@@ -488,10 +495,35 @@ export async function nextVariant(
         annotation: null,
       })
       .where(eq(aiIsbnGuess.isbn13, row.isbn13))
-    log.info('ai', 'вариант отвергнут, ищем дальше', {
+    log.info('find', 'вариант отвергнут, ищем дальше', {
       isbn: row.isbn13,
       rejected: rejected.join(','),
     })
+
+    // Человек отверг то, что дал общий эталон, — значит запись негодная.
+    // Сам себя каталог не чинит: помечаем её модератору на проверку.
+    if (via === 'reference' && hit.refBookId) {
+      try {
+        const { enqueue } = await import('./moderation')
+        await enqueue(
+          'ref_book',
+          hit.refBookId,
+          null,
+          false,
+          'Проверить актуальность: владелец отверг данные и продолжил поиск',
+        )
+        log.info('find', 'запись эталона помечена на проверку', {
+          isbn: row.isbn13,
+          refBookId: hit.refBookId,
+        })
+      } catch (error) {
+        // пометка не должна мешать поиску, но молчать о ней нельзя
+        log.warn('find', 'не удалось пометить запись эталона', {
+          isbn: row.isbn13,
+          message: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
   }
   const core = await recognizeIsbn(userId, row.isbn13, options)
   return { ...core, bookId }

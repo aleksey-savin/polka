@@ -124,6 +124,8 @@ export async function enqueue(
   targetId: string,
   ownerId: string | null,
   fromAi = false,
+  /** Зачем поставили: у проверки актуальности причина не «жалоба». */
+  reason?: string,
 ): Promise<void> {
   const [existing] = await db
     .select({ id: moderationItem.id, status: moderationItem.status })
@@ -135,7 +137,9 @@ export async function enqueue(
     // разобранное снова на проверку не поднимаем: решение уже принято
     return
   }
-  await db.insert(moderationItem).values({ kind, targetId, ownerId, fromAi })
+  await db
+    .insert(moderationItem)
+    .values({ kind, targetId, ownerId, fromAi, reason: reason ?? null })
 }
 
 export interface QueueRow {

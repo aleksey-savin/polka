@@ -219,6 +219,34 @@ export async function findEdition(
   }
   const enriched = await enrichDraft(ctx, chain, merged.draft, merged.covers)
 
+  // ── Негодная запись эталона — на проверку актуальности ──
+  //
+  // Эталон стоит в цепочке первым, и косячная запись (латиница вместо
+  // русского названия) подсовывается всем, кто ищет этот номер. Сам себя
+  // общий каталог не чинит: помечаем такую запись модератору.
+  const badReference = findings.find(
+    (f) => f.key === 'reference' && f.weak && f.refBookId,
+  )
+  if (badReference?.refBookId) {
+    const flagged = await safely('пометка эталона', trace, async () => {
+      const { enqueue } = await import('@/services/moderation')
+      await enqueue(
+        'ref_book',
+        badReference.refBookId!,
+        null,
+        false,
+        'Проверить актуальность: название латиницей вместо русского',
+      )
+      return true
+    })
+    if (flagged.value) {
+      trace.info('запись эталона помечена на проверку', {
+        refBookId: badReference.refBookId,
+        title: badReference.draft.title,
+      })
+    }
+  }
+
   // ── Пополнение общего эталона ──
   //
   // Ради него и заведён M14: второй раз ту же книгу находим мгновенно и без
