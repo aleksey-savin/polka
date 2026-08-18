@@ -4,6 +4,7 @@ import { db } from '@/db'
 import { bookSource } from '@/db/schema/moderation'
 import { log } from '@/lib/logger'
 import { requireAdmin } from './moderation'
+import type { SourceKey } from './find/types'
 
 /**
  * Источники книг и порядок их опроса (M30).
@@ -12,8 +13,9 @@ import { requireAdmin } from './moderation'
  * его «зашитым». Выключенный источник пропускается.
  */
 
-export type SourceKey =
-  'reference' | 'fantlab' | 'google' | 'openlibrary' | 'web' | 'neuro' | 'model'
+// единственное определение живёт в подсистеме поиска: ступени «спросить
+// модель по памяти» нет с M30.1, а ключ 'model' в типе оставался и путал
+export type { SourceKey } from './find/types'
 
 export interface SourceInfo {
   key: SourceKey
