@@ -1622,8 +1622,16 @@
       <button type="button">
         <span class="ic">✧</span>
         <span
-          >Обновить данные<span class="sub"
-            >поиск по обычной цепочке источников</span
+          >Найти недостающее<span class="sub"
+            >заполнит пустое: обложку, описание, год</span
+          ></span
+        >
+      </button>
+      <button type="button">
+        <span class="ic">⟳</span>
+        <span
+          >Заменить данные<span class="sub"
+            >перезапишет карточку целиком</span
           ></span
         >
       </button>
@@ -1685,14 +1693,14 @@
     </p>
   </div>
 
-  <div class="demo-label">5 · Обновление данных с вариантами</div>
+  <div class="demo-label">5 · Найти недостающее</div>
   <div class="phone" style="max-width: 100%; border-radius: 16px">
     <div class="hit">
       <div class="var-head">
-        <span class="lbl">вариант 2 из 3</span>
+        <span class="lbl">вариант 1 из 3</span>
         <span class="var-tag">Яндекс Поиск</span>
         <span class="var-nav">
-          <button type="button" aria-label="Предыдущий">‹</button>
+          <button type="button" disabled aria-label="Предыдущий">‹</button>
           <button type="button" aria-label="Следующий">›</button>
         </span>
       </div>
@@ -1702,7 +1710,7 @@
           <span class="cov-shelf" aria-hidden></span>
         </div>
         <div class="hit-body">
-          <p class="hit-title">Искусство войны</p>
+          <p class="hit-title">Iskusstvo voyny</p>
           <p class="hit-author">Сунь-цзы</p>
           <p class="hit-facts">АСТ · 2021 · 224 с.</p>
           <div>
@@ -1713,27 +1721,50 @@
           </div>
         </div>
       </div>
-      <div class="replace-row">
-        <div style="flex: 1">
-          <div style="font-size: 14px; font-weight: 600">
-            Заменить название и автора
-          </div>
-          <div style="font-size: 12.5px; color: var(--ink-soft)">
-            Сейчас «Iskusstvo voyny» — латиница из источника
-          </div>
-        </div>
-        <button class="sw on" type="button" aria-label="Заменить"></button>
-      </div>
+      <p class="hintline" style="margin-top: 10px">
+        Заполнится: <b>обложка</b>, <b>описание</b>, <b>224 с.</b> Название и
+        автор остаются вашими.
+      </p>
       <div class="hit-actions">
-        <span class="b primary">Сохранить</span>
+        <span class="b primary">Заполнить</span>
+        <span class="b">Искать дальше</span>
+        <button class="more" type="button">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-label">6 · Заменить данные</div>
+  <div class="phone" style="max-width: 100%; border-radius: 16px">
+    <div class="hit" style="border-color: color-mix(in oklab, var(--alarm) 28%, transparent)">
+      <div class="var-head">
+        <span class="lbl">вариант 1 из 3</span>
+        <span class="var-tag">Яндекс Поиск</span>
+        <span class="var-nav">
+          <button type="button" disabled aria-label="Предыдущий">‹</button>
+          <button type="button" aria-label="Следующий">›</button>
+        </span>
+      </div>
+      <div class="split" style="margin-top: 0">
+        <div class="mine">
+          <b>сейчас у вас</b>Iskusstvo voyny · Сунь-цзы · без издательства
+        </div>
+        <div class="draft">
+          <b>станет</b>Искусство войны · Сунь-цзы · АСТ, 2021, 224 с.
+        </div>
+      </div>
+      <p class="hintline" style="margin-top: 10px">
+        Перезапишутся все поля карточки, включая название и автора. Оценка,
+        рецензия и место на полке не тронутся.
+      </p>
+      <div class="hit-actions">
+        <span class="b danger">Заменить</span>
         <span class="b">Искать дальше</span>
         <button class="more" type="button">Отмена</button>
       </div>
     </div>
     <p class="note-inline" style="margin: 10px 0 0">
-      Тот же поиск и та же карточка, что в «Не распознано» — на карточке книги
-      она просто открывается шторкой. Без переключателя заполняются только
-      пустые поля.
+      Ветка для случаев вроде «Iskusstvo voyny»: видно, что было и что станет,
+      до нажатия.
     </p>
   </div>
 
@@ -1744,14 +1775,19 @@
       из меню оба пункта убраны.
     </p>
     <p class="mock-note">
-      · «Обновить данные» не заводит своей ветки поиска: зовёт ту же цепочку с
-      порядком из настроек, что и разбор нераспознанных, и показывает те же
-      варианты.
+      · Обе ветки не заводят своего поиска: зовут ту же цепочку с порядком из
+      настроек, что и разбор нераспознанных, и показывают те же варианты со
+      стрелками.
     </p>
     <p class="mock-note">
-      · Переключатель «заменить название и автора» нужен именно для случаев
-      вроде «Iskusstvo voyny»: по умолчанию правило прежнее — трогаем только
-      пустое, введённое руками не перетираем.
+      · Две ветки, а не переключатель внутри одной: «найти недостающее» и
+      «заменить данные» — разные намерения и разная цена ошибки. Первая
+      безопасна и трогает только пустое; вторая перезаписывает карточку, поэтому
+      показывает «было → станет» и подтверждается красной кнопкой.
+    </p>
+    <p class="mock-note">
+      · Личное не трогает ни та, ни другая: оценка, рецензия, статус чтения,
+      полка и списки остаются как есть.
     </p>
     <p class="mock-note">
       · Меню сгруппировано по смыслу: данные · место · состояние · доступ ·
