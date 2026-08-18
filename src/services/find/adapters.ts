@@ -23,7 +23,13 @@ import {
 } from './clean'
 import { MAX_VARIANTS_PER_STEP } from './types'
 import type { MetadataDraft, SourceResult } from '@/services/metadata/types'
-import type { Finding, FindContext, SourceAdapter, SourceKey } from './types'
+import type {
+  Finding,
+  FindContext,
+  PendingPage,
+  SourceAdapter,
+  SourceKey,
+} from './types'
 
 /**
  * Источники как функции — единственное место подсистемы, где живёт сеть.
@@ -242,37 +248,48 @@ async function readFromWeb(
   key: 'web' | 'neuro',
   collect: () => Promise<Array<WebPage>>,
 ): Promise<Array<Finding>> {
-  const box: { pages: Array<WebPage> } = { pages: [] }
-  // расход считается всегда, когда мы реально пошли в поиск, — включая
-  // неудачу: иначе платный источник тратится мимо суточного лимита
-  await spendSearch(ctx.userId, async () => {
-    box.pages = await collect()
-    return `${box.pages.length} страниц`
-  })
+  // Отложенные страницы читаем без нового поиска: он уже оплачен, а страница
+  // никуда не делась. Так «Искать дальше» не стоит ни поиска, ни лишних
+  // запросов к модели.
+  let queue: Array<PendingPage> = ctx.pending
+  if (queue.length === 0) {
+    const box: { pages: Array<WebPage> } = { pages: [] }
+    // расход считается всегда, когда мы реально пошли в поиск, — включая
+    // неудачу: иначе платный источник тратится мимо суточного лимита
+    await spendSearch(ctx.userId, async () => {
+      box.pages = await collect()
+      return `${box.pages.length} страниц`
+    })
 
-  // Сниппет — только повод открыть страницу: в нём две строки, ни аннотации,
-  // ни нормальных ФИО автора. Отбираем кандидатов и проваливаемся в каждого.
-  const candidates = box.pages
-    .filter(
-      (page) =>
-        mentionsIsbn(page.text, ctx.isbn13) ||
-        mentionsIsbn(page.title, ctx.isbn13),
-    )
-    .slice(0, MAX_VARIANTS_PER_STEP)
-  if (candidates.length === 0) {
-    ctx.trace.info('номер в выдаче не встретился', { step: key })
-    return []
+    // Сниппет — только повод открыть страницу: в нём две строки, ни
+    // аннотации, ни нормальных ФИО автора.
+    queue = box.pages
+      .filter(
+        (page) =>
+          mentionsIsbn(page.text, ctx.isbn13) ||
+          mentionsIsbn(page.title, ctx.isbn13),
+      )
+      .slice(0, MAX_VARIANTS_PER_STEP)
+      .map((page) => ({ url: page.url, title: page.title || page.url }))
+    if (queue.length === 0) {
+      ctx.trace.info('номер в выдаче не встретился', { step: key })
+      ctx.defer([])
+      return []
+    }
+    ctx.trace.info('страницы отобраны', { step: key, pages: queue.length })
   }
 
-  const found: Array<Finding> = []
-  for (const page of candidates) {
+  // За страницу платим запросом к модели, поэтому читаем ровно одну.
+  // Не устроит — «Искать дальше» возьмёт следующую из очереди.
+  for (let i = 0; i < queue.length; i++) {
+    const page = queue[i]!
     if (ctx.leftMs() < 12_000) {
-      ctx.trace.info('на чтение страниц не хватило времени', {
+      ctx.trace.info('на чтение страницы не хватило времени', {
         step: key,
         leftMs: ctx.leftMs(),
-        read: found.length,
       })
-      break
+      ctx.defer(queue.slice(i))
+      return []
     }
 
     const text = await fetchPageText(page.url)
@@ -295,26 +312,26 @@ async function readFromWeb(
     const parsed = parseGuessDrafts(answer.text)[0]
     if (!parsed) continue
 
-    found.push(
-      finding(key, parsed.draft, ctx.isbn13, {
-        variantKey: `${key}#${found.length + 1}`,
-        proof: { url: page.url, title: page.title || page.url },
-      }),
-    )
+    ctx.defer(queue.slice(i + 1))
     ctx.trace.info('страница прочитана', {
       step: key,
       url: page.url,
       title: parsed.draft.title,
       annotation: Boolean(parsed.draft.annotation),
+      left: queue.length - i - 1,
     })
+    return [
+      finding(key, parsed.draft, ctx.isbn13, {
+        variantKey: `${key}#${MAX_VARIANTS_PER_STEP - queue.length + i + 1}`,
+        proof: page,
+      }),
+    ]
   }
 
-  ctx.trace.info('чтение страниц закончено', {
-    step: key,
-    candidates: candidates.length,
-    variants: found.length,
-  })
-  return found
+  // ни одна страница не далась — очередь пуста, идём дальше по цепочке
+  ctx.defer([])
+  ctx.trace.info('страницы не дали данных', { step: key })
+  return []
 }
 
 const web: SourceAdapter = {

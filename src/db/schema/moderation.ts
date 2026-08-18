@@ -238,6 +238,12 @@ export const aiIsbnGuess = sqliteTable('ai_isbn_guess', {
   rejectedVias: text('rejected_vias'),
   /** Все найденные варианты (JSON-массив) — листаются без новых запросов. */
   variants: text('variants'),
+  /**
+   * Страницы, найденные поиском, но ещё не прочитанные (M32). Читаем по одной:
+   * за страницу платим запросом к модели. «Искать дальше» берёт следующую
+   * отсюда — без нового платного поиска.
+   */
+  pendingPages: text('pending_pages'),
   /** Страница, на которой встретился сам номер. */
   proofUrl: text('proof_url'),
   proofTitle: text('proof_title'),

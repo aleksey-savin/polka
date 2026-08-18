@@ -70,6 +70,8 @@ export interface FindResult {
   truncated: boolean
   /** Идти больше некуда: все ступени опрошены или отвергнуты. */
   exhausted: boolean
+  /** Найденные, но ещё не прочитанные страницы — очередь для «Искать дальше». */
+  pendingPages: Array<PendingPage>
 }
 
 export interface FindOptions {
@@ -82,6 +84,12 @@ export interface FindOptions {
   force?: boolean
   /** Ступени, которые человек уже отверг кнопкой «Искать дальше». */
   rejected?: Array<SourceKey>
+  /**
+   * Непрочитанные страницы с прошлого раза. Читаем по одной: за страницу
+   * платим запросом к модели, и тратить три сразу, когда хватит первой, — это
+   * выброшенные деньги.
+   */
+  pendingPages?: Array<PendingPage>
   /** Подмена источников в тестах. В бою не передаётся. */
   adapters?: Partial<Record<SourceKey, SourceAdapter>>
 }
@@ -94,8 +102,14 @@ export interface FindOptions {
 export const QUICK_BUDGET_MS = 10_000
 /** Полный режим: цепочка целиком, включая веб-поиск и чтение страниц. */
 export const FULL_BUDGET_MS = 45_000
-/** Сколько вариантов берём с одной ступени: больше человек не пролистает. */
+/** Сколько страниц отбираем в очередь на чтение с одной ступени. */
 export const MAX_VARIANTS_PER_STEP = 3
+
+/** Страница из выдачи: адрес и заголовок, по которому её узнают. */
+export interface PendingPage {
+  url: string
+  title: string
+}
 
 export interface FindContext {
   userId: string
@@ -105,6 +119,13 @@ export interface FindContext {
   trace: Trace
   /** Сколько миллисекунд осталось у всей цепочки. */
   leftMs: () => number
+  /**
+   * Страницы, отложенные прошлым поиском. Пока они есть, веб-ступень читает
+   * их, а не идёт в платный поиск заново.
+   */
+  pending: Array<PendingPage>
+  /** Отложить остаток страниц на «Искать дальше». */
+  defer: (pages: Array<PendingPage>) => void
 }
 
 /**

@@ -10,6 +10,7 @@ import { startTrace } from './trace'
 import { FULL_BUDGET_MS } from './types'
 import type {
   Finding,
+  PendingPage,
   FindContext,
   FindOptions,
   FindResult,
@@ -64,6 +65,8 @@ export async function findEdition(
 
   const probes: Array<SourceProbe> = []
   const findings: Array<Finding> = []
+  // страницы, найденные, но не прочитанные: очередь для «Искать дальше»
+  let deferred: Array<PendingPage> = options.pendingPages ?? []
   let truncated = false
   /** Ступень пропущена только потому, что книга нашлась раньше нужного. */
   let skippedByEarlyHit = false
@@ -89,6 +92,10 @@ export async function findEdition(
       soFar: findings,
       trace,
       leftMs: () => budget.left(),
+      pending: deferred,
+      defer: (pages) => {
+        deferred = pages
+      },
     }
     const got = await safely(
       `ступень ${key}`,
@@ -216,6 +223,8 @@ export async function findEdition(
     soFar: findings,
     trace,
     leftMs: () => budget.left(),
+    pending: deferred,
+    defer: () => {},
   }
   const enriched = await enrichDraft(ctx, chain, merged.draft, merged.covers)
 
@@ -292,9 +301,11 @@ export async function findEdition(
     covers: enriched.covers,
     cached: false,
     truncated,
-    // идти больше некуда: цепочка прошла до конца и ни одна ступень не
-    // отложена — ни по бюджету, ни потому что книга нашлась раньше
-    exhausted: !truncated && !skippedByEarlyHit,
+    // идти больше некуда: цепочка прошла до конца, ни одна ступень не
+    // отложена — ни по бюджету, ни из-за ранней находки — и не осталось
+    // непрочитанных страниц
+    exhausted: !truncated && !skippedByEarlyHit && deferred.length === 0,
+    pendingPages: deferred,
   }
 
   const written = await safely('запись кэша', trace, () =>

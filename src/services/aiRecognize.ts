@@ -219,6 +219,24 @@ const parseRejected = (raw: string | null | undefined): Array<string> => {
   }
 }
 
+/** Очередь непрочитанных страниц из кэша разбора. */
+function parsePendingPages(
+  raw: string | null | undefined,
+): Array<{ url: string; title: string }> {
+  try {
+    const parsed = JSON.parse(raw ?? '[]') as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(
+      (v): v is { url: string; title: string } =>
+        typeof v === 'object' &&
+        v !== null &&
+        typeof (v as { url?: unknown }).url === 'string',
+    )
+  } catch {
+    return []
+  }
+}
+
 export function parseVariants(
   raw: string | null | undefined,
 ): Array<FoundVariant> {
@@ -282,6 +300,9 @@ export async function recognizeIsbn(
     force: options.force,
     rejected: rejected as Array<SourceKey>,
     adapters: options.adapters,
+    // очередь непрочитанных страниц переживает закрытие шторки: «Искать
+    // дальше» читает следующую, не платя за новый поиск
+    pendingPages: options.force ? [] : parsePendingPages(hit?.pendingPages),
   })
 
   /**
@@ -368,6 +389,7 @@ export async function recognizeIsbn(
     proofTitle: found.proof?.title ?? null,
     rejectedVias: JSON.stringify(rejected),
     variants: JSON.stringify(variants),
+    pendingPages: JSON.stringify(found.pendingPages),
   })
 
   return {
@@ -490,7 +512,8 @@ async function rejectVariant(isbn13: string, via?: string): Promise<void> {
     .update(aiIsbnGuess)
     .set({
       rejectedVias: JSON.stringify(rejected),
-      // сам вариант очищаем, чтобы кэш не вернул его же
+      // сам вариант очищаем, чтобы кэш не вернул его же; очередь страниц
+      // при этом сохраняем — она и нужна для следующего шага
       verdict: 'unknown',
       title: null,
       authors: null,

@@ -258,6 +258,97 @@ describe('ядро поиска', () => {
     expect(keys.indexOf('fantlab')).toBeLessThan(keys.indexOf('google'))
   })
 
+  test('непрочитанные страницы возвращаются наружу', async () => {
+    const withQueue: SourceAdapter = {
+      key: 'web',
+      paid: true,
+      timeoutMs: 1_000,
+      probe: async (ctx) => {
+        asked.push('web')
+        // адаптер прочитал одну страницу, две отложил
+        ctx.defer([
+          { url: 'https://b.ru', title: 'Б' },
+          { url: 'https://c.ru', title: 'В' },
+        ])
+        return [
+          {
+            key: 'web',
+            variantKey: 'web#1',
+            draft: { title: 'Со страницы А' },
+            proof: { url: 'https://a.ru', title: 'А' },
+            refBookId: null,
+            workId: null,
+            covers: [],
+            weak: false,
+          },
+        ]
+      },
+    }
+    const result = await findEdition(ME, ISBN, {
+      adapters: registry({
+        fantlab: answering('fantlab', null),
+        google: answering('google', null),
+        web: withQueue,
+      }),
+    })
+    expect(result.pendingPages).toHaveLength(2)
+    // очередь не пуста — значит есть куда идти
+    expect(result.exhausted).toBe(false)
+  })
+
+  test('отложенные страницы читаются без нового поиска', async () => {
+    let searched = 0
+    const lazy: SourceAdapter = {
+      key: 'web',
+      paid: true,
+      timeoutMs: 1_000,
+      probe: async (ctx) => {
+        // очередь пуста только при первом заходе — тогда и платим за поиск
+        if (ctx.pending.length === 0) searched++
+        const queue =
+          ctx.pending.length > 0
+            ? ctx.pending
+            : [
+                { url: 'https://a.ru', title: 'А' },
+                { url: 'https://b.ru', title: 'Б' },
+              ]
+        const [page, ...rest] = queue
+        ctx.defer(rest)
+        return [
+          {
+            key: 'web',
+            variantKey: 'web#1',
+            draft: { title: `Со страницы ${page!.title}` },
+            proof: page!,
+            refBookId: null,
+            workId: null,
+            covers: [],
+            weak: false,
+          },
+        ]
+      },
+    }
+    const silent = registry({
+      fantlab: answering('fantlab', null),
+      google: answering('google', null),
+      web: lazy,
+    })
+
+    const first = await findEdition(ME, ISBN, { adapters: silent })
+    expect(first.draft.title).toBe('Со страницы А')
+    expect(first.pendingPages).toHaveLength(1)
+
+    // второй заход берёт отложенную страницу и в поиск не идёт
+    const second = await findEdition(ME, ISBN, {
+      adapters: silent,
+      rejected: [],
+      pendingPages: first.pendingPages,
+      force: true,
+    })
+    expect(second.draft.title).toBe('Со страницы Б')
+    expect(searched).toBe(1)
+  })
+
   test('находка каталога пополняет общий эталон', async () => {
     // ради этого заведён M14: второй раз книга находится мгновенно и без сети
     const { refBook } = await import('@/db/schema/catalog')

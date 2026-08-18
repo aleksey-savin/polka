@@ -24,6 +24,7 @@ const result: FindResult = {
   cached: false,
   truncated: false,
   exhausted: false,
+  pendingPages: [],
 }
 
 describe('кэш поиска', () => {
