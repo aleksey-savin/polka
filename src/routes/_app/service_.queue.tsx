@@ -319,9 +319,9 @@ function ModerationPage() {
                   {item.title}
                 </h2>
                 <p className="text-[12.5px] text-muted-foreground [overflow-wrap:anywhere]">
-                  {[item.subtitle, item.ownerName && `автор ${item.ownerName}`]
-                    .filter(Boolean)
-                    .join(' · ')}
+                  {/* кто добавил — не показываем: цель экрана в том, чтобы
+                      не пропустить запрещённое, а не выяснять, чьё это */}
+                  {item.subtitle}
                 </p>
                 {item.reports.slice(0, 2).map((rep, i) => (
                   <p

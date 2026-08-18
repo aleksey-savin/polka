@@ -473,11 +473,14 @@ export async function resolve(
     }
   }
 
+  const decided = await describeTarget(item.kind, item.targetId)
   await writeLog(userId, decision === 'ok' ? 'approve' : 'remove', {
     kind: item.kind,
     targetId: item.targetId,
     subjectId: item.ownerId,
     reason: reason?.trim() || null,
+    targetTitle: decided.title,
+    details: decision === 'removed' && deleteFile ? 'файл удалён' : null,
   })
 }
 
@@ -489,6 +492,10 @@ async function writeLog(
     targetId?: string | null
     subjectId?: string | null
     reason?: string | null
+    /** Снимок названия: объект переименуют или удалят, журнал останется. */
+    targetTitle?: string | null
+    /** Что изменилось: «было → стало». */
+    details?: string | null
   },
 ): Promise<void> {
   await db.insert(moderationLog).values({ actorId, action, ...fields })
@@ -605,6 +612,9 @@ export interface LogRow {
   id: string
   action: string
   kind: string | null
+  targetId: string | null
+  targetTitle: string | null
+  details: string | null
   reason: string | null
   createdAt: Date
   actorName: string | null
@@ -628,6 +638,9 @@ export async function listLog(
       id: moderationLog.id,
       action: moderationLog.action,
       kind: moderationLog.kind,
+      targetId: moderationLog.targetId,
+      targetTitle: moderationLog.targetTitle,
+      details: moderationLog.details,
       reason: moderationLog.reason,
       createdAt: moderationLog.createdAt,
       actorName: actor.name,
@@ -651,6 +664,9 @@ export async function listLog(
     id: r.id,
     action: r.action,
     kind: r.kind,
+    targetId: r.targetId,
+    targetTitle: r.targetTitle,
+    details: r.details,
     reason: r.reason,
     createdAt: r.createdAt,
     actorName: r.actorName,
@@ -782,11 +798,39 @@ export async function saveDraft(
 ): Promise<void> {
   await requireModerator(userId)
   if (!draft.title.trim()) throw new AppError('Без названия нельзя', 'invalid')
+  const before = await getDraft(userId, itemId)
+  const [item] = await db
+    .select()
+    .from(moderationItem)
+    .where(eq(moderationItem.id, itemId))
   await db
     .update(moderationItem)
     .set({ draftJson: JSON.stringify(draft) })
     .where(eq(moderationItem.id, itemId))
-  await writeLog(userId, 'draft-edit', { targetId: itemId })
+
+  // «поправил» без подробностей бесполезно: пишем, что именно изменилось
+  const changes: Array<string> = []
+  if (before && before.title !== draft.title) {
+    changes.push(`название: «${before.title}» → «${draft.title}»`)
+  }
+  if (before && before.authors !== draft.authors) {
+    changes.push(`авторы: «${before.authors}» → «${draft.authors}»`)
+  }
+  if (before && before.publisher !== draft.publisher) {
+    changes.push(
+      `издательство: «${before.publisher ?? '—'}» → «${draft.publisher ?? '—'}»`,
+    )
+  }
+  if (before && before.year !== draft.year) {
+    changes.push(`год: ${before.year ?? '—'} → ${draft.year ?? '—'}`)
+  }
+  await writeLog(userId, 'draft-edit', {
+    kind: item?.kind ?? null,
+    targetId: item?.targetId ?? itemId,
+    subjectId: item?.ownerId ?? null,
+    targetTitle: before?.title ?? draft.title,
+    details: changes.join(' · ') || null,
+  })
 }
 
 /**
@@ -859,10 +903,13 @@ export async function approveItem(
       publishedRefId,
     })
     .where(eq(moderationItem.id, itemId))
+  const approved = await describeTarget(item.kind, item.targetId)
   await writeLog(userId, publishedRefId ? 'approve-ref' : 'approve', {
     kind: item.kind,
     targetId: item.targetId,
     subjectId: item.ownerId,
+    targetTitle: approved.title,
+    details: item.fromAi ? 'нашёл ИИ' : null,
   })
 }
 
@@ -902,10 +949,20 @@ export async function undoDecision(
       publishedRefId: null,
     })
     .where(eq(moderationItem.id, itemId))
+  const undone = await describeTarget(item.kind, item.targetId)
   await writeLog(userId, 'undo', {
     kind: item.kind,
     targetId: item.targetId,
     subjectId: item.ownerId,
     reason: item.reason,
+    targetTitle: undone.title,
+    details:
+      item.status === 'removed'
+        ? item.kind === 'share'
+          ? 'ссылка снова работает'
+          : 'снятие отменено'
+        : item.publishedRefId
+          ? 'копия убрана из эталона'
+          : null,
   })
 }

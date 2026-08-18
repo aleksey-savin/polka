@@ -286,3 +286,37 @@ describe('решения обратимы, правки — в копию', () =
     expect(restored?.revokedAt).toBeNull()
   })
 })
+
+describe('журнал', () => {
+  test('решение пишется с названием объекта и подробностями', async () => {
+    const { refBook } = await import('@/db/schema/catalog')
+    const [ref] = await db
+      .insert(refBook)
+      .values({
+        source: 'fantlab',
+        sourceRef: 'log-ref-1',
+        title: 'Книга для журнала',
+        titleNorm: 'книга для журнала',
+        authors: 'Автор',
+      })
+      .returning({ id: refBook.id })
+    await enqueue('ref_book', ref!.id, 'u-third')
+    const [item] = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.targetId, ref!.id))
+
+    await saveDraft('u-first', item!.id, {
+      title: 'Поправленное название',
+      authors: 'Автор',
+      publisher: null,
+      year: null,
+    })
+    const page = await listLog('u-first')
+    const edit = page.rows.find((r) => r.action === 'draft-edit')
+    expect(edit?.targetTitle).toBe('Книга для журнала')
+    // видно, что именно изменилось — иначе строка бесполезна
+    expect(edit?.details).toContain('Поправленное название')
+    expect(edit?.targetId).toBe(ref!.id)
+  })
+})

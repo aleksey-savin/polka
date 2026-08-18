@@ -48,8 +48,8 @@ function AppSettingsPage() {
         />
         <Row
           icon={<ScrollText />}
-          label="Журнал решений"
-          sub="кто и что снимал"
+          label="Журнал"
+          sub="решения модерации и настроек"
           to="/service/log"
         />
       </section>

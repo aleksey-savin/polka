@@ -126,6 +126,13 @@ export const moderationLog = sqliteTable(
       onDelete: 'set null',
     }),
     reason: text('reason'),
+    /**
+     * Название объекта на момент решения (M29.1). Храним снимком: объект
+     * могут удалить или переименовать, а журнал должен остаться понятным.
+     */
+    targetTitle: text('target_title'),
+    /** Что именно изменилось: «было → стало» для правок копии. */
+    details: text('details'),
     createdAt: createdAt(),
   },
   (t) => [index('moderation_log_created_idx').on(sql`${t.createdAt} desc`)],
