@@ -108,6 +108,8 @@ function BookCardPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [coverOpen, setCoverOpen] = useState(false)
   const [proposal, setProposal] = useState<Proposal | null>(null)
+  /** Номер текущего поиска: ответы прошлых не показываем. */
+  const searchRun = useRef(0)
   const [finding, setFinding] = useState<'fill' | 'replace' | null>(null)
   const [listsOpen, setListsOpen] = useState(false)
   const [covers, setCovers] = useState<Array<string> | null>(null)
@@ -232,20 +234,25 @@ function BookCardPage() {
     fresh = false,
     rejectVia?: string,
   ) {
+    // поиск идёт до минуты: за это время человек может закрыть шторку или
+    // нажать ещё раз — ответ отменённого запроса всплывать не должен
+    const attempt = ++searchRun.current
     setFinding(mode)
     try {
       const found = await proposeForBookFn({
         data: { bookId: book.id, mode, variantVia, fresh, rejectVia },
       })
+      if (searchRun.current !== attempt) return
       if (!found) {
         toast.info('Ничего не нашлось — заполните карточку руками')
         return
       }
       setProposal(found)
     } catch (e) {
+      if (searchRun.current !== attempt) return
       toast.error(e instanceof Error ? e.message : 'Не получилось')
     } finally {
-      setFinding(null)
+      if (searchRun.current === attempt) setFinding(null)
     }
   }
 
@@ -267,6 +274,9 @@ function BookCardPage() {
     // между двумя вариантами и до остальных не доходит
     const next = proposal.variants[proposal.variantIndex + 1]
     const { exhausted, via } = proposal
+    // индикатор включаем до закрытия предложения: иначе шторка на миг
+    // исчезнет и человек решит, что всё оборвалось
+    setFinding(mode)
     await closeProposal()
     // уже найденное листается без запросов в сеть
     if (next) {
@@ -1083,10 +1093,16 @@ function BookCardPage() {
         onOpenChange={setGiftOpen}
         onDone={refresh}
       />
+      {/* Шторка остаётся открытой на время поиска: он идёт до минуты, и
+          закрывать её — значит оставить человека без признаков жизни */}
       <Drawer
-        open={proposal !== null}
+        open={proposal !== null || finding !== null}
         onOpenChange={(open) => {
-          if (!open) void closeProposal()
+          if (open) return
+          // закрыли во время поиска — отменяем: ответ придёт в пустоту
+          searchRun.current++
+          setFinding(null)
+          void closeProposal()
         }}
       >
         <DrawerContent>
@@ -1095,6 +1111,15 @@ function BookCardPage() {
               {proposal?.mode === 'replace' ? 'Заменить данные' : 'Нашлось'}
             </DrawerTitle>
           </DrawerHeader>
+          {!proposal && finding !== null && (
+            <div className="px-4 pb-2">
+              <p className="text-[14.5px]">Ищем в источниках…</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Сначала свой эталон и каталоги, потом страницы из поиска — их
+                читаем целиком, поэтому это занимает время.
+              </p>
+            </div>
+          )}
           {proposal && (
             <>
               {proposal.variants.length > 1 && (
@@ -1105,6 +1130,39 @@ function BookCardPage() {
                   </span>
                   <span className="rounded-full bg-stamp/10 px-2.5 py-0.5 text-[11px] font-semibold text-stamp">
                     {viaLabel(proposal.via)}
+                  </span>
+                  {/* листаем уже найденное: запросов в сеть это не стоит */}
+                  <span className="ml-auto flex gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-11"
+                      aria-label="Предыдущий вариант"
+                      disabled={proposal.variantIndex === 0}
+                      onClick={() => {
+                        const prev =
+                          proposal.variants[proposal.variantIndex - 1]
+                        if (prev) void findData(proposal.mode, prev.via)
+                      }}
+                    >
+                      ←
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-11"
+                      aria-label="Следующий вариант"
+                      disabled={
+                        proposal.variantIndex >= proposal.variants.length - 1
+                      }
+                      onClick={() => {
+                        const next =
+                          proposal.variants[proposal.variantIndex + 1]
+                        if (next) void findData(proposal.mode, next.via)
+                      }}
+                    >
+                      →
+                    </Button>
                   </span>
                 </div>
               )}
