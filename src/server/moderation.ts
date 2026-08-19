@@ -206,6 +206,12 @@ export const saveDraftFn = createServerFn({ method: 'POST' })
       authors: z.string(),
       publisher: z.string().nullable(),
       year: z.number().int().nullable(),
+      // полное издание (M34): без этих полей эталон остаётся куцым
+      pages: z.number().int().min(1).max(20000).nullable(),
+      language: z.string(),
+      seriesName: z.string().nullable(),
+      annotation: z.string().nullable(),
+      coverUrl: z.string().nullable(),
     }),
   )
   .handler(({ context, data }) =>
@@ -214,5 +220,10 @@ export const saveDraftFn = createServerFn({ method: 'POST' })
       authors: data.authors,
       publisher: data.publisher,
       year: data.year,
+      pages: data.pages,
+      language: data.language,
+      seriesName: data.seriesName,
+      annotation: data.annotation,
+      coverUrl: data.coverUrl,
     }),
   )

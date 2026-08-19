@@ -24,6 +24,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import type { QueueRow } from '@/services/moderation'
 
@@ -118,6 +119,12 @@ function ModerationPage() {
     authors: '',
     publisher: '',
     year: '',
+    // полное издание (M34): за аннотацией и серией и приходит следующий владелец
+    pages: '',
+    language: 'ru',
+    seriesName: '',
+    annotation: '',
+    coverUrl: '',
   })
 
   async function approve() {
@@ -160,6 +167,11 @@ function ModerationPage() {
         authors: found?.authors ?? '',
         publisher: found?.publisher ?? '',
         year: found?.year?.toString() ?? '',
+        pages: found?.pages?.toString() ?? '',
+        language: found?.language ?? 'ru',
+        seriesName: found?.seriesName ?? '',
+        annotation: found?.annotation ?? '',
+        coverUrl: found?.coverUrl ?? '',
       })
       setEditing(item)
     } catch (e) {
@@ -178,6 +190,11 @@ function ModerationPage() {
           authors: draft.authors,
           publisher: draft.publisher.trim() || null,
           year: Number(draft.year) || null,
+          pages: Number(draft.pages) || null,
+          language: draft.language.trim() || 'ru',
+          seriesName: draft.seriesName.trim() || null,
+          annotation: draft.annotation.trim() || null,
+          coverUrl: draft.coverUrl.trim() || null,
         },
       })
       toast.success('Копия сохранена — карточка владельца не менялась')
@@ -623,6 +640,68 @@ function ModerationPage() {
                   }
                 />
               </div>
+            </div>
+            {/* Полное издание (M34): за аннотацией и серией и приходит
+                следующий владелец этой книги */}
+            <div className="grid grid-cols-[100px_1fr] gap-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="d-pages">Страниц</Label>
+                <Input
+                  id="d-pages"
+                  inputMode="numeric"
+                  className="h-12 rounded-xl font-mono text-[16px]"
+                  value={draft.pages}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, pages: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="d-lang">Язык</Label>
+                <Input
+                  id="d-lang"
+                  className="h-12 rounded-xl text-[16px]"
+                  value={draft.language}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, language: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="d-series">Серия</Label>
+              <Input
+                id="d-series"
+                className="h-12 rounded-xl text-[16px]"
+                value={draft.seriesName}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, seriesName: e.target.value }))
+                }
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="d-annotation">Аннотация</Label>
+              <Textarea
+                id="d-annotation"
+                rows={5}
+                className="rounded-xl text-[16px]"
+                value={draft.annotation}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, annotation: e.target.value }))
+                }
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="d-cover">Обложка</Label>
+              <Input
+                id="d-cover"
+                className="h-12 rounded-xl text-[16px]"
+                placeholder="https://…"
+                value={draft.coverUrl}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, coverUrl: e.target.value }))
+                }
+              />
             </div>
           </div>
           <DrawerFooter>

@@ -231,6 +231,11 @@ describe('решения обратимы, правки — в копию', () =
       authors: 'Автор',
       publisher: 'Издательство',
       year: 2020,
+      pages: null,
+      language: 'ru',
+      seriesName: null,
+      annotation: null,
+      coverUrl: null,
     })
     const [untouched] = await db
       .select()
@@ -311,6 +316,11 @@ describe('журнал', () => {
       authors: 'Автор',
       publisher: null,
       year: null,
+      pages: null,
+      language: 'ru',
+      seriesName: null,
+      annotation: null,
+      coverUrl: null,
     })
     const page = await listLog('u-first')
     // журнал общий: ищем именно своё событие, а не первое попавшееся
@@ -321,6 +331,103 @@ describe('журнал', () => {
     // видно, что именно изменилось — иначе строка бесполезна
     expect(edit?.details).toContain('Поправленное название')
     expect(edit?.targetId).toBe(ref!.id)
+  })
+})
+
+describe('полное издание в эталоне', () => {
+  test('в эталон уходят все поля, а не четыре', async () => {
+    const { refBook } = await import('@/db/schema/catalog')
+    const [ref] = await db
+      .insert(refBook)
+      .values({
+        source: 'fantlab',
+        sourceRef: 'full-ref-1',
+        isbn13: '9785900000024',
+        title: 'Куцая запись',
+        titleNorm: 'куцая запись',
+        authors: 'Автор',
+      })
+      .returning({ id: refBook.id })
+    await enqueue('ref_book', ref!.id, 'u-third')
+    const [item] = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.targetId, ref!.id))
+
+    await saveDraft('u-first', item!.id, {
+      title: 'Дети-билингвы',
+      authors: 'Абделила-Боэр Барбара',
+      publisher: 'Дискурс',
+      year: 2020,
+      pages: 256,
+      language: 'ru',
+      seriesName: 'Наше будущее',
+      annotation: 'О детях, растущих в двуязычной среде, и о двух языках.',
+      coverUrl: null,
+    })
+    await approveItem('u-first', item!.id, true)
+
+    const [published] = await db
+      .select()
+      .from(refBook)
+      .where(eq(refBook.sourceRef, `moderated:${item!.id}`))
+    expect(published?.annotation).toContain('двуязычной')
+    expect(published?.seriesName).toBe('Наше будущее')
+    expect(published?.pages).toBe(256)
+    // сумма посчитана: по ней книги поймут, что эталон дополнен
+    expect(published?.checksum).toHaveLength(16)
+  })
+
+  test('книги с этим номером получают ссылку на новую запись', async () => {
+    const { refBook } = await import('@/db/schema/catalog')
+    const { book } = await import('@/db/schema/catalog')
+
+    const isbn = '9785900000031'
+    const lib = await createLibrary('u-first', { name: 'Дом модератора' })
+    const shelfRow = await createShelf('u-first', {
+      libraryId: lib.id,
+      name: 'Полка',
+    })
+    // книга сохранена до модерации — эталона тогда не было
+    const own = await createBook('u-first', {
+      title: 'Неполная',
+      authors: '',
+      isbn13: isbn,
+      libraryId: lib.id,
+      shelfId: shelfRow.id,
+    })
+
+    const [ref] = await db
+      .insert(refBook)
+      .values({
+        source: 'google',
+        sourceRef: 'link-ref-1',
+        isbn13: isbn,
+        title: 'Neplnaya',
+        titleNorm: 'neplnaya',
+        authors: '',
+      })
+      .returning({ id: refBook.id })
+    await enqueue('ref_book', ref!.id, 'u-third')
+    const [item] = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.targetId, ref!.id))
+    await saveDraft('u-first', item!.id, {
+      title: 'Полная книга',
+      authors: 'Автор',
+      publisher: 'Издательство',
+      year: 2021,
+      pages: 300,
+      language: 'ru',
+      seriesName: null,
+      annotation: 'Описание книги достаточной длины для проверки.',
+      coverUrl: null,
+    })
+    await approveItem('u-first', item!.id, true)
+
+    const [row] = await db.select().from(book).where(eq(book.id, own.id))
+    expect(row?.refBookId).not.toBeNull()
   })
 })
 

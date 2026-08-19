@@ -731,6 +731,16 @@ export interface Draft {
   authors: string
   publisher: string | null
   year: number | null
+  /**
+   * Полные данные издания (M34). Без них эталон остаётся куцым: модератору
+   * нечем занести аннотацию и серию, а именно за ними и приходит следующий
+   * владелец этой книги.
+   */
+  pages: number | null
+  language: string
+  seriesName: string | null
+  annotation: string | null
+  coverUrl: string | null
 }
 
 /**
@@ -761,6 +771,11 @@ export async function getDraft(
         authors: row.authors,
         publisher: row.publisher,
         year: row.year,
+        pages: row.pages,
+        language: row.language,
+        seriesName: null,
+        annotation: row.annotation,
+        coverUrl: null,
       }
     }
   }
@@ -775,6 +790,11 @@ export async function getDraft(
         authors: row.authors,
         publisher: row.publisher,
         year: row.year,
+        pages: row.pages,
+        language: row.language,
+        seriesName: row.seriesName,
+        annotation: row.annotation,
+        coverUrl: row.coverUrl,
       }
     }
   }
@@ -784,7 +804,17 @@ export async function getDraft(
       .from(refWork)
       .where(eq(refWork.id, item.targetId))
     if (row) {
-      return { title: row.title, authors: '', publisher: null, year: row.year }
+      return {
+        title: row.title,
+        authors: '',
+        publisher: null,
+        year: row.year,
+        pages: null,
+        language: 'ru',
+        seriesName: null,
+        annotation: row.annotation,
+        coverUrl: null,
+      }
     }
   }
   return {
@@ -792,6 +822,11 @@ export async function getDraft(
     authors: view.subtitle,
     publisher: null,
     year: null,
+    pages: null,
+    language: 'ru',
+    seriesName: null,
+    annotation: null,
+    coverUrl: null,
   }
 }
 
@@ -863,6 +898,7 @@ export async function approveItem(
     const draft = await getDraft(userId, itemId)
     if (draft) {
       const { normalizeForSearch } = await import('./search')
+      const { refChecksum } = await import('./reference/checksum')
       const isbn13 =
         item.kind === 'ref_book'
           ? ((
@@ -890,10 +926,24 @@ export async function approveItem(
           authors: draft.authors.trim(),
           publisher: draft.publisher,
           year: draft.year,
+          // полное издание (M34): за этим и приходит следующий владелец
+          pages: draft.pages,
+          language: draft.language,
+          seriesName: draft.seriesName,
+          annotation: draft.annotation,
+          coverUrl: draft.coverUrl,
+          checksum: refChecksum(draft),
         })
         .onConflictDoNothing()
         .returning({ id: refBook.id })
       publishedRefId = created?.id ?? null
+
+      // Ссылка на эталон обязательна: книга, сохранённая до модерации, иначе
+      // осталась бы без связи, и обновление до неё не дошло бы никогда.
+      if (publishedRefId) {
+        const { linkBooksToReference } = await import('./reference')
+        await linkBooksToReference(publishedRefId, isbn13)
+      }
     }
   }
 
