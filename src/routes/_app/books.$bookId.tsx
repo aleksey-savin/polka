@@ -63,6 +63,12 @@ import {
   revertRecognitionFn,
 } from '@/server/aiRecognize'
 import type { Proposal } from '@/services/aiRecognize'
+import {
+  applyRefUpdateFn,
+  muteRefUpdateFn,
+  refUpdateForFn,
+} from '@/server/reference'
+import type { RefUpdate } from '@/services/reference/sync'
 import { bookCycleFn } from '@/server/cycles'
 import { bookLoanHistoryFn, returnLoanFn } from '@/server/loans'
 import { listBookPersonalFn } from '@/server/personal'
@@ -108,6 +114,10 @@ function BookCardPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [coverOpen, setCoverOpen] = useState(false)
   const [proposal, setProposal] = useState<Proposal | null>(null)
+  /** Что в эталоне полнее, чем в карточке (M34). */
+  const [refUpdate, setRefUpdate] = useState<RefUpdate | null>(null)
+  const [refOpen, setRefOpen] = useState(false)
+  const [refBusy, setRefBusy] = useState(false)
   /** Номер текущего поиска: ответы прошлых не показываем. */
   const searchRun = useRef(0)
   const [finding, setFinding] = useState<'fill' | 'replace' | null>(null)
@@ -123,6 +133,54 @@ function BookCardPage() {
   const [coverBusy, setCoverBusy] = useState(false)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const refresh = () => void router.invalidate()
+
+  // эталон мог уйти вперёд: спрашиваем один раз при открытии карточки
+  useEffect(() => {
+    let alive = true
+    void refUpdateForFn({ data: { bookId: book.id } })
+      .then((found) => {
+        if (alive) setRefUpdate(found)
+      })
+      .catch(() => {
+        // не срослось — просто не показываем плашку
+      })
+    return () => {
+      alive = false
+    }
+  }, [book.id])
+
+  /** Обновить карточку данными эталона — целиком, по кнопке владельца. */
+  async function updateFromReference() {
+    setRefBusy(true)
+    try {
+      await applyRefUpdateFn({ data: { bookId: book.id, force: true } })
+      toast.success('Карточка обновлена — «Откатить» в меню вернёт как было')
+      setRefOpen(false)
+      setRefUpdate(null)
+      refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setRefBusy(false)
+    }
+  }
+
+  /** «Больше не напоминать»: карточка владельца его устраивает. */
+  async function muteReference() {
+    setRefBusy(true)
+    try {
+      await muteRefUpdateFn({ data: { bookId: book.id } })
+      setRefOpen(false)
+      setRefUpdate(null)
+      toast.success(
+        'Больше не напомним — обновить можно через «Заменить данные»',
+      )
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setRefBusy(false)
+    }
+  }
 
   // запоминаем библиотеку книги: следующий переход должен попасть в неё
   useEffect(() => {
@@ -453,6 +511,26 @@ function BookCardPage() {
 
   return (
     <div className="mx-auto max-w-[640px]">
+      {refUpdate && (
+        <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[color-mix(in_oklab,var(--stamp)_30%,transparent)] bg-[color-mix(in_oklab,var(--stamp)_6%,transparent)] px-3.5 py-3">
+          <div className="min-w-0 flex-1">
+            <b className="block text-[14.5px] font-semibold text-stamp">
+              В эталоне данных больше
+            </b>
+            <span className="mt-0.5 block text-[13px] text-muted-foreground">
+              {refUpdate.fields.map((f) => f.label).join(', ')} — проверено
+              модератором
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            className="h-11 self-center"
+            onClick={() => setRefOpen(true)}
+          >
+            Посмотреть
+          </Button>
+        </div>
+      )}
       {aiMark && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[color-mix(in_oklab,var(--stamp)_35%,transparent)] bg-[color-mix(in_oklab,var(--stamp)_6%,transparent)] px-3 py-2 text-[12.5px]">
           <span className="font-semibold text-stamp">
@@ -1292,6 +1370,61 @@ function BookCardPage() {
               onClick={() => void closeProposal()}
             >
               {proposal?.suggestionId === null ? 'Закрыть' : 'Отмена'}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Обновление из эталона (M34): целиком, по кнопке, с откатом */}
+      <Drawer open={refOpen} onOpenChange={setRefOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Обновить из эталона</DrawerTitle>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {refUpdate?.fields.map((f) => (
+              <div key={f.field} className="border-b py-2.5 last:border-b-0">
+                <div className="font-mono text-[10.5px] tracking-[0.1em] text-muted-foreground uppercase">
+                  {f.label}
+                </div>
+                {f.was && (
+                  <div className="text-[13px] text-muted-foreground line-through">
+                    {f.was}
+                  </div>
+                )}
+                <div className="text-[14.5px]">{f.now}</div>
+              </div>
+            ))}
+            <p className="mt-3 text-[12.5px] text-muted-foreground">
+              Оценка, рецензия, заметки, полка и списки не меняются. Передумали
+              — «Откатить» в меню книги вернёт как было.
+            </p>
+          </div>
+          <DrawerFooter>
+            <Button
+              className="h-12 w-full text-[15px]"
+              loading={refBusy}
+              onClick={() => void updateFromReference()}
+            >
+              Обновить карточку
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 w-full text-[15px]"
+              loading={refBusy}
+              onClick={() => void muteReference()}
+            >
+              Больше не напоминать
+            </Button>
+            <p className="text-center text-[12px] text-muted-foreground">
+              Обновить всё равно можно — «Заменить данные» в меню книги
+            </p>
+            <Button
+              variant="ghost"
+              className="h-12 w-full text-[15px]"
+              onClick={() => setRefOpen(false)}
+            >
+              Не сейчас
             </Button>
           </DrawerFooter>
         </DrawerContent>
