@@ -1243,9 +1243,18 @@ export async function applyProposal(
     .update(aiSuggestion)
     .set({ status: 'applied', appliedAt: new Date() })
     .where(eq(aiSuggestion.id, suggestionId))
-  log.info('ai', 'дозаполнение применено', {
+
+  // Данные пришли из поиска, а не от человека: их стоит проверить, и тогда
+  // проверенная версия достанется всем, кто держит эту книгу (M34).
+  if (FROM_AI(row.via)) {
+    const { enqueue } = await import('./moderation')
+    await enqueue('ai_book', row.bookId, userId, true)
+  }
+
+  log.info('find', 'дозаполнение применено', {
     bookId: row.bookId,
     fields: Object.keys(patch).join(','),
+    toModeration: FROM_AI(row.via),
   })
 }
 

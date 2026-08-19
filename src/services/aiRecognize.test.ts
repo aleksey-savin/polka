@@ -661,6 +661,39 @@ describe('история вариантов из прошлой схемы', () 
   })
 })
 
+describe('дозаполнение доезжает до модератора', () => {
+  test('применённое предложение ставит книгу в очередь', async () => {
+    const { moderationItem } = await import('@/db/schema/moderation')
+    const isbn = '9785900000046'
+    const created = await createBook(ME, {
+      title: 'Неполная книга',
+      authors: '',
+      isbn13: isbn,
+      libraryId: library.id,
+      shelfId: shelf.id,
+    })
+    webFound({ title: 'Полная книга', authors: 'Автор', year: 2020 })
+
+    const proposal = await proposeForBook(
+      ME,
+      created.id,
+      'replace',
+      undefined,
+      false,
+      { adapters: ADAPTERS() },
+    )
+    await applyProposal(ME, proposal!.suggestionId!)
+
+    const queued = await db
+      .select()
+      .from(moderationItem)
+      .where(eq(moderationItem.targetId, created.id))
+    expect(queued).toHaveLength(1)
+    // данные из поиска: их стоит проверить человеком
+    expect(queued[0]?.fromAi).toBe(true)
+  })
+})
+
 describe('модерация и эталон', () => {
   test('утверждение заводит запись эталона, отклонение — откатывает', async () => {
     const isbn = '9785042222221'

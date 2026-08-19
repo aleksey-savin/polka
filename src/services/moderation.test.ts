@@ -342,7 +342,7 @@ describe('полное издание в эталоне', () => {
       .values({
         source: 'fantlab',
         sourceRef: 'full-ref-1',
-        isbn13: '9785900000024',
+        isbn13: '9785900000022',
         title: 'Куцая запись',
         titleNorm: 'куцая запись',
         authors: 'Автор',
@@ -382,7 +382,7 @@ describe('полное издание в эталоне', () => {
     const { refBook } = await import('@/db/schema/catalog')
     const { book } = await import('@/db/schema/catalog')
 
-    const isbn = '9785900000031'
+    const isbn = '9785900000039'
     const lib = await createLibrary('u-first', { name: 'Дом модератора' })
     const shelfRow = await createShelf('u-first', {
       libraryId: lib.id,

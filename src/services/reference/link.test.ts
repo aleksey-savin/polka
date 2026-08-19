@@ -31,7 +31,7 @@ const shelfRow = await createShelf(ME, { libraryId: lib.id, name: 'Полка' }
 describe('связывание книг с эталоном', () => {
   test('книга, сохранённая до модерации, получает ссылку', async () => {
     // номер уникален для этого файла: bun test держит одну базу на процесс
-    const isbn = '9785900000017'
+    const isbn = '9785900000015'
     // человек сохранил неполную карточку — эталона тогда ещё не было
     const created = await createBook(ME, {
       title: 'Зона',
