@@ -173,3 +173,20 @@ describe('больше не напоминать', () => {
     expect(row?.refSyncMuted).toBe(false)
   })
 })
+
+describe('сводка в «Чтении»', () => {
+  test('книга с дополненным эталоном видна в хабе', async () => {
+    const { getReadingHub } = await import('@/services/reading')
+    const { bookId } = await bookWithReference({ synced: false })
+    const hub = await getReadingHub(ME)
+    expect(hub.stale.some((b) => b.bookId === bookId)).toBe(true)
+  })
+
+  test('приглушённая книга в хаб не попадает', async () => {
+    const { getReadingHub } = await import('@/services/reading')
+    const { bookId } = await bookWithReference({ synced: false })
+    await muteRefUpdate(ME, bookId)
+    const hub = await getReadingHub(ME)
+    expect(hub.stale.some((b) => b.bookId === bookId)).toBe(false)
+  })
+})

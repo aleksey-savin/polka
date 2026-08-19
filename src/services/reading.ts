@@ -7,6 +7,8 @@ import { listMyLists } from './lists'
 import { memberLibraryIds } from './members'
 import type { LoanListRow } from './loans'
 import type { ListRow } from './lists'
+import { staleBooks } from './reference/sync'
+import type { StaleBook } from './reference/sync'
 
 export interface ReadingNowBook {
   id: string
@@ -29,6 +31,8 @@ export interface ReadingHub {
   year: number
   yearCount: number
   yearAvgRating: number | null
+  /** Книги, у которых эталон ушёл вперёд (M34). */
+  stale: Array<StaleBook>
 }
 
 const WISHLIST_HEAD = 3
@@ -98,5 +102,6 @@ export async function getReadingHub(userId: string): Promise<ReadingHub> {
     year,
     yearCount: yearRow?.count ?? 0,
     yearAvgRating: yearRow?.avg ?? null,
+    stale: await staleBooks(userId),
   }
 }

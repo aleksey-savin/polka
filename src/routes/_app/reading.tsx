@@ -42,7 +42,8 @@ function ReadingPage() {
     hub.loans.length === 0 &&
     hub.wishlistTotal === 0 &&
     hub.lists.length === 0 &&
-    hub.yearCount === 0
+    hub.yearCount === 0 &&
+    hub.stale.length === 0
 
   return (
     <div className="mx-auto max-w-[640px]">
@@ -67,6 +68,47 @@ function ReadingPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Эталон ушёл вперёд: секции нет, если дополнять нечего (M34) */}
+      {hub.stale.length > 0 && (
+        <section className="mt-6">
+          <SectionLabel>
+            Можно дополнить{' '}
+            <span className="text-stamp">· {hub.stale.length}</span>
+          </SectionLabel>
+          <p className="mb-1 text-[12.5px] text-muted-foreground">
+            В эталоне появились данные, которых нет в ваших карточках.
+          </p>
+          <div>
+            {hub.stale.map((b) => (
+              <Link
+                key={b.bookId}
+                to="/books/$bookId"
+                params={{ bookId: b.bookId }}
+                className="flex items-center gap-3 border-b py-3 last:border-b-0"
+              >
+                <span className="h-[50px] w-[34px] flex-none overflow-hidden rounded-sm bg-muted">
+                  {b.coverPath && (
+                    <img
+                      src={`/api/covers/${b.bookId}?v=${b.coverPath}`}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14.5px] font-medium">
+                    {b.title}
+                  </span>
+                  <span className="block text-[12.5px] text-muted-foreground">
+                    {b.fields.join(', ')}
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       {hub.reading.length > 0 && (
