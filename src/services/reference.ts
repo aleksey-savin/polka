@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm'
 
 import { db } from '@/db'
 import {
@@ -14,6 +14,8 @@ import { ensureAuthor, parseAuthors } from './authors'
 import { editionsInLists, listsForOne, listsForTargets } from './lists'
 import { memberLibraryIds } from './members'
 import { normalizeForSearch } from './search'
+import { refChecksum } from './reference/checksum'
+import { log } from '@/lib/logger'
 import type { MetadataDraft, SourceResult } from './metadata/types'
 import type { ListBadge } from './lists'
 
@@ -21,6 +23,35 @@ import type { ListBadge } from './lists'
  * Эталонный каталог: неизменяемые справочные записи со своими ID;
  * source/sourceRef — только метки происхождения для дедупа.
  */
+
+/**
+ * Связать книги с записью эталона по номеру (M34).
+ *
+ * Ссылка на эталон обязательна, иначе сценарий «модератор дополнил — у всех
+ * появилась кнопка обновиться» не работает: книга, сохранённая до модерации,
+ * осталась бы без связи навсегда.
+ */
+export async function linkBooksToReference(
+  refBookId: string,
+  isbn13: string | null,
+): Promise<number> {
+  if (!isbn13) return 0
+  const rows = await db
+    .select({ id: book.id })
+    .from(book)
+    .where(and(eq(book.isbn13, isbn13), isNull(book.refBookId)))
+  for (const row of rows) {
+    await db.update(book).set({ refBookId }).where(eq(book.id, row.id))
+  }
+  if (rows.length > 0) {
+    log.info('reference', 'книги связаны с эталоном', {
+      refBookId,
+      isbn: isbn13,
+      books: rows.length,
+    })
+  }
+  return rows.length
+}
 
 /** Издания эталона по ISBN → SourceResult'ы для обычного merge. */
 export async function refLookup(
@@ -84,6 +115,7 @@ export async function persistLookup(
           seriesName: r.draft.seriesName ?? null,
           coverUrl: r.draft.coverUrl ?? null,
           rawJson: JSON.stringify(r.draft),
+          checksum: refChecksum(r.draft),
         })
         .onConflictDoNothing()
         .returning({ id: refBook.id })

@@ -143,6 +143,18 @@ export const book = sqliteTable(
     refBookId: text('ref_book_id').references(() => refBook.id, {
       onDelete: 'set null',
     }),
+    /**
+     * Версия эталона, применённая в эту карточку (M34). Отличается от
+     * `ref_book.checksum` — значит запись дополнили и есть что подтянуть.
+     */
+    refChecksum: text('ref_checksum'),
+    /**
+     * Владелец сказал «больше не напоминать»: плашка и сводка эту книгу не
+     * показывают. Обновиться он по-прежнему может сам — «Заменить данные».
+     */
+    refSyncMuted: integer('ref_sync_muted', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     /** Желание уровня произведения («Хочу» без выбора издания). */
     refWorkId: text('ref_work_id').references(() => refWork.id, {
       onDelete: 'set null',
