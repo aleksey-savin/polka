@@ -294,6 +294,16 @@ async function readFromWeb(
 
     const text = await fetchPageText(page.url)
     if (!text) continue
+    // Пустой каркас: магазин отдал страницу, но данные рисует скриптами.
+    // Тратить на неё запрос к модели незачем — читать там нечего.
+    if (text.length < 400) {
+      ctx.trace.info('страница пришла почти пустой', {
+        step: key,
+        url: page.url,
+        chars: text.length,
+      })
+      continue
+    }
     // Номер должен встретиться в тексте самой страницы, а не только в
     // сниппете: совпадение в выдаче бывает случайным (M26, усилено M32).
     if (!mentionsIsbn(text, ctx.isbn13)) {
@@ -304,20 +314,40 @@ async function readFromWeb(
       continue
     }
 
+    // Магазины отдают ботам по-разному: кто-то 403, кто-то пустой каркас с
+    // рендером на скриптах. Записываем, сколько текста реально досталось —
+    // иначе «аннотации нет» не отличить от «страница пришла пустой».
+    ctx.trace.info('страница прочитана', {
+      step: key,
+      url: page.url,
+      chars: text.length,
+    })
+
     const answer = await ask(
       ctx.userId,
       `ISBN: ${ctx.isbn13}. Страница ${page.url}:\n\n${text.slice(0, 7000)}`,
       { system: WEB_SYSTEM, maxTokens: 700 },
     )
     const parsed = parseGuessDrafts(answer.text)[0]
-    if (!parsed) continue
+    if (!parsed) {
+      ctx.trace.info('модель не нашла книгу на странице', {
+        step: key,
+        url: page.url,
+      })
+      continue
+    }
 
     ctx.defer(queue.slice(i + 1))
-    ctx.trace.info('страница прочитана', {
+    ctx.trace.info('данные со страницы', {
       step: key,
       url: page.url,
       title: parsed.draft.title,
-      annotation: Boolean(parsed.draft.annotation),
+      publisher: parsed.draft.publisher ?? '—',
+      pages: parsed.draft.pages ?? '—',
+      // самое частое «чего-то не хватает» — именно про описание
+      annotation: parsed.draft.annotation
+        ? `${parsed.draft.annotation.length} символов`
+        : 'нет',
       left: queue.length - i - 1,
     })
     return [
