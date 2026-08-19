@@ -1,0 +1,1 @@
+ALTER TABLE `ref_book` ADD `checksum` text;

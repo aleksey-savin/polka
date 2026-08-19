@@ -350,6 +350,11 @@ export const refBook = sqliteTable(
     annotation: text('annotation'),
     seriesName: text('series_name'),
     coverUrl: text('cover_url'),
+    /**
+     * Контрольная сумма значимых полей (M34). Меняется при любой правке
+     * записи модератором — по ней книги понимают, что эталон дополнили.
+     */
+    checksum: text('checksum'),
     coverPath: text('cover_path'),
     coverColor: text('cover_color'),
     rawJson: text('raw_json'),
