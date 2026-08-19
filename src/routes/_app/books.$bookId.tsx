@@ -1111,137 +1111,141 @@ function BookCardPage() {
               {proposal?.mode === 'replace' ? 'Заменить данные' : 'Нашлось'}
             </DrawerTitle>
           </DrawerHeader>
-          {!proposal && finding !== null && (
-            <div className="px-4 pb-2">
-              <p className="text-[14.5px]">Ищем в источниках…</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">
-                Сначала свой эталон и каталоги, потом страницы из поиска — их
-                читаем целиком, поэтому это занимает время.
-              </p>
-            </div>
-          )}
-          {proposal && (
-            <>
-              {proposal.variants.length > 1 && (
-                <div className="mb-2.5 flex items-center gap-2.5">
-                  <span className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
-                    вариант {proposal.variantIndex + 1} из{' '}
-                    {proposal.variants.length}
-                  </span>
-                  <span className="rounded-full bg-stamp/10 px-2.5 py-0.5 text-[11px] font-semibold text-stamp">
-                    {viaLabel(proposal.via)}
-                  </span>
-                  {/* листаем уже найденное: запросов в сеть это не стоит */}
-                  <span className="ml-auto flex gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-11"
-                      aria-label="Предыдущий вариант"
-                      disabled={proposal.variantIndex === 0}
-                      onClick={() => {
-                        const prev =
-                          proposal.variants[proposal.variantIndex - 1]
-                        if (prev) void findData(proposal.mode, prev.via)
-                      }}
-                    >
-                      ←
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-11"
-                      aria-label="Следующий вариант"
-                      disabled={
-                        proposal.variantIndex >= proposal.variants.length - 1
-                      }
-                      onClick={() => {
-                        const next =
-                          proposal.variants[proposal.variantIndex + 1]
-                        if (next) void findData(proposal.mode, next.via)
-                      }}
-                    >
-                      →
-                    </Button>
-                  </span>
-                </div>
-              )}
-              <div className="flex gap-3">
-                {proposal.coverUrl && (
-                  <img
-                    src={proposal.coverUrl}
-                    alt=""
-                    className="aspect-[7/10] w-[70px] flex-none rounded-[4px] object-cover"
-                  />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15.5px] leading-tight font-semibold">
-                    {proposal.title}
-                  </p>
-                  <p className="text-[13px] text-muted-foreground">
-                    {proposal.authors}
-                  </p>
-                  {proposal.proof && (
-                    <a
-                      href={proposal.proof.url}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="mt-1.5 inline-block text-[12px] text-accent-foreground underline underline-offset-2"
-                    >
-                      ISBN найден на {proposal.proof.title}
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              {proposal.fills.length === 0 ? (
-                <p className="mt-3 rounded-xl bg-muted px-3 py-2.5 text-[13px] text-muted-foreground">
-                  {proposal.mode === 'replace'
-                    ? 'Это ровно то, что уже записано в карточке. Ищите дальше, если издание не то.'
-                    : 'Пустых полей нет — дозаполнять нечего.'}
+          {/* Скроллящийся блок обязателен: без него длинный список полей не
+              влезает в шторку и до кнопок не дотянуться (см. гайдлайн) */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {!proposal && finding !== null && (
+              <div className="pb-2">
+                <p className="text-[14.5px]">Ищем в источниках…</p>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  Сначала свой эталон и каталоги, потом страницы из поиска — их
+                  читаем целиком, поэтому это занимает время.
                 </p>
-              ) : (
-                <div className="mt-3 grid gap-1.5">
-                  {proposal.fills.map((fill) => (
-                    <div
-                      key={fill.field}
-                      className="rounded-xl bg-muted px-3 py-2"
-                    >
-                      <b className="block font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
-                        {fill.label}
-                      </b>
-                      {fill.was && (
-                        <s className="block text-[12.5px] text-muted-foreground decoration-muted-foreground/60">
-                          {fill.was}
-                        </s>
-                      )}
-                      {fill.field === 'coverUrl' ? (
-                        <img
-                          src={fill.value}
-                          alt=""
-                          className="mt-1 aspect-[7/10] w-[46px] rounded-[3px] object-cover"
-                        />
-                      ) : (
-                        <span
-                          className={`block text-[13px] leading-snug ${
-                            fill.field === 'annotation' ? 'line-clamp-4' : ''
-                          }`}
-                        >
-                          {fill.value}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+              </div>
+            )}
+            {proposal && (
+              <>
+                {proposal.variants.length > 1 && (
+                  <div className="mb-2.5 flex items-center gap-2.5">
+                    <span className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+                      вариант {proposal.variantIndex + 1} из{' '}
+                      {proposal.variants.length}
+                    </span>
+                    <span className="rounded-full bg-stamp/10 px-2.5 py-0.5 text-[11px] font-semibold text-stamp">
+                      {viaLabel(proposal.via)}
+                    </span>
+                    {/* листаем уже найденное: запросов в сеть это не стоит */}
+                    <span className="ml-auto flex gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="size-11"
+                        aria-label="Предыдущий вариант"
+                        disabled={proposal.variantIndex === 0}
+                        onClick={() => {
+                          const prev =
+                            proposal.variants[proposal.variantIndex - 1]
+                          if (prev) void findData(proposal.mode, prev.via)
+                        }}
+                      >
+                        ←
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="size-11"
+                        aria-label="Следующий вариант"
+                        disabled={
+                          proposal.variantIndex >= proposal.variants.length - 1
+                        }
+                        onClick={() => {
+                          const next =
+                            proposal.variants[proposal.variantIndex + 1]
+                          if (next) void findData(proposal.mode, next.via)
+                        }}
+                      >
+                        →
+                      </Button>
+                    </span>
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  {proposal.coverUrl && (
+                    <img
+                      src={proposal.coverUrl}
+                      alt=""
+                      className="aspect-[7/10] w-[70px] flex-none rounded-[4px] object-cover"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15.5px] leading-tight font-semibold">
+                      {proposal.title}
+                    </p>
+                    <p className="text-[13px] text-muted-foreground">
+                      {proposal.authors}
+                    </p>
+                    {proposal.proof && (
+                      <a
+                        href={proposal.proof.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="mt-1.5 inline-block text-[12px] text-accent-foreground underline underline-offset-2"
+                      >
+                        ISBN найден на {proposal.proof.title}
+                      </a>
+                    )}
+                  </div>
                 </div>
-              )}
 
-              <p className="mt-2 text-[12.5px] text-muted-foreground">
-                {proposal.mode === 'fill'
-                  ? 'Название и автор остаются вашими. Оценка, рецензия, полка и списки не меняются.'
-                  : 'Оценка, рецензия, полка и списки не меняются.'}
-              </p>
-            </>
-          )}
+                {proposal.fills.length === 0 ? (
+                  <p className="mt-3 rounded-xl bg-muted px-3 py-2.5 text-[13px] text-muted-foreground">
+                    {proposal.mode === 'replace'
+                      ? 'Это ровно то, что уже записано в карточке. Ищите дальше, если издание не то.'
+                      : 'Пустых полей нет — дозаполнять нечего.'}
+                  </p>
+                ) : (
+                  <div className="mt-3 grid gap-1.5">
+                    {proposal.fills.map((fill) => (
+                      <div
+                        key={fill.field}
+                        className="rounded-xl bg-muted px-3 py-2"
+                      >
+                        <b className="block font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
+                          {fill.label}
+                        </b>
+                        {fill.was && (
+                          <s className="block text-[12.5px] text-muted-foreground decoration-muted-foreground/60">
+                            {fill.was}
+                          </s>
+                        )}
+                        {fill.field === 'coverUrl' ? (
+                          <img
+                            src={fill.value}
+                            alt=""
+                            className="mt-1 aspect-[7/10] w-[46px] rounded-[3px] object-cover"
+                          />
+                        ) : (
+                          <span
+                            className={`block text-[13px] leading-snug ${
+                              fill.field === 'annotation' ? 'line-clamp-4' : ''
+                            }`}
+                          >
+                            {fill.value}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="mt-2 text-[12.5px] text-muted-foreground">
+                  {proposal.mode === 'fill'
+                    ? 'Название и автор остаются вашими. Оценка, рецензия, полка и списки не меняются.'
+                    : 'Оценка, рецензия, полка и списки не меняются.'}
+                </p>
+              </>
+            )}
+          </div>
           <DrawerFooter>
             {proposal && proposal.suggestionId !== null && (
               <Button
